@@ -67,7 +67,7 @@ export default function ResultDashboard() {
     setIsChatLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/predict", "/chat") || "http://localhost:10000/chat";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/predict", "/chat") || "/api/chat";
       const contextString = `Risk: ${resultData.risk}, Probability: ${(resultData.probability * 100).toFixed(1)}%, AI Note: ${resultData.explanation}`;
       
       const payload = {

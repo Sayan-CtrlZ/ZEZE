@@ -138,7 +138,7 @@ def generate_explanation(data: PatientData, probability: float, risk: str) -> st
         logger.error(f"Gemini API failure: {e}", exc_info=True)
         return f"Patient has a {risk.lower()} risk profile. (AI explanation generation temporarily unavailable)."
 
-@app.post("/predict")
+@app.post("/api/predict")
 def predict_risk(data: PatientData):
     logger.info(f"Received prediction request for age: {data.age}, sex: {data.sex}")
     try:
@@ -193,7 +193,7 @@ class ChatRequest(BaseModel):
     message: str
     context: str
 
-@app.post("/chat")
+@app.post("/api/chat")
 def chat_follow_up(req: ChatRequest):
     if not gemini_model:
         raise HTTPException(status_code=503, detail="AI Chat is not configured.")

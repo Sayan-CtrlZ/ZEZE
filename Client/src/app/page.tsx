@@ -20,7 +20,7 @@ export default function Home() {
         if (key !== 'symptoms' && payload[key] === '') payload[key] = 0;
       });
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000/predict';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/predict';
 
       const response = await fetch(apiUrl, {
         method: "POST",
