@@ -1,5 +1,7 @@
 import os
-import math
+import joblib
+import numpy as np
+import pandas as pd
 import logging
 import json
 from typing import Optional
@@ -35,20 +37,18 @@ else:
     logger.warning("GEMINI_API_KEY not found. Explanations will fallback to simple rule-based strings.")
     gemini_model = None
 
-# Load Models from JSON (pure python inference)
+# Load Models
+# Using relative paths since Render will start from the backend folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_WEIGHTS_PATH = os.path.join(BASE_DIR, "ml", "model_weights.json")
+MODEL_PATH = os.path.join(BASE_DIR, "ml", "logistic_regression_model.pkl")
+SCALER_PATH = os.path.join(BASE_DIR, "ml", "scaler.pkl")
 
 try:
-    with open(MODEL_WEIGHTS_PATH, 'r') as f:
-        model_data = json.load(f)
-    scaler_mean = model_data["scaler_mean"]
-    scaler_scale = model_data["scaler_scale"]
-    model_coef = model_data["model_coef"]
-    model_intercept = model_data["model_intercept"]
-    logger.info("Successfully loaded ML model weights.")
+    model = joblib.load(MODEL_PATH)
+    scaler = joblib.load(SCALER_PATH)
+    logger.info("Successfully loaded ML models and scaler.")
 except Exception as e:
-    logger.error(f"Failed to load ML weights: {e}")
+    logger.error(f"Failed to load ML artifacts: {e}")
     raise e
 
 class PatientData(BaseModel):
@@ -151,19 +151,23 @@ def predict_risk(data: PatientData):
                     if hasattr(data, key):
                         setattr(data, key, value)
                         
+        # Convert input to array matching model's expected features
         features = [
             data.age, data.sex, data.cp, data.trestbps, data.chol,
             data.fbs, data.restecg, data.thalach, data.exang, 
             data.oldpeak, data.slope, data.ca, data.thal
         ]
         
-        # Pure Python Inference: Scale features and compute logistic regression
-        z_scores = [(features[i] - scaler_mean[i]) / scaler_scale[i] for i in range(len(features))]
+        feature_array = np.array([features])
         
-        logit = model_intercept + sum(z_scores[i] * model_coef[i] for i in range(len(features)))
+        # We use DataFrame to be safe against warning if scaler was fit on df.
+        feature_columns = ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"]
+        df = pd.DataFrame(feature_array, columns=feature_columns)
         
-        # Sigmoid function for probability
-        prob = 1.0 / (1.0 + math.exp(-logit))
+        scaled_features = scaler.transform(df)
+        
+        # predict_proba returns [[P(class_0), P(class_1)]]
+        prob = float(model.predict_proba(scaled_features)[0][1])
         
         risk = "High" if prob > 0.7 else "Low"
         
