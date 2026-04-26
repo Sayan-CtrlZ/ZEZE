@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-100: #f4f0ec;
+  --color-brand-200: #e8e2db;
+  --color-brand-900: #2d2a26;
+  --color-risk-high: #fef2f2;
+  --color-risk-low: #f0fdf4;
+}
+
+:root {
+  --background: #fcfbf9;
+  --foreground: #2a2825;
+}
+
+body {
+  background-color: #e6dace;
+  background-image: url('/bg.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(110vh) scale(0.6);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.6;
+  }
+
+  80% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(-20vh) scale(1.2);
+    opacity: 0;
+  }
+}
+
+.bubble {
+  position: fixed;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 250, 240, 0.6), rgba(220, 210, 190, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 5px 5px 15px rgba(255, 255, 255, 0.4), inset -5px -5px 15px rgba(0, 0, 0, 0.02), 0 10px 30px rgba(0, 0, 0, 0.02);
+  backdrop-filter: blur(4px);
+  animation: floatUp linear infinite;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Custom UI Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(45, 42, 38, 0.3);
+  border-radius: 20px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(45, 42, 38, 0.6);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
