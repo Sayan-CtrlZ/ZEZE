@@ -40,16 +40,21 @@ else:
 # Load Models
 # Using relative paths since Render will start from the backend folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(BASE_DIR, "ml", "logistic_regression_model.pkl")
-SCALER_PATH = os.path.join(BASE_DIR, "ml", "scaler.pkl")
+WEIGHTS_PATH = os.path.join(BASE_DIR, "ml", "model_weights.json")
 
 try:
-    model = joblib.load(MODEL_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    logger.info("Successfully loaded ML models and scaler.")
+    with open(WEIGHTS_PATH, "r") as f:
+        ml_weights = json.load(f)
+    logger.info("Successfully loaded ML weights from JSON.")
 except Exception as e:
-    logger.error(f"Failed to load ML artifacts: {e}")
+    logger.error(f"Failed to load ML weights: {e}")
     raise e
+
+def predict_risk_from_weights(features: list, weights: dict) -> float:
+    scaled = (np.array(features) - np.array(weights["scaler_mean"])) / np.array(weights["scaler_scale"])
+    logit = np.sum(scaled * np.array(weights["model_coef"])) + weights["model_intercept"]
+    prob = 1.0 / (1.0 + np.exp(-logit))
+    return float(prob)
 
 class PatientData(BaseModel):
     age: float = Field(..., ge=1, le=120, description="Patient age in years")
@@ -158,16 +163,7 @@ def predict_risk(data: PatientData):
             data.oldpeak, data.slope, data.ca, data.thal
         ]
         
-        feature_array = np.array([features])
-        
-        # We use DataFrame to be safe against warning if scaler was fit on df.
-        feature_columns = ["age", "sex", "cp", "trestbps", "chol", "fbs", "restecg", "thalach", "exang", "oldpeak", "slope", "ca", "thal"]
-        df = pd.DataFrame(feature_array, columns=feature_columns)
-        
-        scaled_features = scaler.transform(df)
-        
-        # predict_proba returns [[P(class_0), P(class_1)]]
-        prob = float(model.predict_proba(scaled_features)[0][1])
+        prob = predict_risk_from_weights(features, ml_weights)
         
         risk = "High" if prob > 0.7 else "Low"
         
