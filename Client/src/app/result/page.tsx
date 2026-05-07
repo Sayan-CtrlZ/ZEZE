@@ -111,9 +111,9 @@ export default function ResultDashboard() {
         {/* REPORT SECTION (Printable) */}
         <div 
           ref={reportRef} 
-          className="lg:col-span-8 flex flex-col space-y-4 md:space-y-6 rounded-3xl"
+          className="lg:col-span-7 flex flex-col space-y-4 md:space-y-6 rounded-3xl"
         >
-          <div className="backdrop-blur-[64px] bg-white/20 p-6 md:p-12 rounded-3xl md:rounded-[2rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="backdrop-blur-[64px] bg-white/20 p-4 md:p-8 rounded-3xl md:rounded-[2rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
             
             {/* Color Accent */}
             <div className={`absolute top-0 left-0 w-full h-2 ${isHighRisk ? 'bg-red-400' : 'bg-green-400'} opacity-70`}></div>
@@ -132,10 +132,10 @@ export default function ResultDashboard() {
             </div>
 
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
-            <p className="text-brand-900/60 font-medium mb-10 tracking-widest uppercase text-[10px] md:text-sm">Zero Error Zonal Evaluation Model</p>
+            <p className="text-brand-900/60 font-medium mb-4 md:mb-6 tracking-widest uppercase text-[10px] md:text-sm">Zero Error Zonal Evaluation Model</p>
 
             {/* Donut Chart */}
-            <div className="relative w-48 h-48 md:w-64 md:h-64 mb-6 md:mb-10">
+            <div className="relative w-40 h-40 md:w-48 md:h-48 mb-4 md:mb-6">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <path
                   className="text-brand-900/10"
@@ -160,11 +160,11 @@ export default function ResultDashboard() {
               </div>
             </div>
 
-            <div className={`px-4 md:px-6 py-2 rounded-full border mb-6 md:mb-8 font-bold tracking-widest uppercase text-xs md:text-sm ${isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+            <div className={`px-4 md:px-6 py-2 rounded-full border mb-4 md:mb-6 font-bold tracking-widest uppercase text-xs md:text-sm ${isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
               Risk Classification: {resultData.risk}
             </div>
 
-            <div className="bg-white/40 p-6 md:p-10 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
+            <div className="bg-white/40 p-5 md:p-8 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
               <h3 className="text-lg md:text-xl font-black mb-3 md:mb-4 tracking-tight border-b border-brand-900/10 pb-3 md:pb-4">AI Diagnostic Summary</h3>
               <div className="prose prose-sm md:prose-base max-w-none">
                 <ReactMarkdown>{resultData.explanation}</ReactMarkdown>
@@ -174,7 +174,7 @@ export default function ResultDashboard() {
         </div>
 
         {/* CHAT SECTION */}
-        <div className="lg:col-span-4 flex flex-col backdrop-blur-[64px] bg-brand-900/90 rounded-3xl md:rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[60vh] md:h-[80vh] lg:sticky lg:top-8 mt-4 lg:mt-0">
+        <div className="lg:col-span-5 flex flex-col backdrop-blur-[64px] bg-brand-900/90 rounded-3xl md:rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[70vh] md:h-[85vh] lg:h-[90vh] lg:sticky lg:top-4 mt-4 lg:mt-0">
           <div className="p-4 md:p-6 border-b border-brand-100/10 shrink-0">
             <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
