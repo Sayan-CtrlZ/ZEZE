@@ -67,7 +67,7 @@ export default function ResultDashboard() {
     setIsChatLoading(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/predict", "/chat") || "http://localhost:10000/chat";
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/chat`;
       const contextString = `Risk: ${resultData.risk}, Probability: ${(resultData.probability * 100).toFixed(1)}%, AI Note: ${resultData.explanation}`;
       
       const payload = {
@@ -106,36 +106,36 @@ export default function ResultDashboard() {
       <div className="bubble w-[300px] h-[300px] left-[5%]" style={{ animationDuration: '28s', animationDelay: '2s' }}></div>
       <div className="bubble w-[200px] h-[200px] right-[10%]" style={{ animationDuration: '20s', animationDelay: '6s' }}></div>
 
-      <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start px-2 sm:px-0">
         
         {/* REPORT SECTION (Printable) */}
         <div 
           ref={reportRef} 
-          className="lg:col-span-8 flex flex-col space-y-6 rounded-3xl"
+          className="lg:col-span-8 flex flex-col space-y-4 md:space-y-6 rounded-3xl"
         >
-          <div className="backdrop-blur-[64px] bg-white/20 p-8 md:p-12 rounded-[2rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="backdrop-blur-[64px] bg-white/20 p-6 md:p-12 rounded-3xl md:rounded-[2rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
             
             {/* Color Accent */}
             <div className={`absolute top-0 left-0 w-full h-2 ${isHighRisk ? 'bg-red-400' : 'bg-green-400'} opacity-70`}></div>
 
             <div className="flex justify-between w-full items-center mb-8">
-              <Link href="/" className="text-sm font-bold text-brand-900 border border-brand-900/20 px-4 py-2 rounded-full hover:bg-brand-900 hover:text-white transition-colors">
+              <Link href="/" className="text-xs md:text-sm font-bold text-brand-900 border border-brand-900/20 px-4 py-2 rounded-full hover:bg-brand-900 hover:text-white transition-colors">
                 ← New Patient
               </Link>
               <button 
                 id="pdf-btn" 
                 onClick={handleDownloadPDF}
-                className="text-sm font-bold flex items-center gap-2 text-white bg-brand-900 px-4 py-2 rounded-full hover:bg-black transition-colors"
+                className="text-xs md:text-sm font-bold flex items-center gap-2 text-white bg-brand-900 px-4 py-2 rounded-full hover:bg-black transition-colors"
               >
                 Download PDF
               </button>
             </div>
 
-            <h1 className="text-3xl font-bold tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
-            <p className="text-brand-900/60 font-medium mb-10 tracking-widest uppercase text-sm">Zero Error Zonal Evaluation Model</p>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
+            <p className="text-brand-900/60 font-medium mb-10 tracking-widest uppercase text-[10px] md:text-sm">Zero Error Zonal Evaluation Model</p>
 
             {/* Donut Chart */}
-            <div className="relative w-64 h-64 mb-10">
+            <div className="relative w-48 h-48 md:w-64 md:h-64 mb-6 md:mb-10">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <path
                   className="text-brand-900/10"
@@ -155,17 +155,17 @@ export default function ResultDashboard() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-black text-brand-900 tracking-tighter">{probPercent}%</span>
-                <span className="text-xs font-bold tracking-widest uppercase text-brand-900/50 mt-1">Probability</span>
+                <span className="text-4xl md:text-5xl font-black text-brand-900 tracking-tighter">{probPercent}%</span>
+                <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase text-brand-900/50 mt-1">Probability</span>
               </div>
             </div>
 
-            <div className={`px-6 py-2 rounded-full border mb-8 font-bold tracking-widest uppercase ${isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+            <div className={`px-4 md:px-6 py-2 rounded-full border mb-6 md:mb-8 font-bold tracking-widest uppercase text-xs md:text-sm ${isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
               Risk Classification: {resultData.risk}
             </div>
 
-            <div className="bg-white/40 p-10 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
-              <h3 className="text-xl font-black mb-4 tracking-tight border-b border-brand-900/10 pb-4">AI Diagnostic Summary</h3>
+            <div className="bg-white/40 p-6 md:p-10 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
+              <h3 className="text-lg md:text-xl font-black mb-3 md:mb-4 tracking-tight border-b border-brand-900/10 pb-3 md:pb-4">AI Diagnostic Summary</h3>
               <div className="prose prose-sm md:prose-base max-w-none">
                 <ReactMarkdown>{resultData.explanation}</ReactMarkdown>
               </div>
@@ -174,8 +174,8 @@ export default function ResultDashboard() {
         </div>
 
         {/* CHAT SECTION */}
-        <div className="lg:col-span-4 flex flex-col backdrop-blur-[64px] bg-brand-900/90 rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[80vh] lg:sticky lg:top-8">
-          <div className="p-6 border-b border-brand-100/10 shrink-0">
+        <div className="lg:col-span-4 flex flex-col backdrop-blur-[64px] bg-brand-900/90 rounded-3xl md:rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[60vh] md:h-[80vh] lg:sticky lg:top-8 mt-4 lg:mt-0">
+          <div className="p-4 md:p-6 border-b border-brand-100/10 shrink-0">
             <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
               Clinical Assistant

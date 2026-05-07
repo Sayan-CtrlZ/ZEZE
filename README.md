@@ -1,102 +1,95 @@
 # ZEZE: Zero Error Zonal Evaluation Model
 **An Intelligent Clinical Risk Assessment System**
 
-> *“Precision in Prediction. Clarity in Care.”*
+> *"Precision in Prediction. Clarity in Care."*
 
-ZEZE is a healthcare-focused analytical AI system designed to process structured patient data and generate accurate, interpretable risk assessments. It aims to bridge the gap between clinical inputs and actionable insights, enabling early-stage evaluation and decision support.
-
----
-
-## 🔹 1. Objective
-- To provide data-driven risk assessment based on patient inputs.
-- To enhance the interpretability of clinical predictions using Generative AI.
-- To support early detection and awareness in cardiovascular health.
+ZEZE is a healthcare-focused analytical AI system designed to process structured patient data and generate accurate, interpretable cardiovascular risk assessments. 
 
 ---
 
-## 🔹 2. Core Functionality
+## 🔹 1. Core Functionality
 
-### 🧩 Input Layer
-ZEZE collects structured clinical data along with natural language symptom descriptions:
+### 🧩 Input Layer (Manual & Smart Scan)
+ZEZE collects patient data via two primary pathways:
+1. **Manual Entry**: Users can input specific clinical parameters directly into the interactive dashboard.
+2. **Smart Document Scan**: Users can upload clinical reports (PDF, JPG, PNG). The system uses AI-assisted vision to extract the clinical parameters from the documents seamlessly.
+
+Both input pathways capture:
 - **Demographics**: Age, Sex
 - **Symptoms**: Chest pain type, Exercise-induced responses
-- **Clinical Parameters**:
-  - Blood pressure (Resting BP)
-  - Cholesterol levels
-  - Heart rate (Max HR)
-  - ECG indicators
-  - Other diagnostic variables (Thalassemia, ST Depression, Vessels)
+- **Clinical Parameters**: Resting BP, Cholesterol levels, Max HR, ECG indicators, Thalassemia, ST Depression, etc.
 
 ### ⚙️ Processing Layer
-- Data is processed through a predictive machine learning model (Logistic Regression).
-- The model identifies patterns and correlations.
+- Extracted and entered data is passed directly into our **Predictive Machine Learning Model**.
+- The ML pipeline identifies patterns and correlates the multi-dimensional clinical inputs.
 - **Outputs**:
   - Risk classification (e.g., High / Low)
   - Probability score (0–100%)
 
 ### 📊 Output Layer
-ZEZE provides:
-- **Risk Assessment Result**: Clearly displayed with dynamic color psychology.
+ZEZE translates complex ML outputs into a clear, clinical dashboard:
+- **Risk Assessment Result**: Displayed with dynamic color psychology.
 - **Confidence Score / Probability**: Exact percentage of risk likelihood.
-- **Simplified Explanation**: AI-generated (via Google Gemini) for user clarity, translating complex medical values into a simple, human-readable summary.
+- **AI Diagnostic Summary**: The system utilizes Google Gemini to provide a 3-4 bullet point, human-readable summary, translating the raw values into clear, supportive clinical insights.
+- **Interactive Assistant**: Users can chat with the AI about their specific test results for lifestyle guidance.
 
 ---
 
-## 🔹 3. Key Features
+## 🔹 2. System Architecture
 
-✅ **Predictive Risk Evaluation**
-- Identifies the likelihood of cardiovascular conditions based on structured clinical datasets.
+`Input (Manual / Smart Scan) → ML Prediction Model → AI Diagnostic Summary → Dashboard UI`
 
-✅ **Explainable AI Integration**
-- Translates ML predictions into simple, human-readable insights. If a patient enters natural language symptoms, the AI intelligently maps them directly to the risk form variables.
-
-✅ **Zero Error Philosophy**
-- Designed with a focus on minimizing prediction errors and improving reliability over time through strict structured input parameters.
-
-✅ **Modular Interface**
-- Currently deployed as a premium Glassmorphic Web Application (Next.js), but easily adaptable for chatbot interfaces or other form-based systems via the decoupled FastAPI backend.
-
-✅ **Real-Time Processing**
-- Generates instant predictions from user inputs.
+- **Frontend**: Premium Next.js React UI (Tailwind CSS, App Router).
+- **Backend**: Python FastAPI + Scikit-Learn Model Execution.
+- **AI Layer**: Google GenAI (`gemini-2.5-flash`) for parsing documents and generating clinical explanations.
 
 ---
 
-## 🔹 4. System Architecture
+## 🔹 3. Deployment Guide
 
-`Input → Model → Prediction → Explanation → Output`
+The project is structured to be deployed securely and independently.
 
-- **Frontend**: Premium Next.js React UI (Form input & Results UI).
-- **Backend**: Python FastAPI data processing + Scikit-Learn Model Execution.
-- **AI Layer**: Google Gemini 1.5 Flash (Symptom parsing + Explanation generation).
-- **Output**: Risk result + AI Insights.
+### Deploying the Backend (Render)
+The backend is a FastAPI application designed to run on a service like [Render](https://render.com/).
 
+1. Create a new **Web Service** on Render.
+2. Connect your GitHub repository.
+3. Set the **Root Directory** to `Backend`.
+4. Set the **Build Command** to: `pip install -r requirements.txt`
+5. Set the **Start Command** to: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+6. **Environment Variables**:
+   - `GEMINI_API_KEY`: Your Google Gemini API Key.
+   - `GEMINI_MODEL`: `gemini-2.5-flash`
+   - `GEMINI_TEMPERATURE`: `0.7`
+
+### Deploying the Client (Vercel)
+The frontend is a Next.js application perfectly optimized for [Vercel](https://vercel.com/).
+
+1. Create a new **Project** on Vercel.
+2. Connect your GitHub repository.
+3. Set the **Root Directory** to `Client`.
+4. The Build and Output settings will be automatically detected for Next.js.
+5. **Environment Variables**:
+   - `NEXT_PUBLIC_API_URL`: The URL of your deployed Render backend (e.g., `https://zeze-backend.onrender.com`). Do not include a trailing slash.
+   
 ---
 
-## 🔹 5. Development & Deployment
-
-### Tech Stack
-- **Frontend**: Next.js 15 (App Router), Tailwind V4 CSS, React 19, TypeScript
-- **Backend**: FastAPI, Python 3.10+, Scikit-Learn, Pandas, NumPy, Uvicorn
-- **AI**: Google Generative AI (`gemini-1.5-flash`)
-
-### How to Run Locally
+## 🔹 4. Local Development
 
 **1. Run the Backend**
 ```bash
-cd backend
+cd Backend
 python -m venv venv
-source venv/Scripts/activate  # (Windows)
+# Activate venv: source venv/bin/activate (Mac/Linux) or venv\Scripts\activate (Windows)
 pip install -r requirements.txt
-# Ensure .env is populated with GEMINI_API_KEY
-uvicorn main:app --host 0.0.0.0 --port 10000 --reload
+python main.py
 ```
 
 **2. Run the Frontend**
 ```bash
 cd Client
 npm install
-# Ensure .env.local has NEXT_PUBLIC_API_URL=http://localhost:10000/predict
 npm run dev
 ```
 
-Visit `http://localhost:3000` to interact with the ZEZE platform!
+Visit `http://localhost:3000` to interact with the ZEZE platform locally!

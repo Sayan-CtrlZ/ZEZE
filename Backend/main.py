@@ -4,8 +4,8 @@ import numpy as np
 import pandas as pd
 import logging
 import json
-from typing import Optional
-from fastapi import FastAPI, HTTPException
+from typing import Optional, List
+from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -25,17 +25,23 @@ logger = logging.getLogger("zeze-backend")
 
 # Configure environment and Gemini
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
+# Try to load from backend/.env first, then fallback to Client/.env
 load_dotenv()
+client_env_path = os.path.join(os.path.dirname(__file__), '..', 'Client', '.env')
+if os.path.exists(client_env_path):
+    load_dotenv(client_env_path)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL")
+GEMINI_TEMPERATURE = os.getenv("GEMINI_TEMPERATURE")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+if GEMINI_API_KEY and GEMINI_MODEL and GEMINI_TEMPERATURE:
+    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 else:
-    logger.warning("GEMINI_API_KEY not found. Explanations will fallback to simple rule-based strings.")
-    gemini_model = None
+    logger.warning("One or more Gemini environment variables (GEMINI_API_KEY, GEMINI_MODEL, GEMINI_TEMPERATURE) are missing. Explanations and AI features will be disabled.")
+    gemini_client = None
 
 # Load Models
 # Using relative paths since Render will start from the backend folder
@@ -73,7 +79,7 @@ class PatientData(BaseModel):
     symptoms: Optional[str] = Field(None, description="Optional natural language description of symptoms")
 
 def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
-    if not gemini_model:
+    if not gemini_client:
         return {}
     
     prompt = f"""
@@ -92,7 +98,11 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
     If nothing needs overriding, return {{}}.
     """
     try:
-        response = gemini_model.generate_content(prompt)
+        response = gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+        )
         text = response.text.strip()
         if text.startswith("```json"):
             text = text[7:-3].strip()
@@ -107,7 +117,7 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
 
 def generate_explanation(data: PatientData, probability: float, risk: str) -> str:
     # If Gemini is not configured, silently fallback to rule-based.
-    if not gemini_model:
+    if not gemini_client:
         return f"Patient has a {risk.lower()} risk profile. (Gemini AI not configured, fallback used)."
 
     prompt = f"""
@@ -137,7 +147,11 @@ def generate_explanation(data: PatientData, probability: float, risk: str) -> st
     """
     
     try:
-        response = gemini_model.generate_content(prompt)
+        response = gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+        )
         return response.text.strip()
     except Exception as e:
         logger.error(f"Gemini API failure: {e}", exc_info=True)
@@ -191,7 +205,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat_follow_up(req: ChatRequest):
-    if not gemini_model:
+    if not gemini_client:
         raise HTTPException(status_code=503, detail="AI Chat is not configured.")
         
     try:
@@ -203,23 +217,107 @@ def chat_follow_up(req: ChatRequest):
             "You may provide general health and lifestyle guidance, but explicitly state you are an AI and not a substitute for a real doctor if they ask for a deep diagnosis."
         )
         
-        model_with_context = genai.GenerativeModel(
-            'gemini-2.5-flash',
-            system_instruction=system_instruction
-        )
-        
         formatted_history = []
         for msg in req.history:
             r = "user" if msg.role == "user" else "model"
-            formatted_history.append({"role": r, "parts": [msg.parts]})
+            formatted_history.append(types.Content(role=r, parts=[types.Part.from_text(text=msg.parts)]))
             
-        chat = model_with_context.start_chat(history=formatted_history)
+        chat = gemini_client.chats.create(
+            model=GEMINI_MODEL,
+            config=types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                temperature=float(GEMINI_TEMPERATURE)
+            ),
+            history=formatted_history
+        )
         response = chat.send_message(req.message)
         
         return {"response": response.text}
     except Exception as e:
         logger.error(f"Chat endpoint failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during chat sequence.")
+
+@app.post("/predict-document")
+async def predict_document(files: List[UploadFile] = File(...), symptoms: Optional[str] = Form(None)):
+    if not gemini_client:
+        raise HTTPException(status_code=503, detail="AI parsing is not configured.")
+    
+    SUPPORTED_MIME_TYPES = {
+        "application/pdf", "image/png", "image/jpeg", 
+        "image/jpg", "image/webp", "image/heic", 
+        "image/heif", "text/plain"
+    }
+
+    parts = []
+    for file in files:
+        contents = await file.read()
+        mime_type = file.content_type if file.content_type else "application/octet-stream"
+        
+        # Fallback mapping based on file extension
+        if mime_type == "application/octet-stream" or not mime_type:
+            if file.filename:
+                ext = file.filename.split('.')[-1].lower()
+                if ext == 'pdf': mime_type = "application/pdf"
+                elif ext in ['jpg', 'jpeg']: mime_type = "image/jpeg"
+                elif ext == 'png': mime_type = "image/png"
+                elif ext == 'txt': mime_type = "text/plain"
+        
+        # Validate MIME type
+        if mime_type not in SUPPORTED_MIME_TYPES:
+            raise HTTPException(status_code=400, detail=f"Unsupported file type: {mime_type}. Please upload an image (PNG/JPG) or PDF.")
+            
+        parts.append(types.Part.from_bytes(data=contents, mime_type=mime_type))
+    
+    symptoms_text = f"\nPatient reported symptoms: {symptoms}" if symptoms else ""
+
+    prompt = f"""
+    You are ZEZE (Zero Error Zonal Evaluation Model), an advanced AI clinical risk assessment assistant.
+    The user has uploaded one or more medical documents (which could be formal reports, handwritten notes, or casual summaries) for a single patient.{symptoms_text}
+    
+    Your job is to act exactly like our machine learning model. You must carefully analyze the documents and any provided symptoms to evaluate the patient's cardiovascular risk.
+    
+    CRITICAL INSTRUCTION:
+    Provide the exact same output format as the machine learning model.
+    Return ONLY a valid JSON object mapping these exact keys:
+    - "risk": string (Must be exactly "High" or "Low")
+    - "probability": float (A percentage number between 0 and 100, e.g., 75.5 or 12.0)
+    - "explanation": string (A concise patient-friendly explanation interpreting the top factors found in the documents. Focus strictly on why the risk is High or Low. Format your explanation strictly as a list of 3-4 bullet points using markdown `- `. Do not write introductory or concluding paragraphs. ONLY return bullet points.)
+
+    Do not include markdown ticks or any extra text outside the JSON. Example:
+    {{"risk": "High", "probability": 82.5, "explanation": "- Patient age and high cholesterol contribute to increased risk.\\n- Blood pressure is elevated."}}
+    """
+    
+    try:
+        parts.append(prompt)
+        
+        response = gemini_client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=parts,
+            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+        )
+        
+        text = response.text.strip()
+        if text.startswith("```json"):
+            text = text[7:-3].strip()
+        elif text.startswith("```"):
+            text = text[3:-3].strip()
+            
+        prediction_data = json.loads(text)
+        
+        # Validate output structure
+        if "risk" not in prediction_data or "probability" not in prediction_data or "explanation" not in prediction_data:
+            raise ValueError("Gemini returned invalid structure.")
+            
+        logger.info(f"Successfully predicted risk from document: {prediction_data['risk']}")
+        return prediction_data
+    except json.JSONDecodeError:
+        logger.error(f"Failed to parse Gemini JSON: {text}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to parse AI prediction. Please try again.")
+    except Exception as e:
+        logger.error(f"Failed to predict document using Gemini: {e}", exc_info=True)
+        if "429" in str(e) or "Quota exceeded" in str(e):
+            raise HTTPException(status_code=429, detail="AI usage limit reached. Please try again later or use manual entry.")
+        raise HTTPException(status_code=500, detail="Failed to evaluate document. Ensure it is a clear image or PDF.")
 
 if __name__ == "__main__":
     import uvicorn
