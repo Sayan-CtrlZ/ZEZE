@@ -79,6 +79,12 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
     }
   };
 
+  const handleClearFiles = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedFiles(null);
+  };
+
   const inputClasses = "w-full bg-white/50 backdrop-blur-2xl border-2 border-white/60 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-900/40 focus:border-brand-900/60 focus:bg-white/80 transition-all font-semibold text-gray-900 placeholder:font-medium placeholder:text-gray-500 shadow-sm";
   const labelClasses = "block text-xs font-bold tracking-wider text-gray-800 mb-1.5";
 
@@ -92,6 +98,16 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
         <div className="flex flex-col space-y-4 max-w-4xl mx-auto w-full">
           {/* Smart Document Upload */}
           <div className="w-full bg-white/40 backdrop-blur-xl border-2 border-dashed border-white/80 rounded-2xl md:rounded-3xl p-6 md:p-8 text-center transition-all hover:bg-white/60 relative group shadow-sm">
+            {selectedFiles && selectedFiles.length > 0 && (
+              <button 
+                type="button"
+                onClick={handleClearFiles}
+                className="absolute top-4 right-4 z-20 w-8 h-8 md:w-10 md:h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 hover:scale-110 transition-all shadow-sm cursor-pointer"
+                title="Remove File"
+              >
+                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            )}
             <input 
               type="file" 
               accept="image/*,application/pdf"

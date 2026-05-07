@@ -105,7 +105,10 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
         response = gemini_client.models.generate_content(
             model=GEMINI_MODEL,
             contents=prompt,
-            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+            config=types.GenerateContentConfig(
+                temperature=float(GEMINI_TEMPERATURE),
+                response_mime_type="application/json"
+            )
         )
         text = response.text.strip()
         if text.startswith("```json"):
@@ -315,7 +318,10 @@ async def predict_document(files: List[UploadFile] = File(...), symptoms: Option
         response = gemini_client.models.generate_content(
             model=GEMINI_MODEL,
             contents=parts,
-            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+            config=types.GenerateContentConfig(
+                temperature=float(GEMINI_TEMPERATURE),
+                response_mime_type="application/json"
+            )
         )
         
         text = response.text.strip()
