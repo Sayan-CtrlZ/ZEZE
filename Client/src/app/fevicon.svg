@@ -1,0 +1,101 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5EEE8"/>
+      <stop offset="1" stop-color="#E8D9CF"/>
+    </linearGradient>
+
+    <linearGradient id="heartFill" x1="160" y1="120" x2="360" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E8D4C7"/>
+      <stop offset="1" stop-color="#CFAF9D"/>
+    </linearGradient>
+
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#00000022"/>
+    </filter>
+  </defs>
+
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="220" fill="url(#bg)" />
+
+  <!-- Outer Ring -->
+  <circle
+    cx="256"
+    cy="256"
+    r="210"
+    stroke="#8B5E4C"
+    stroke-width="6"
+    fill="none"
+    opacity="0.85"
+  />
+
+  <!-- Decorative Dots -->
+  <circle cx="110" cy="170" r="6" fill="#D8B9A8"/>
+  <circle cx="400" cy="360" r="6" fill="#D8B9A8"/>
+  <circle cx="160" cy="400" r="5" fill="#D8B9A8"/>
+
+  <!-- Heart -->
+  <g filter="url(#shadow)">
+    <path
+      d="M256 355
+         C190 315 150 260 150 205
+         C150 160 182 128 225 128
+         C250 128 270 140 286 160
+         C302 140 322 128 347 128
+         C390 128 422 160 422 205
+         C422 260 382 315 316 355
+         L286 378
+         Z"
+      fill="url(#heartFill)"
+      stroke="#5C3D32"
+      stroke-width="10"
+      stroke-linejoin="round"
+    />
+
+    <!-- Heart Veins -->
+    <path
+      d="M286 160
+         C300 185 320 205 350 220"
+      stroke="#5C3D32"
+      stroke-width="8"
+      stroke-linecap="round"
+      fill="none"
+    />
+
+    <path
+      d="M255 230
+         C240 255 220 280 195 300"
+      stroke="#5C3D32"
+      stroke-width="7"
+      stroke-linecap="round"
+      fill="none"
+      opacity="0.7"
+    />
+  </g>
+
+  <!-- ECG Badge -->
+  <g filter="url(#shadow)">
+    <circle
+      cx="355"
+      cy="335"
+      r="62"
+      fill="#FFF9F5"
+      stroke="#6B4637"
+      stroke-width="8"
+    />
+
+    <path
+      d="M315 335
+         H335
+         L347 310
+         L363 360
+         L377 325
+         H395"
+      stroke="#6B4637"
+      stroke-width="8"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      fill="none"
+    />
+  </g>
+</svg>

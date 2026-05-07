@@ -21,6 +21,8 @@ export default function Home() {
             ACTIVE AI ASSESSMENT
           </div>
 
+          <img src="/icon.webp" alt="ZEZE Logo" className="w-24 h-24 md:w-32 md:h-32 mb-2 drop-shadow-xl hover:scale-105 transition-transform duration-500" />
+
           <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter text-brand-900 mb-1 md:mb-2 drop-shadow-md">
             ZEZE
           </h1>

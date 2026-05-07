@@ -144,10 +144,24 @@ def generate_explanation(data: PatientData, probability: float, risk: str) -> st
     - Number of major vessels (0-3): {data.ca}
     - Thalassemia (0-3): {data.thal}
     
-    Provide a concise patient-friendly explanation interpreting these top factors without diagnosing. 
+    Provide a patient-friendly explanation interpreting these top factors without diagnosing. 
     Focus strictly on why the risk is {risk}. Be reassuring but clear. Use a professional, clinical but clear tone.
 
-    CRITICAL REQUIREMENT: Format your entire response as a list of 3-4 bullet points using markdown `- `. Do not write introductory or concluding paragraphs. ONLY return bullet points.
+    CRITICAL REQUIREMENT: Format your response STRICTLY using the following markdown structure. Do not include any introductory or concluding text outside of this structure. Ensure important concepts are bolded.
+    **Key Findings**:
+    - (short + scannable bullet points)
+    
+    **What This Means**:
+    (simple 1-2 sentence explanation)
+    
+    **Possible Concerns**:
+    (if abnormal, otherwise omit)
+    
+    **Lifestyle / Prevention**:
+    - (short action items)
+    
+    **Additional Information**:
+    (any longer explanations last)
     """
     
     try:
@@ -217,8 +231,12 @@ def chat_follow_up(req: ChatRequest):
         system_instruction = (
             "You are the ZEZE AI Clinical Assistant. The user has just completed a cardiovascular health assessment.\n"
             f"Here is their exact clinical context: {req.context}\n\n"
-            "Answer their follow-up questions clearly, supportively, and professionally based on this specific assessment. "
-            "You may provide general health and lifestyle guidance, but explicitly state you are an AI and not a substitute for a real doctor if they ask for a deep diagnosis."
+            "Act as an intelligent, conversational agent and assistant. Answer their follow-up questions clearly and supportively.\n"
+            "CRITICAL RULES:\n"
+            "1. Be concise. Do not give long, verbose answers unless explicitly asked. Give exactly the required amount of information—no more, no less.\n"
+            "2. Be helpful. Do not refuse to answer relevant health, lifestyle, or clinical questions. You are fully allowed to provide general medical information and guidance.\n"
+            "3. Keep responses conversational, balanced, and easy to read.\n"
+            "4. Only add medical disclaimers if the user is asking for a deep, complex diagnosis or immediate emergency advice."
         )
         
         formatted_history = []
@@ -285,10 +303,10 @@ async def predict_document(files: List[UploadFile] = File(...), symptoms: Option
     Return ONLY a valid JSON object mapping these exact keys:
     - "risk": string (Must be exactly "High" or "Low")
     - "probability": float (A percentage number between 0 and 100, e.g., 75.5 or 12.0)
-    - "explanation": string (A concise patient-friendly explanation interpreting the top factors found in the documents. Focus strictly on why the risk is High or Low. Format your explanation strictly as a list of 3-4 bullet points using markdown `- `. Do not write introductory or concluding paragraphs. ONLY return bullet points.)
+    - "explanation": string (A structured patient-friendly explanation. Format STRICTLY with these markdown headers and no extra text outside them: "**Key Findings**:\n- (short bullet points)\n\n**What This Means**:\n(simple explanation)\n\n**Possible Concerns**:\n(if abnormal)\n\n**Lifestyle / Prevention**:\n- (short items)\n\n**Additional Information**:\n(longer explanations last)". Ensure important concepts are bolded.)
 
     Do not include markdown ticks or any extra text outside the JSON. Example:
-    {{"risk": "High", "probability": 82.5, "explanation": "- Patient age and high cholesterol contribute to increased risk.\\n- Blood pressure is elevated."}}
+    {{"risk": "High", "probability": 82.5, "explanation": "**Key Findings**:\\n- High cholesterol\\n\\n**What This Means**:\\nElevated risk of blockages.\\n\\n**Possible Concerns**:\\nHypertension.\\n\\n**Lifestyle / Prevention**:\\n- Diet changes\\n\\n**Additional Information**:\\nConsult doctor."}}
     """
     
     try:

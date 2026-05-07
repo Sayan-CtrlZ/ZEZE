@@ -130,12 +130,14 @@ export default function ResultDashboard() {
                 Download PDF
               </button>
             </div>
+            
+            <img src="/icon.webp" alt="ZEZE Logo" className="w-16 h-16 md:w-20 md:h-20 mb-3 drop-shadow-lg" />
 
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
             <p className="text-brand-900/60 font-medium mb-4 md:mb-6 tracking-widest uppercase text-[10px] md:text-sm">Zero Error Zonal Evaluation Model</p>
 
             {/* Donut Chart */}
-            <div className="relative w-40 h-40 md:w-48 md:h-48 mb-4 md:mb-6">
+            <div className="relative w-48 h-48 md:w-56 md:h-56 mb-4 md:mb-6">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                 <path
                   className="text-brand-900/10"
@@ -155,7 +157,7 @@ export default function ResultDashboard() {
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-4xl md:text-5xl font-black text-brand-900 tracking-tighter">{probPercent}%</span>
+                <span className="text-5xl md:text-6xl font-black text-brand-900 tracking-tighter">{probPercent}%</span>
                 <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase text-brand-900/50 mt-1">Probability</span>
               </div>
             </div>
@@ -166,7 +168,7 @@ export default function ResultDashboard() {
 
             <div className="bg-white/40 p-5 md:p-8 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
               <h3 className="text-lg md:text-xl font-black mb-3 md:mb-4 tracking-tight border-b border-brand-900/10 pb-3 md:pb-4">AI Diagnostic Summary</h3>
-              <div className="prose prose-sm md:prose-base max-w-none">
+              <div className="prose prose-sm md:prose-base max-w-none text-brand-900 prose-strong:text-brand-900 prose-strong:font-black prose-p:leading-relaxed">
                 <ReactMarkdown>{resultData.explanation}</ReactMarkdown>
               </div>
             </div>
