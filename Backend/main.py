@@ -62,11 +62,12 @@ except Exception as e:
 
 def predict_risk_from_weights(features: list, weights: dict) -> float:
     scaled = (np.array(features) - np.array(weights["scaler_mean"])) / np.array(weights["scaler_scale"])
-    logit = np.sum(scaled * np.array(weights["model_coef"])) + weights["model_intercept"]
+    logit = np.sum(scaled * np.array(weights["weights"])) + weights["intercept"]
     prob = 1.0 / (1.0 + np.exp(-logit))
     return float(prob)
 
 class PatientData(BaseModel):
+    role: str = Field("patient", description="User role: patient, practitioner, or researcher")
     age: float = Field(..., ge=1, le=120, description="Patient age in years")
     sex: float = Field(..., ge=0, le=1, description="1 = male; 0 = female; 0.5 = other")
     cp: int = Field(..., ge=0, le=3, description="Chest pain type (0-3)")
@@ -122,10 +123,53 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
         logger.error(f"Failed to parse symptoms using Gemini: {e}", exc_info=True)
         return {}
 
-def generate_explanation(data: PatientData, probability: float, risk: str) -> str:
+def generate_explanation(data: PatientData, probability: float, risk: str, role: str) -> str:
     # If Gemini is not configured, silently fallback to rule-based.
     if not gemini_client:
         return f"Patient has a {risk.lower()} risk profile. (Gemini AI not configured, fallback used)."
+
+    if role == "practitioner":
+        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Be concise, like a doctor's medical chart."
+        structure_instruction = """
+    **Clinical Findings**:
+    - (bulleted objective data)
+    
+    **Differential Assessment**:
+    (concise clinical interpretation)
+    
+    **Recommended Clinical Pathways**:
+    - (short actionable medical steps)
+        """
+    elif role == "researcher":
+        tone_instruction = "Use statistical language, focus on the weight of anomalous features, and provide deep analytical interpretations. Provide proper notes for each issue, proper research context, and referenced drugs (e.g., 'Drug X can be used for Y')."
+        structure_instruction = """
+    **Anomalous Data Points**:
+    - (detailed notes for each issue)
+    
+    **Mechanistic Analysis**:
+    (detailed research-driven physiological explanation)
+    
+    **Literature / Pharmacological References**:
+    - (list potential referenced drugs, e.g., 'Note: [Drug Name] can be used for [Condition] - Use: [Mechanism]')
+        """
+    else:
+        tone_instruction = "Be reassuring but clear. Use a patient-friendly tone and avoid complex medical jargon. Provide a HIGHLY DETAILED, comprehensive explanation."
+        structure_instruction = """
+    **Key Findings**:
+    - (short + scannable bullet points)
+    
+    **What This Means**:
+    (highly detailed, comprehensive physiological explanation)
+    
+    **Possible Concerns**:
+    (if abnormal, otherwise omit)
+    
+    **Lifestyle / Prevention**:
+    - (short action items)
+    
+    **Additional Information**:
+    (any longer explanations last)
+        """
 
     prompt = f"""
     You are ZEZE (Zero Error Zonal Evaluation Model), an AI clinical risk assessment assistant. 
@@ -147,24 +191,11 @@ def generate_explanation(data: PatientData, probability: float, risk: str) -> st
     - Number of major vessels (0-3): {data.ca}
     - Thalassemia (0-3): {data.thal}
     
-    Provide a patient-friendly explanation interpreting these top factors without diagnosing. 
-    Focus strictly on why the risk is {risk}. Be reassuring but clear. Use a professional, clinical but clear tone.
+    Provide an explanation interpreting these top factors without diagnosing. 
+    {tone_instruction}
 
     CRITICAL REQUIREMENT: Format your response STRICTLY using the following markdown structure. Do not include any introductory or concluding text outside of this structure. Ensure important concepts are bolded.
-    **Key Findings**:
-    - (short + scannable bullet points)
-    
-    **What This Means**:
-    (simple 1-2 sentence explanation)
-    
-    **Possible Concerns**:
-    (if abnormal, otherwise omit)
-    
-    **Lifestyle / Prevention**:
-    - (short action items)
-    
-    **Additional Information**:
-    (any longer explanations last)
+    {structure_instruction}
     """
     
     try:
@@ -202,14 +233,24 @@ def predict_risk(data: PatientData):
         
         risk = "High" if prob > 0.7 else "Low"
         
-        explanation = generate_explanation(data, prob, risk)
+        explanation = generate_explanation(data, prob, risk, data.role)
         
-        logger.info(f"Successfully generated prediction: Risk={risk}, Probability={prob:.2f}")
+        # Calculate feature impacts for explainability (SHAP-like values using LR coefficients)
+        feature_impacts = {}
+        if data.role in ["practitioner", "researcher"]:
+            feature_names = ["Age", "Sex", "Chest Pain", "Resting BP", "Cholesterol", "Fasting Blood Sugar", "Resting ECG", "Max HR", "Exercise Angina", "ST Depression", "Slope", "Vessels", "Thalassemia"]
+            scaled_features = (np.array(features) - np.array(ml_weights["scaler_mean"])) / np.array(ml_weights["scaler_scale"])
+            impacts = scaled_features * np.array(ml_weights["weights"])
+            for name, impact in zip(feature_names, impacts):
+                feature_impacts[name] = float(impact)
+        
+        logger.info(f"Successfully generated prediction: Risk={risk}, Probability={prob:.2f}, Role={data.role}")
         
         return {
             "risk": risk,
             "probability": round(prob * 100, 2), # percentage
-            "explanation": explanation
+            "explanation": explanation,
+            "feature_impacts": feature_impacts
         }
     except Exception as e:
         logger.error(f"Prediction failed due to error: {str(e)}", exc_info=True)
@@ -262,8 +303,13 @@ def chat_follow_up(req: ChatRequest):
         logger.error(f"Chat endpoint failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during chat sequence.")
 
+class AIPredictionResponse(BaseModel):
+    risk: str = Field(description="Must be exactly 'High' or 'Low'")
+    probability: float = Field(description="A percentage number between 0 and 100")
+    explanation: str = Field(description="A structured patient-friendly explanation. Format STRICTLY with markdown headers.")
+
 @app.post("/predict-document")
-async def predict_document(files: List[UploadFile] = File(...), symptoms: Optional[str] = Form(None)):
+async def predict_document(files: List[UploadFile] = File(...), symptoms: Optional[str] = Form(None), role: Optional[str] = Form("patient")):
     if not gemini_client:
         raise HTTPException(status_code=503, detail="AI parsing is not configured.")
     
@@ -295,21 +341,32 @@ async def predict_document(files: List[UploadFile] = File(...), symptoms: Option
     
     symptoms_text = f"\nPatient reported symptoms: {symptoms}" if symptoms else ""
 
+    if role == "practitioner":
+        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Be concise, like a doctor's medical chart."
+        structure_instruction = "**Clinical Findings**:\\n- (bulleted objective data)\\n\\n**Differential Assessment**:\\n(concise clinical interpretation)\\n\\n**Recommended Clinical Pathways**:\\n- (short actionable medical steps)"
+    elif role == "researcher":
+        tone_instruction = "Use statistical language, focus on the weight of anomalous features, and provide deep analytical interpretations. Provide proper notes for each issue, proper research context, and referenced drugs (e.g., 'Drug X can be used for Y')."
+        structure_instruction = "**Anomalous Data Points**:\\n- (detailed notes for each issue)\\n\\n**Mechanistic Analysis**:\\n(detailed research-driven physiological explanation)\\n\\n**Literature / Pharmacological References**:\\n- (list potential referenced drugs, e.g., 'Note: [Drug Name] can be used for [Condition] - Use: [Mechanism]')"
+    else:
+        tone_instruction = "Be reassuring but clear. Use a patient-friendly tone and avoid complex medical jargon. Provide a HIGHLY DETAILED, comprehensive explanation."
+        structure_instruction = "**Key Findings**:\\n- (short bullet points)\\n\\n**What This Means**:\\n(highly detailed, comprehensive physiological explanation)\\n\\n**Possible Concerns**:\\n(if abnormal)\\n\\n**Lifestyle / Prevention**:\\n- (short action items)\\n\\n**Additional Information**:\\n(longer explanations last)"
+
     prompt = f"""
     You are ZEZE (Zero Error Zonal Evaluation Model), an advanced AI clinical risk assessment assistant.
     The user has uploaded one or more medical documents (which could be formal reports, handwritten notes, or casual summaries) for a single patient.{symptoms_text}
     
     Your job is to act exactly like our machine learning model. You must carefully analyze the documents and any provided symptoms to evaluate the patient's cardiovascular risk.
+    {tone_instruction}
     
     CRITICAL INSTRUCTION:
     Provide the exact same output format as the machine learning model.
     Return ONLY a valid JSON object mapping these exact keys:
     - "risk": string (Must be exactly "High" or "Low")
     - "probability": float (A percentage number between 0 and 100, e.g., 75.5 or 12.0)
-    - "explanation": string (A structured patient-friendly explanation. Format STRICTLY with these markdown headers and no extra text outside them: "**Key Findings**:\n- (short bullet points)\n\n**What This Means**:\n(simple explanation)\n\n**Possible Concerns**:\n(if abnormal)\n\n**Lifestyle / Prevention**:\n- (short items)\n\n**Additional Information**:\n(longer explanations last)". Ensure important concepts are bolded.)
+    - "explanation": string (Format STRICTLY with these markdown headers and no extra text outside them: {structure_instruction}. Ensure important concepts are bolded.)
 
     Do not include markdown ticks or any extra text outside the JSON. Example:
-    {{"risk": "High", "probability": 82.5, "explanation": "**Key Findings**:\\n- High cholesterol\\n\\n**What This Means**:\\nElevated risk of blockages.\\n\\n**Possible Concerns**:\\nHypertension.\\n\\n**Lifestyle / Prevention**:\\n- Diet changes\\n\\n**Additional Information**:\\nConsult doctor."}}
+    {{"risk": "High", "probability": 82.5, "explanation": "{structure_instruction}"}}
     """
     
     try:
@@ -320,7 +377,8 @@ async def predict_document(files: List[UploadFile] = File(...), symptoms: Option
             contents=parts,
             config=types.GenerateContentConfig(
                 temperature=float(GEMINI_TEMPERATURE),
-                response_mime_type="application/json"
+                response_mime_type="application/json",
+                response_schema=AIPredictionResponse
             )
         )
         

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
+import ResultCard from '@/components/ResultCard';
 
 type ChatMessage = { role: "user" | "model"; parts: string };
 
@@ -17,6 +18,7 @@ export default function ResultDashboard() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const data = sessionStorage.getItem("zeze_result");
@@ -40,142 +42,175 @@ export default function ResultDashboard() {
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 20;
-      const isHighRisk = resultData.risk.toLowerCase() === "high";
-
-      // 1. Header Banner
-      // Using brand colors, dark blue for header
-      pdf.setFillColor(15, 23, 42); // slate-900 (brand-900 like)
-      pdf.rect(0, 0, pageWidth, 40, "F");
-
-      // Header Text
-      pdf.setTextColor(255, 255, 255);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(22);
-      pdf.text("ZEZE Clinical Report", margin, 25);
-
-      // 2. Patient Data & Risk
-      pdf.setTextColor(40, 40, 40);
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(14);
-      pdf.text("Risk Classification:", margin, 60);
+      const margin = 15;
+      const contentWidth = pageWidth - margin * 2;
+      const dateStr = new Date().toLocaleDateString();
+      const role = resultData.payload?.role || 'patient';
       
-      pdf.setFont("helvetica", "bold");
-      if (isHighRisk) {
-        pdf.setTextColor(220, 38, 38); // red-600
-      } else {
-        pdf.setTextColor(22, 163, 74); // green-600
+      let themeTitle = "What do your test results mean?";
+      let themeHeader = "ZEZE";
+      let titleColor = [0, 102, 204]; // Blue
+      let lineColor = [173, 216, 230]; // Light Blue
+      
+      if (role === 'practitioner') {
+        themeTitle = "Medical Diagnostic Report";
+        themeHeader = "ZEZE Clinical System";
+        titleColor = [15, 118, 110]; // Teal 700
+        lineColor = [20, 184, 166]; // Teal 500
+      } else if (role === 'researcher') {
+        themeTitle = "Cardiovascular Risk Data Profile";
+        themeHeader = "ZEZE Research Analytics";
+        titleColor = [51, 65, 85]; // Slate 700
+        lineColor = [148, 163, 184]; // Slate 400
       }
-      pdf.text(resultData.risk.toUpperCase(), margin + 50, 60);
-
-      pdf.setTextColor(40, 40, 40);
-      pdf.setFont("helvetica", "bold");
-      pdf.text("Probability Score:", margin, 75);
       
-      pdf.setFont("helvetica", "normal");
-      pdf.text(`${Number(resultData.probability).toFixed(1)}%`, margin + 50, 75);
+      let cursorY = 40;
+      let pageNum = 1;
+      
+      const drawHeader = () => {
+        pdf.setTextColor(60, 60, 60);
+        
+        // Branding
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(14);
+        pdf.text(themeHeader, margin, 20);
+        
+        // Date
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.text(`Report Date: ${dateStr}`, pageWidth - margin, 20, { align: "right" });
+        
+        // Accent line
+        pdf.setDrawColor(lineColor[0], lineColor[1], lineColor[2]); 
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, 23, pageWidth - margin, 23);
+      };
+      
+      const disclaimerText = "This report is only for information purpose and does not provide any diagnosis or treatment. There may be many other risk factors that must be considered for a complete assessment of your health. Please consult your healthcare provider to discuss your results and any questions you may have about your wellness.";
+      
+      const drawFooter = (page: number) => {
+        pdf.setPage(page);
+        pdf.setTextColor(150, 150, 150);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7);
+        const splitDisclaimer = pdf.splitTextToSize(disclaimerText, contentWidth - 20);
+        pdf.text(splitDisclaimer, margin, pageHeight - 20);
+        
+        pdf.setFontSize(9);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text(`Page ${page}`, pageWidth - margin, pageHeight - 10, { align: "right" });
+      };
 
-      // 3. Divider
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, 85, pageWidth - margin, 85);
-
-      // 4. Summary Title
-      pdf.setTextColor(15, 23, 42);
+      drawHeader();
+      
+      // Title
+      pdf.setTextColor(titleColor[0], titleColor[1], titleColor[2]); 
       pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(14);
-      pdf.text("AI Diagnostic Summary", margin, 100);
-
-      // 5. Summary Content & Footer
+      pdf.setFontSize(24);
+      pdf.text(themeTitle, margin, cursorY);
+      cursorY += 15;
+      
       const rawText = resultData.explanation || "";
       const processText = rawText
-        .replace(/^\*\s/gm, "- ") // Convert bullet point * to -
-        .replace(/\*\*/g, "*") // Convert all ** to * so we can split by * uniformly
-        .replace(/#{1,6}\s?(.*?)\n/g, "$1\n") // Remove headings
-        .replace(/`/g, "") // Remove inline code
-        .replace(/\[(.*?)\]\(.*?\)/g, "$1"); // Remove links
+        .replace(/^\*\s/gm, "- ") 
+        .replace(/\*\*/g, "*") 
+        .replace(/#{1,6}\s?(.*?)\n/g, "$1\n") 
+        .replace(/`/g, "") 
+        .replace(/\[(.*?)\]\(.*?\)/g, "$1"); 
 
-      pdf.setFontSize(11);
-      pdf.setTextColor(60, 60, 60);
-      
-      let cursorY = 110;
-      let cursorX = margin;
-      const lineHeight = 6;
-      const dateStr = new Date().toLocaleDateString();
-      
-      const paragraphs = processText.split('\n');
+      const paragraphs = processText.split('\n').filter((p: string) => p.trim() !== '');
+      let isAltBg = true;
+      const lineHeight = 5.5;
       
       paragraphs.forEach((paragraph: string) => {
-        if (!paragraph.trim()) {
-           cursorY += lineHeight;
-           if (cursorY > pageHeight - 25) {
-             pdf.setFont("helvetica", "normal");
-             pdf.setFontSize(9);
-             pdf.setTextColor(150, 150, 150);
-             pdf.text(`Generated by ZEZE Engine on ${dateStr}`, margin, pageHeight - 15);
-             pdf.addPage();
-             cursorY = 20;
-           }
-           return;
-        }
-        
         const segments = paragraph.split('*');
+        let tempCursorX = margin + 3;
+        let tempCursorY = cursorY + 6;
         
+        // 1. Calculate height of this block
         segments.forEach((segment: string, index: number) => {
           const isBold = index % 2 === 1;
           pdf.setFont("helvetica", isBold ? "bold" : "normal");
-          pdf.setFontSize(11);
-          pdf.setTextColor(60, 60, 60);
+          pdf.setFontSize(10);
           
           const words = segment.split(/(\s+)/);
-          
           words.forEach((word: string) => {
             if (!word) return;
             const wordWidth = pdf.getTextWidth(word);
-            
-            if (cursorX + wordWidth > pageWidth - margin) {
-              if (word.trim() === "") return; // Skip space at line break
-              cursorX = margin;
-              cursorY += lineHeight;
-              
-              if (cursorY > pageHeight - 25) {
-                pdf.setFont("helvetica", "normal");
-                pdf.setFontSize(9);
-                pdf.setTextColor(150, 150, 150);
-                pdf.text(`Generated by ZEZE Engine on ${dateStr}`, margin, pageHeight - 15);
-                pdf.addPage();
-                cursorY = 20;
-                pdf.setFontSize(11);
-                pdf.setTextColor(60, 60, 60);
-                pdf.setFont("helvetica", isBold ? "bold" : "normal");
-              }
+            if (tempCursorX + wordWidth > pageWidth - margin - 3) {
+              if (word.trim() === "") return;
+              tempCursorX = margin + 3;
+              tempCursorY += lineHeight;
             }
-            
-            if (word.trim() !== "" || cursorX > margin) {
-              pdf.text(word, cursorX, cursorY);
-              cursorX += wordWidth;
+            if (word.trim() !== "" || tempCursorX > margin + 3) {
+              tempCursorX += wordWidth;
             }
           });
         });
         
-        cursorX = margin;
-        cursorY += lineHeight + 2; 
+        const blockHeight = tempCursorY - cursorY + 5;
         
-        if (cursorY > pageHeight - 25) {
-            pdf.setFont("helvetica", "normal");
-            pdf.setFontSize(9);
-            pdf.setTextColor(150, 150, 150);
-            pdf.text(`Generated by ZEZE Engine on ${dateStr}`, margin, pageHeight - 15);
-            pdf.addPage();
-            cursorY = 20;
+        // Add page if needed
+        if (cursorY + blockHeight > pageHeight - 35) {
+          pdf.addPage();
+          pageNum++;
+          drawHeader();
+          cursorY = 35;
         }
+        
+        // Draw background box or separator based on role
+        if (role === 'researcher') {
+          if (!isAltBg) { // Add subtle separator line for researchers instead of boxes
+            pdf.setDrawColor(226, 232, 240); // slate-200
+            pdf.setLineWidth(0.2);
+            pdf.line(margin, cursorY - 2, pageWidth - margin, cursorY - 2);
+          }
+        } else {
+          if (isAltBg) {
+            if (role === 'practitioner') {
+              pdf.setFillColor(240, 253, 250); // Teal 50
+            } else {
+              pdf.setFillColor(245, 250, 255); // VERY light blue (Patient)
+            }
+            pdf.rect(margin, cursorY, contentWidth, blockHeight, "F");
+          }
+        }
+        
+        // 2. Draw actual text
+        let writeCursorX = margin + 3;
+        let writeCursorY = cursorY + 6;
+        
+        segments.forEach((segment: string, index: number) => {
+          const isBold = index % 2 === 1;
+          pdf.setFont("helvetica", isBold ? "bold" : "normal");
+          pdf.setFontSize(10);
+          pdf.setTextColor(40, 40, 40);
+          
+          const words = segment.split(/(\s+)/);
+          words.forEach((word: string) => {
+            if (!word) return;
+            const wordWidth = pdf.getTextWidth(word);
+            if (writeCursorX + wordWidth > pageWidth - margin - 3) {
+              if (word.trim() === "") return;
+              writeCursorX = margin + 3;
+              writeCursorY += lineHeight;
+            }
+            if (word.trim() !== "" || writeCursorX > margin + 3) {
+              pdf.text(word, writeCursorX, writeCursorY);
+              writeCursorX += wordWidth;
+            }
+          });
+        });
+        
+        cursorY += blockHeight + 3;
+        isAltBg = !isAltBg;
       });
       
-      // 6. Footer (for the final page)
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(9);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`Generated by ZEZE Engine on ${dateStr}`, margin, pageHeight - 15);
-
+      // Draw footers on all pages
+      for (let i = 1; i <= pageNum; i++) {
+        drawFooter(i);
+      }
+      
       pdf.save("ZEZE_Clinical_Report.pdf");
     } catch (err) {
       console.error("Failed to generate PDF", err);
@@ -231,83 +266,67 @@ export default function ResultDashboard() {
       <div className="bubble w-[300px] h-[300px] left-[5%]" style={{ animationDuration: '28s', animationDelay: '2s' }}></div>
       <div className="bubble w-[200px] h-[200px] right-[10%]" style={{ animationDuration: '20s', animationDelay: '6s' }}></div>
 
-      <div className="max-w-7xl mx-auto relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-8 items-start px-2 sm:px-0">
+      <div className="w-full mx-auto relative z-10 px-0">
         
         {/* REPORT SECTION (Printable) */}
         <div 
           ref={reportRef} 
-          className="lg:col-span-7 flex flex-col space-y-4 md:space-y-6 rounded-3xl"
+          className="w-full flex flex-col mb-24 bg-white/95 min-h-screen border-t-8 border-brand-900"
         >
-          <div className="backdrop-blur-[64px] bg-white/20 p-4 md:p-8 rounded-3xl md:rounded-[2rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center text-center relative overflow-hidden">
+          <div className="w-full max-w-6xl mx-auto p-4 md:p-12 lg:p-16 flex flex-col relative">
             
             {/* Color Accent */}
-            <div className={`absolute top-0 left-0 w-full h-2 ${isHighRisk ? 'bg-red-400' : 'bg-green-400'} opacity-70`}></div>
+            <div className={`absolute top-0 left-0 w-full h-2 ${isHighRisk ? 'bg-red-500' : 'bg-green-500'}`}></div>
 
             <div className="flex justify-between w-full items-center mb-8">
-              <Link href="/" className="text-xs md:text-sm font-bold text-brand-900 border border-brand-900/20 px-4 py-2 rounded-full hover:bg-brand-900 hover:text-white transition-colors">
-                ← New Patient
-              </Link>
+              <div className="flex gap-2">
+                <Link href="/" onClick={() => sessionStorage.removeItem('zeze_form_data')} className="text-xs md:text-sm font-bold text-brand-900 border border-brand-900/20 px-4 py-2 hover:bg-brand-900 hover:text-white transition-colors">
+                  ← Start Over
+                </Link>
+                <Link href={`/assessment?mode=manual&role=${resultData.payload?.role || 'patient'}`} className="text-xs md:text-sm font-bold text-brand-900 bg-brand-900/10 px-4 py-2 hover:bg-brand-900 hover:text-white transition-colors">
+                  Modify Inputs (What-If)
+                </Link>
+              </div>
               <button 
                 id="pdf-btn" 
                 onClick={handleDownloadPDF}
-                className="text-xs md:text-sm font-bold flex items-center gap-2 text-white bg-brand-900 px-4 py-2 rounded-full hover:bg-black transition-colors"
+                className="text-xs md:text-sm font-bold flex items-center gap-2 text-white bg-brand-900 px-6 py-2 hover:bg-brand-700 transition-colors"
               >
                 Download PDF
               </button>
             </div>
-            
-            <img src="/icon.webp" alt="ZEZE Logo" className="w-16 h-16 md:w-20 md:h-20 mb-3 drop-shadow-lg" />
-
-            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
-            <p className="text-brand-900/60 font-medium mb-4 md:mb-6 tracking-widest uppercase text-[10px] md:text-sm">Zero Error Zonal Evaluation Model</p>
-
-            {/* Donut Chart */}
-            <div className="relative w-48 h-48 md:w-56 md:h-56 mb-4 md:mb-6">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                <path
-                  className="text-brand-900/10"
-                  strokeWidth="3"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-                <path
-                  className={`${isHighRisk ? 'text-red-500' : 'text-green-500'} transition-all duration-1000 ease-out`}
-                  strokeDasharray={strokeDash}
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  stroke="currentColor"
-                  fill="none"
-                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl md:text-6xl font-black text-brand-900 tracking-tighter">{probPercent}%</span>
-                <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase text-brand-900/50 mt-1">Probability</span>
+            <div className="flex items-center gap-6 mb-12 border-b border-brand-900/10 pb-8">
+              <img src="/icon.webp" alt="ZEZE Logo" className="w-20 h-20 md:w-24 md:h-24 drop-shadow-md" />
+              <div>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tight text-brand-900 mb-2">Clinical Results Dashboard</h1>
+                <p className="text-brand-900/70 font-bold tracking-widest uppercase text-xs md:text-sm">Zero Error Zonal Evaluation Model</p>
               </div>
             </div>
 
-            <div className={`px-4 md:px-6 py-2 rounded-full border mb-4 md:mb-6 font-bold tracking-widest uppercase text-xs md:text-sm ${isHighRisk ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
-              Risk Classification: {resultData.risk}
-            </div>
-
-            <div className="bg-white/40 p-5 md:p-8 rounded-2xl w-full border border-white/60 prose prose-sm md:prose-base text-left max-w-none text-brand-900 shadow-xl backdrop-blur-xl">
-              <h3 className="text-lg md:text-xl font-black mb-3 md:mb-4 tracking-tight border-b border-brand-900/10 pb-3 md:pb-4">AI Diagnostic Summary</h3>
-              <div className="prose prose-sm md:prose-base max-w-none text-brand-900 prose-strong:text-brand-900 prose-strong:font-black prose-p:leading-relaxed">
-                <ReactMarkdown>{resultData.explanation}</ReactMarkdown>
-              </div>
-            </div>
+            <ResultCard 
+              risk={resultData.risk}
+              probability={resultData.probability}
+              explanation={resultData.explanation}
+              role={resultData.payload?.role || 'patient'}
+              feature_impacts={resultData.feature_impacts}
+              payload={resultData.payload}
+            />
           </div>
         </div>
 
-        {/* CHAT SECTION */}
-        <div className="lg:col-span-5 flex flex-col backdrop-blur-[64px] bg-brand-900/90 rounded-3xl md:rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[70vh] md:h-[85vh] lg:h-[90vh] lg:sticky lg:top-4 mt-4 lg:mt-0">
-          <div className="p-4 md:p-6 border-b border-brand-100/10 shrink-0">
-            <h2 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-              Clinical Assistant
-            </h2>
-            <p className="text-xs text-brand-100/60 mt-1 uppercase tracking-widest">Ask about your results</p>
+        {/* FLOATING CHAT SECTION */}
+        <div className={`fixed bottom-24 right-4 md:right-8 w-[90%] md:w-[400px] flex flex-col backdrop-blur-[64px] bg-brand-900/95 rounded-3xl md:rounded-[2rem] border border-white/20 shadow-2xl overflow-hidden text-brand-100 h-[500px] max-h-[70vh] z-50 transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+          <div className="p-4 md:p-6 border-b border-brand-100/10 shrink-0 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg md:text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                Clinical Assistant
+              </h2>
+              <p className="text-[10px] md:text-xs text-brand-100/60 mt-1 uppercase tracking-widest">Ask about your results</p>
+            </div>
+            <button onClick={() => setIsChatOpen(false)} className="text-white/60 hover:text-white transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
           </div>
 
           <div className="flex-1 p-6 overflow-y-auto space-y-4 no-scrollbar">
@@ -346,6 +365,18 @@ export default function ResultDashboard() {
             </button>
           </form>
         </div>
+
+        {/* FLOATING ACTION BUTTON */}
+        <button 
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className={`fixed bottom-6 right-4 md:right-8 z-50 w-14 h-14 md:w-16 md:h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 ${isChatOpen ? 'bg-red-500 text-white rotate-90 hover:bg-red-600' : 'bg-brand-900 text-white hover:bg-black hover:scale-110'}`}
+        >
+          {isChatOpen ? (
+            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+          ) : (
+            <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+          )}
+        </button>
 
       </div>
     </main>

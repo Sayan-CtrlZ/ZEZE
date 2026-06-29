@@ -30,6 +30,25 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
     exang: '', oldpeak: '', slope: '', ca: '', thal: '', symptoms: ''
   });
   
+  const loadPreset = (preset: 'high' | 'atypical' | 'low') => {
+    if (preset === 'high') {
+      setFormData({
+        age: 65, sex: 1, cp: 0, trestbps: 145, chol: 260, fbs: 1, restecg: 1, thalach: 130,
+        exang: 1, oldpeak: 2.5, slope: 1, ca: 2, thal: 3, symptoms: "Patient experiences tightness in chest when climbing stairs. Feels out of breath easily."
+      });
+    } else if (preset === 'atypical') {
+      setFormData({
+        age: 58, sex: 0, cp: 1, trestbps: 130, chol: 240, fbs: 0, restecg: 0, thalach: 155,
+        exang: 0, oldpeak: 0.5, slope: 0, ca: 0, thal: 1, symptoms: "Patient reports general fatigue and occasional sharp pains that don't seem related to exercise."
+      });
+    } else if (preset === 'low') {
+      setFormData({
+        age: 45, sex: 1, cp: 3, trestbps: 120, chol: 180, fbs: 0, restecg: 0, thalach: 170,
+        exang: 0, oldpeak: 0.0, slope: 0, ca: 0, thal: 1, symptoms: "Routine checkup. No reported symptoms."
+      });
+    }
+  };
+  
   const [parseError, setParseError] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<FileList | File[] | null>(null);
 
@@ -177,9 +196,20 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full">
-          {/* Left Column: Essential Clinic Metrics */}
-          <div className="lg:col-span-8 flex flex-col justify-between space-y-6">
+        <div className="flex flex-col w-full">
+          {/* Pedagogical Quick Fill */}
+          <div className="w-full mb-8 flex flex-col md:flex-row items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white/60">
+            <span className="text-xs font-bold tracking-widest text-brand-900 uppercase">Case Studies:</span>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => loadPreset('high')} className="px-3 py-1.5 text-xs font-bold bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors">Classic High-Risk</button>
+              <button type="button" onClick={() => loadPreset('atypical')} className="px-3 py-1.5 text-xs font-bold bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors">Atypical Female</button>
+              <button type="button" onClick={() => loadPreset('low')} className="px-3 py-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">Asymptomatic Low-Risk</button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full">
+            {/* Left Column: Essential Clinic Metrics */}
+            <div className="lg:col-span-8 flex flex-col justify-between space-y-6">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
                 <label className={labelClasses}>Age limit</label>
@@ -315,6 +345,7 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
                 ) : "Predict Risk"}
               </button>
             </div>
+          </div>
           </div>
         </div>
       )}

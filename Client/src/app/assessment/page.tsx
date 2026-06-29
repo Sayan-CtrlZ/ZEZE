@@ -9,6 +9,7 @@ function AssessmentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mode = (searchParams.get("mode") as "upload" | "manual") || "upload";
+  const role = searchParams.get("role") || "patient";
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -18,9 +19,9 @@ function AssessmentContent() {
     setError("");
 
     try {
-      const payload: any = { ...data };
+      const payload: any = { ...data, role };
       Object.keys(payload).forEach(key => {
-        if (key !== 'symptoms' && payload[key] === '') payload[key] = 0;
+        if (key !== 'symptoms' && key !== 'role' && payload[key] === '') payload[key] = 0;
       });
 
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/predict`;
@@ -63,6 +64,7 @@ function AssessmentContent() {
       if (symptoms) {
         uploadData.append("symptoms", symptoms);
       }
+      uploadData.append("role", role);
 
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/predict-document`;
 
@@ -83,7 +85,7 @@ function AssessmentContent() {
       const responseData = await response.json();
       
       // Store the result seamlessly in browser session to pass to the next page
-      sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload: { symptoms } }));
+      sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload: { symptoms, role } }));
 
       // Route successfully to the dashboard
       router.push('/result');
