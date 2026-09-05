@@ -185,8 +185,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "100%", color: "#9333ea" }, // Deep Violet / Electric Purple
         ],
         filter: "drop-shadow(0px 4px 16px rgba(220, 38, 38, 0.45))",
-        textGradient: "from-rose-500 via-red-600 to-purple-600",
-        badgeClass: "text-rose-700 bg-rose-50 border border-rose-200",
+        textGradientStyle: "linear-gradient(135deg, #f43f5e 0%, #dc2626 50%, #9333ea 100%)",
+        badgeBg: "#ffe4e6",
+        badgeText: "#be123c",
+        badgeBorder: "#fecdd3",
         label: "High Risk",
       };
     } else if (probability >= 65) {
@@ -198,8 +200,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "100%", color: "#e11d48" }, // Crimson
         ],
         filter: "drop-shadow(0px 4px 14px rgba(244, 63, 94, 0.42))",
-        textGradient: "from-amber-500 to-rose-600",
-        badgeClass: "text-rose-700 bg-rose-50 border border-rose-200",
+        textGradientStyle: "linear-gradient(135deg, #f59e0b 0%, #e11d48 100%)",
+        badgeBg: "#ffe4e6",
+        badgeText: "#be123c",
+        badgeBorder: "#fecdd3",
         label: "High Risk",
       };
     } else if (probability >= 45) {
@@ -211,8 +215,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "100%", color: "#ea580c" }, // Deep Orange
         ],
         filter: "drop-shadow(0px 4px 14px rgba(245, 158, 11, 0.42))",
-        textGradient: "from-amber-500 to-orange-600",
-        badgeClass: "text-amber-800 bg-amber-50 border border-amber-200",
+        textGradientStyle: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+        badgeBg: "#fef3c7",
+        badgeText: "#92400e",
+        badgeBorder: "#fde68a",
         label: "Moderate Risk",
       };
     } else if (probability >= 25) {
@@ -224,8 +230,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "100%", color: "#059669" }, // Emerald
         ],
         filter: "drop-shadow(0px 4px 14px rgba(16, 185, 129, 0.38))",
-        textGradient: "from-teal-500 to-emerald-600",
-        badgeClass: "text-teal-800 bg-teal-50 border border-teal-200",
+        textGradientStyle: "linear-gradient(135deg, #0d9488 0%, #059669 100%)",
+        badgeBg: "#dcfce7",
+        badgeText: "#166534",
+        badgeBorder: "#bbf7d0",
         label: "Mild Risk",
       };
     } else {
@@ -237,8 +245,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "100%", color: "#10b981" }, // Bright Emerald
         ],
         filter: "drop-shadow(0px 4px 14px rgba(56, 189, 248, 0.38))",
-        textGradient: "from-sky-500 to-teal-600",
-        badgeClass: "text-emerald-800 bg-emerald-50 border border-emerald-200",
+        textGradientStyle: "linear-gradient(135deg, #0284c7 0%, #0d9488 100%)",
+        badgeBg: "#dcfce7",
+        badgeText: "#166534",
+        badgeBorder: "#bbf7d0",
         label: "Low Risk",
       };
     }
@@ -255,18 +265,16 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: ap_hi >= 140 ? 2.4 : ap_hi >= 130 ? 1.5 : -0.4,
         isRisk: ap_hi >= 130,
         label: ap_hi >= 140 ? 'Primary Risk Contributor' : ap_hi >= 130 ? 'Elevated Contributor' : 'Optimal Hemodynamics',
-        badgeClass: ap_hi >= 140 
-          ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-rose-600 shadow-sm font-black' 
+        badgeBg: ap_hi >= 140 ? '#1d4ed8' : ap_hi >= 130 ? '#2563eb' : '#eff6ff',
+        badgeColor: ap_hi >= 130 ? '#ffffff' : '#1e40af',
+        badgeBorder: ap_hi >= 140 ? '#1e3a8a' : ap_hi >= 130 ? '#1d4ed8' : '#bfdbfe',
+        metricBadgeClass: 'bg-blue-50 text-blue-900 border-blue-200',
+        barBackground: ap_hi >= 140 
+          ? 'linear-gradient(90deg, #3b82f6 0%, #1d4ed8 50%, #0f2b5c 100%)' 
           : ap_hi >= 130 
-          ? 'bg-amber-500 text-white border-amber-600 font-black' 
-          : 'bg-blue-100 text-blue-900 border-blue-300 font-black',
-        metricBadgeClass: ap_hi >= 130 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50/90 text-blue-900 border-blue-200',
-        pillGradient: ap_hi >= 140 
-          ? 'from-[#fca5a5] via-[#f87171] to-[#ef4444]' 
-          : ap_hi >= 130 
-          ? 'from-[#fcd34d] to-[#f59e0b]' 
-          : 'from-[#60a5fa] to-[#2563eb]',
-        dotColor: ap_hi >= 140 ? '#f43f5e' : ap_hi >= 130 ? '#f59e0b' : '#2563eb',
+          ? 'linear-gradient(90deg, #60a5fa 0%, #2563eb 100%)' 
+          : 'linear-gradient(90deg, #93c5fd 0%, #3b82f6 100%)',
+        dotColor: '#1d4ed8',
         explanation: 'Elevated arterial pressure exerts high pulsatile mechanical shear stress against arterial walls, driving cardiac afterload.',
         fillPercent: Math.min(Math.max(((ap_hi - 90) / 90) * 100, 30), 96)
       },
@@ -278,17 +286,15 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: cholTier === 3 ? 1.4 : cholTier === 2 ? 0.7 : -0.5,
         isRisk: cholTier > 1,
         label: cholTier === 3 ? 'High Atherogenic Burden' : cholTier === 2 ? 'Moderate Contributor' : 'Protective Baseline',
-        badgeClass: cholTier === 3 
-          ? 'bg-amber-500 text-amber-950 border-amber-600 shadow-sm font-black' 
-          : cholTier === 2 
-          ? 'bg-amber-100 text-amber-900 border-amber-300 font-black' 
-          : 'bg-emerald-100 text-emerald-900 border-emerald-300 font-black',
+        badgeBg: cholTier === 3 ? '#d97706' : cholTier === 2 ? '#fef3c7' : '#d1fae5',
+        badgeColor: cholTier === 3 ? '#ffffff' : cholTier === 2 ? '#78350f' : '#065f46',
+        badgeBorder: cholTier === 3 ? '#b45309' : cholTier === 2 ? '#fde68a' : '#a7f3d0',
         metricBadgeClass: cholTier === 3 ? 'bg-amber-100 text-amber-950 border-amber-300' : cholTier === 2 ? 'bg-yellow-50 text-amber-900 border-yellow-300' : 'bg-emerald-50 text-emerald-900 border-emerald-200',
-        pillGradient: cholTier === 3 
-          ? 'from-[#f59e0b] to-[#b45309]' 
+        barBackground: cholTier === 3 
+          ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 50%, #b45309 100%)' 
           : cholTier === 2 
-          ? 'from-[#fbbf24] to-[#d97706]' 
-          : 'from-[#34d399] to-[#059669]',
+          ? 'linear-gradient(90deg, #fbbf24 0%, #d97706 100%)' 
+          : 'linear-gradient(90deg, #34d399 0%, #059669 100%)',
         dotColor: '#d97706',
         explanation: 'Circulating atherogenic lipoproteins infiltrate vascular subendothelial spaces to form fibrous plaques.',
         fillPercent: cholTier === 3 ? 90 : cholTier === 2 ? 65 : 25
@@ -301,10 +307,12 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: ageVal >= 60 ? 1.2 : ageVal >= 50 ? 0.6 : -0.3,
         isRisk: ageVal >= 50,
         label: 'Baseline Non-Modifiable Factor',
-        badgeClass: 'bg-indigo-100 text-indigo-950 border-indigo-200 font-black',
-        metricBadgeClass: 'bg-indigo-50/90 text-indigo-900 border-indigo-200',
-        pillGradient: 'from-[#818cf8] to-[#4f46e5]',
-        dotColor: '#4f46e5',
+        badgeBg: '#ccfbf1',
+        badgeColor: '#115e59',
+        badgeBorder: '#99f6e4',
+        metricBadgeClass: 'bg-teal-50 text-teal-900 border-teal-200',
+        barBackground: 'linear-gradient(90deg, #2dd4bf 0%, #0d9488 50%, #115e59 100%)',
+        dotColor: '#0d9488',
         explanation: 'Cumulative physiological arterial stiffness that naturally increases over decades, forming baseline susceptibility.',
         fillPercent: Math.min(Math.max(((ageVal - 20) / 60) * 100, 20), 95)
       },
@@ -316,13 +324,13 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: isSmoker ? 1.1 : -0.6,
         isRisk: isSmoker,
         label: isSmoker ? 'Major Modifiable Risk' : 'Protective Factor',
-        badgeClass: isSmoker 
-          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-700 shadow-sm font-black' 
-          : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black',
+        badgeBg: isSmoker ? '#7c3aed' : '#d1fae5',
+        badgeColor: isSmoker ? '#ffffff' : '#065f46',
+        badgeBorder: isSmoker ? '#6d28d9' : '#a7f3d0',
         metricBadgeClass: isSmoker ? 'bg-purple-50 text-purple-800 border-purple-200' : 'bg-emerald-50 text-emerald-900 border-emerald-200',
-        pillGradient: isSmoker 
-          ? 'from-[#d8b4fe] via-[#a855f7] to-[#7c3aed]' 
-          : 'from-[#34d399] to-[#059669]',
+        barBackground: isSmoker 
+          ? 'linear-gradient(90deg, #d8b4fe 0%, #a855f7 45%, #7c3aed 100%)' 
+          : 'linear-gradient(90deg, #34d399 0%, #059669 100%)',
         dotColor: isSmoker ? '#9333ea' : '#059669',
         explanation: isSmoker ? 'Nicotine and carbon monoxide cause acute vasoconstriction, endothelial injury, and hypercoagulability.' : 'Absence of tobacco smoke preserves microvascular health.',
         fillPercent: isSmoker ? 88 : 15
@@ -335,17 +343,15 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: glucTier === 3 ? 1.3 : glucTier === 2 ? 0.5 : -0.4,
         isRisk: glucTier > 1,
         label: glucTier === 3 ? 'Elevated Glycemic Risk' : glucTier === 2 ? 'Borderline' : 'Normal Glycemia',
-        badgeClass: glucTier === 3 
-          ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-700 shadow-sm font-black' 
-          : glucTier === 2 
-          ? 'bg-lime-100 text-lime-900 border-lime-300 font-black' 
-          : 'bg-teal-100 text-teal-900 border-teal-300 font-black',
+        badgeBg: glucTier === 3 ? '#e11d48' : glucTier === 2 ? '#ecfccb' : '#ccfbf1',
+        badgeColor: glucTier === 3 ? '#ffffff' : glucTier === 2 ? '#365314' : '#134e4a',
+        badgeBorder: glucTier === 3 ? '#be123c' : glucTier === 2 ? '#d9f99d' : '#99f6e4',
         metricBadgeClass: glucTier === 3 ? 'bg-pink-50 text-pink-700 border-pink-200' : glucTier === 2 ? 'bg-lime-50 text-lime-900 border-lime-200' : 'bg-teal-50 text-teal-900 border-teal-200',
-        pillGradient: glucTier === 3 
-          ? 'from-[#f472b6] via-[#fb7185] to-[#e11d48]' 
+        barBackground: glucTier === 3 
+          ? 'linear-gradient(90deg, #f472b6 0%, #fb7185 45%, #e11d48 100%)' 
           : glucTier === 2 
-          ? 'from-[#fcd34d] to-[#f59e0b]' 
-          : 'from-[#22d3ee] to-[#0891b2]',
+          ? 'linear-gradient(90deg, #fcd34d 0%, #f59e0b 100%)' 
+          : 'linear-gradient(90deg, #22d3ee 0%, #0891b2 100%)',
         dotColor: glucTier === 3 ? '#db2777' : glucTier === 2 ? '#f59e0b' : '#0891b2',
         explanation: 'Chronic hyperglycemia causes advanced glycation end-products and microvascular capillary wall thickening.',
         fillPercent: glucTier === 3 ? 88 : glucTier === 2 ? 55 : 20
@@ -358,17 +364,15 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         weight: bmiNum >= 30 ? 0.8 : bmiNum >= 25 ? 0.4 : -0.2,
         isRisk: bmiNum >= 25,
         label: bmiNum >= 30 ? 'Obesity Category' : bmiNum >= 25 ? 'Overweight Category' : 'Normal Weight',
-        badgeClass: bmiNum >= 30 
-          ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white border-orange-700 shadow-sm font-black' 
-          : bmiNum >= 25 
-          ? 'bg-orange-100 text-orange-950 border-orange-300 font-black' 
-          : 'bg-sky-100 text-sky-900 border-sky-300 font-black',
+        badgeBg: bmiNum >= 30 ? '#ea580c' : bmiNum >= 25 ? '#ffedd5' : '#e0f2fe',
+        badgeColor: bmiNum >= 30 ? '#ffffff' : bmiNum >= 25 ? '#7c2d12' : '#0369a1',
+        badgeBorder: bmiNum >= 30 ? '#c2410c' : bmiNum >= 25 ? '#fed7aa' : '#bae6fd',
         metricBadgeClass: bmiNum >= 30 ? 'bg-orange-50 text-orange-800 border-orange-200' : bmiNum >= 25 ? 'bg-orange-50 text-orange-900 border-orange-200' : 'bg-sky-50 text-sky-900 border-sky-200',
-        pillGradient: bmiNum >= 30 
-          ? 'from-[#fdba74] via-[#fb923c] to-[#ea580c]' 
+        barBackground: bmiNum >= 30 
+          ? 'linear-gradient(90deg, #fdba74 0%, #fb923c 45%, #ea580c 100%)' 
           : bmiNum >= 25 
-          ? 'from-[#fed7aa] to-[#fb923c]' 
-          : 'from-[#38bdf8] to-[#0284c7]',
+          ? 'linear-gradient(90deg, #fed7aa 0%, #fb923c 100%)' 
+          : 'linear-gradient(90deg, #38bdf8 0%, #0284c7 100%)',
         dotColor: bmiNum >= 30 ? '#ea580c' : bmiNum >= 25 ? '#f97316' : '#0284c7',
         explanation: 'Excess visceral adiposity promotes systemic low-grade inflammation and insulin resistance.',
         fillPercent: Math.min(Math.max(((bmiNum - 18) / 22) * 100, 25), 95)
@@ -542,10 +546,24 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
 
               {/* Inner Raised Island Center */}
               <div className="w-[71%] h-[71%] rounded-full bg-[#e8ecf2] shadow-[6px_6px_14px_#b4c4d7,-6px_-6px_14px_#ffffff] z-10 flex flex-col items-center justify-center text-center select-none p-2 sm:p-3">
-                <span className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-br ${circleConfig.textGradient}`}>
+                <span 
+                  className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none"
+                  style={{
+                    backgroundImage: circleConfig.textGradientStyle,
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                  }}
+                >
                   {probability.toFixed(0)}%
                 </span>
-                <span className={`text-[9px] sm:text-[10.5px] font-black uppercase tracking-widest mt-1 sm:mt-1.5 px-2.5 py-0.5 rounded-full ${circleConfig.badgeClass}`}>
+                <span 
+                  className="text-[9px] sm:text-[10.5px] font-black uppercase tracking-widest mt-1 sm:mt-1.5 px-2.5 py-0.5 rounded-full border shadow-xs"
+                  style={{
+                    backgroundColor: circleConfig.badgeBg,
+                    color: circleConfig.badgeText,
+                    borderColor: circleConfig.badgeBorder
+                  }}
+                >
                   {circleConfig.label}
                 </span>
                 <span className="text-[8.5px] sm:text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">
@@ -600,7 +618,14 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   <span className="text-[10px] sm:text-xs font-black text-slate-700 bg-white px-2 sm:px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm">
                     {Math.round(driver.fillPercent)}% impact
                   </span>
-                  <span className={`text-[10px] sm:text-xs font-black px-2.5 sm:px-3 py-0.5 rounded-full border shadow-sm ${driver.badgeClass}`}>
+                  <span 
+                    className="text-[10px] sm:text-xs font-black px-2.5 sm:px-3 py-0.5 rounded-full border shadow-sm"
+                    style={{
+                      backgroundColor: driver.badgeBg,
+                      color: driver.badgeColor,
+                      borderColor: driver.badgeBorder
+                    }}
+                  >
                     {driver.label}
                   </span>
                 </div>
@@ -609,8 +634,11 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
               {/* Pure Soft Neumorphic Inset Cutout Track */}
               <div className="relative w-full h-4 sm:h-6 rounded-full bg-[#edf3f9] shadow-[inset_3px_3px_6px_#c2d2e4,inset_-3px_-3px_6px_#ffffff] p-1 overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r ${driver.pillGradient} shadow-[0_1px_3px_rgba(0,0,0,0.14),inset_1px_1px_2px_rgba(255,255,255,0.4)]`}
-                  style={{ width: `${driver.fillPercent}%` }}
+                  className="h-full rounded-full transition-all duration-700 ease-out shadow-[0_1px_3px_rgba(0,0,0,0.14),inset_1px_1px_2px_rgba(255,255,255,0.4)]"
+                  style={{ 
+                    width: `${driver.fillPercent}%`,
+                    background: driver.barBackground 
+                  }}
                 />
               </div>
 
