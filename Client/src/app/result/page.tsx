@@ -25,6 +25,7 @@ export default function ResultDashboard() {
   const [resultData, setResultData] = useState<ResultPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const reportRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -32,9 +33,48 @@ export default function ResultDashboard() {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
+    if (isChatOpen) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isChatLoading, isChatOpen]);
+
+  useEffect(() => {
     const data = sessionStorage.getItem("zeze_result");
     if (!data) {
-      router.push("/");
+      const demoData = {
+        risk: "High",
+        probability: 84.8,
+        explanation: `**Key Findings**:
+- **Heart Health Score**: Your cardiovascular evaluation places you in the **High Risk** zone (84.8% risk likelihood).
+- **Blood Pressure**: 140/90 mmHg, categorized as **Stage 2 Hypertension**.
+- **Body Weight & BMI**: Your Body Mass Index is **26.8 kg/m²** (Overweight).
+- **Cholesterol & Sugar**: Cholesterol is **Borderline Elevated (Tier 2/3)**, and fasting glucose is **Normal (<100 mg/dL)**.
+
+**What This Means**:
+Your heart and arteries are currently experiencing elevated stress due to higher blood pressure and metabolic markers. Blood pressure and cholesterol work together over time; maintaining them within optimal ranges protects the blood vessels supplying your heart and brain.
+
+**Lifestyle & Prevention**:
+- **Target Optimal Blood Pressure**: Monitor your BP regularly and aim for a resting level below 120/80 mmHg.
+- **Heart-Healthy Nutrition**: Emphasize whole grains, leafy greens, healthy fats (olive oil, nuts), and reduce dietary sodium.
+- **Daily Physical Activity**: Aim for at least 150 minutes of moderate aerobic exercise (brisk walking, cycling, swimming) each week.
+- **Avoid Tobacco**: If you smoke, quitting is the single most rapid way to lower cardiovascular risk.`,
+        payload: {
+          age: 55,
+          sex: 1,
+          ap_hi: 140,
+          ap_lo: 90,
+          cholesterol: 2,
+          gluc: 1,
+          smoke: 0,
+          alco: 0,
+          active: 1,
+          height: 175,
+          weight: 82,
+          role: "clinician"
+        }
+      };
+      setResultData(demoData);
+      setLoading(false);
     } else {
       setResultData(JSON.parse(data));
       setLoading(false);
@@ -63,16 +103,21 @@ export default function ResultDashboard() {
       let titleColor = [23, 128, 93]; // Medical emerald green
       let lineColor = [167, 243, 208];
       
-      if (role === 'practitioner') {
-        themeTitle = "Medical Diagnostic Report";
-        themeHeader = "ZEZE Clinical System";
-        titleColor = [15, 118, 110];
-        lineColor = [20, 184, 166];
-      } else if (role === 'researcher') {
-        themeTitle = "Cardiovascular Risk Data Profile";
-        themeHeader = "ZEZE Research Analytics";
-        titleColor = [51, 65, 85];
-        lineColor = [148, 163, 184];
+      if (role === 'clinician' || role === 'practitioner') {
+        themeTitle = "Clinical Decision Support Report";
+        themeHeader = "ZEZE Clinical Decision System";
+        titleColor = [29, 78, 216];
+        lineColor = [191, 219, 254];
+      } else if (role === 'trainee' || role === 'student') {
+        themeTitle = "Supervised Learning & Educational Report";
+        themeHeader = "ZEZE Medical Education System";
+        titleColor = [126, 34, 206];
+        lineColor = [233, 213, 255];
+      } else {
+        themeTitle = "Cardiovascular Risk & Lifestyle Guidance";
+        themeHeader = "ZEZE Health Assessment";
+        titleColor = [23, 128, 93];
+        lineColor = [167, 243, 208];
       }
       
       let cursorY = 40;
@@ -206,23 +251,22 @@ export default function ResultDashboard() {
     }
   };
 
-  const handleChatSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() || !resultData) return;
+  const executeChat = async (promptText: string, currentHistory: ChatMessage[]) => {
+    if (!resultData || isChatLoading) return;
 
-    const newUserMsg: ChatMessage = { role: "user", parts: chatInput };
-    setMessages((prev) => [...prev, newUserMsg]);
-    setChatInput("");
+    const newUserMsg: ChatMessage = { role: "user", parts: promptText };
+    const updatedHistory = [...currentHistory, newUserMsg];
+    setMessages(updatedHistory);
     setIsChatLoading(true);
 
     try {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000";
       const apiUrl = `${baseUrl}/chat`;
       const contextString = `Risk: ${resultData.risk}, Probability: ${Number(resultData.probability).toFixed(1)}%, AI Note: ${resultData.explanation}`;
-      
+
       const payload = {
-        history: messages,
-        message: newUserMsg.parts,
+        history: currentHistory,
+        message: promptText,
         context: contextString
       };
 
@@ -244,6 +288,18 @@ export default function ResultDashboard() {
     }
   };
 
+  const handleChatSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim() || isChatLoading) return;
+    const text = chatInput.trim();
+    setChatInput("");
+    await executeChat(text, messages);
+  };
+
+  const handleSendPrompt = async (promptText: string) => {
+    await executeChat(promptText, messages);
+  };
+
   if (loading || !resultData) return (
     <div className="min-h-screen flex items-center justify-center font-black tracking-widest uppercase text-slate-800 bg-[#e8ecf2]">
       Loading Report...
@@ -253,55 +309,57 @@ export default function ResultDashboard() {
   const probPercent = Number(resultData.probability).toFixed(1);
 
   return (
-    <main className="min-h-screen relative p-3 sm:p-6 lg:p-8 overflow-y-auto bg-[#e8ecf2]">
-      <div className="w-full max-w-7xl 2xl:max-w-[1400px] mx-auto relative z-10 px-1 sm:px-2">
+    <main className="min-h-screen relative px-2 sm:px-4 lg:px-6 xl:px-8 pt-2 sm:pt-3 pb-16 overflow-y-auto bg-[#e8ecf2]">
+      <div className="w-full max-w-[1720px] mx-auto relative z-10 px-1 sm:px-2">
         
-        {/* Main Neumorphic Card Surface (Master Card stretched horizontally) */}
+        {/* Main Dashboard Layout Container */}
         <div 
           ref={reportRef} 
-          className="w-full neu-flat-lg rounded-3xl p-6 sm:p-10 lg:p-14 mb-20 bg-[#e8ecf2]"
+          className="w-full mb-16 space-y-6 sm:space-y-8"
         >
-          {/* Top Bar: Action Buttons */}
-          <div className="flex flex-wrap justify-between items-center gap-3 mb-8 pb-6 border-b border-slate-300/60">
-            <div className="flex flex-wrap gap-2.5">
-              <Link 
-                href="/" 
-                onClick={() => sessionStorage.removeItem('zeze_form_data')} 
-                className="neu-button text-xs sm:text-sm font-black text-slate-800 px-4 py-2.5 rounded-xl hover:text-[#17805d]"
-              >
-                ← Start Over
-              </Link>
-              <Link 
-                href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
-                className="neu-button text-xs sm:text-sm font-black text-[#2563eb] px-4 py-2.5 rounded-xl"
-              >
-                Modify Inputs (What-If)
-              </Link>
+          {/* Top Nav: Moved higher up with minimal top margin */}
+          <div className="flex items-center gap-3 pt-0.5 pb-1">
+            <Link 
+              href="/" 
+              onClick={() => sessionStorage.removeItem('zeze_form_data')} 
+              className="neu-button text-xs font-black text-slate-800 px-3.5 py-1.5 rounded-lg hover:text-[#17805d] transition-colors"
+            >
+              ← Start Over
+            </Link>
+            <span className="text-slate-400 font-bold">•</span>
+            <Link 
+              href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
+              className="neu-button text-xs font-black text-blue-600 px-3.5 py-1.5 rounded-lg hover:text-blue-800 transition-colors"
+            >
+              Modify Inputs (What-If)
+            </Link>
+          </div>
+
+          {/* Header Title with Logo Medallion & Aligned Contrasting Download PDF Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
+            <div className="flex items-center gap-4 sm:gap-5">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
+                <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+                  Clinical Results Dashboard
+                </h1>
+                <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[11px] sm:text-xs mt-0.5">
+                  Zero Error Zonal Evaluation Model
+                </p>
+              </div>
             </div>
-            
+
+            {/* 3D Structured Download PDF Report Button (matching home screen 3D theme) */}
             <button 
               id="pdf-btn" 
               onClick={handleDownloadPDF}
-              className="neu-button-green text-xs sm:text-sm font-black flex items-center gap-2 px-6 py-2.5 rounded-xl uppercase tracking-wider cursor-pointer shadow-md"
+              className="neu-button-3d text-xs sm:text-sm font-black flex items-center gap-2.5 px-6 py-3 rounded-xl uppercase tracking-wider cursor-pointer self-start sm:self-auto shrink-0 shadow-lg"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
               Download PDF Report
             </button>
-          </div>
-
-          {/* Header Title with Logo Medallion */}
-          <div className="flex items-center gap-5 sm:gap-6 mb-10">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-flat flex items-center justify-center p-2.5 shrink-0">
-              <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
-                Clinical Results Dashboard
-              </h1>
-              <p className="text-slate-500 font-extrabold tracking-widest uppercase text-xs sm:text-sm mt-1">
-                Zero Error Zonal Evaluation Model
-              </p>
-            </div>
           </div>
 
           {/* Result Card Component */}
@@ -315,75 +373,225 @@ export default function ResultDashboard() {
           />
         </div>
 
-        {/* 3D NEUMORPHIC FLOATING CHAT DRAWER */}
-        <div className={`fixed bottom-24 right-4 sm:right-8 w-[92%] sm:w-[420px] flex flex-col neu-flat-lg rounded-3xl overflow-hidden h-[520px] max-h-[75vh] z-50 transition-all duration-300 transform origin-bottom-right bg-[#e8ecf2] ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
-          <div className="p-4 sm:p-5 neu-convex border-b border-slate-300/60 shrink-0 flex justify-between items-center">
-            <div>
-              <h2 className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d] animate-pulse"></span>
-                Clinical Assistant
-              </h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Ask questions about your risk score</p>
+        {/* MODERN CLINICAL AI BOT DRAWER */}
+        <div className={`fixed bottom-20 sm:bottom-24 right-2 sm:right-6 md:right-8 w-[95%] sm:w-[540px] md:w-[600px] lg:w-[640px] flex flex-col bg-white border-2 border-slate-200/90 rounded-3xl shadow-[0_25px_70px_rgba(15,23,42,0.22)] overflow-hidden h-[680px] max-h-[85vh] z-50 transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+          {/* Header */}
+          <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-white tracking-tight">Clinical AI Assistant</h2>
+                  <span className="flex items-center gap-1 text-[10px] font-semibold bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Online
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 font-medium">Evidence-based cardiovascular decision support</p>
+              </div>
             </div>
-            <button 
-              onClick={() => setIsChatOpen(false)} 
-              className="neu-button w-8 h-8 rounded-full flex items-center justify-center text-slate-700 hover:text-slate-900"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
+
+            <div className="flex items-center gap-1">
+              {messages.length > 0 && (
+                <button
+                  onClick={() => setMessages([])}
+                  title="Clear conversation"
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+              <button 
+                onClick={() => setIsChatOpen(false)} 
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Close chat"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 p-5 overflow-y-auto space-y-4">
-            <div className="neu-inset p-4 rounded-2xl rounded-tl-none text-xs sm:text-sm font-bold text-slate-800 w-5/6">
-              Hello! I&apos;m the ZEZE AI Assistant. I&apos;ve analyzed your results ({probPercent}% calculated probability). Feel free to ask about your blood pressure, biomarkers, or lifestyle guidance!
+          {/* Chat Messages Body */}
+          <div className="flex-1 p-5 overflow-y-auto space-y-4 bg-slate-50/70">
+            {/* Initial Greeting Message */}
+            <div className="flex gap-3 items-start max-w-[92%]">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div className="bg-white border border-slate-200/90 rounded-2xl rounded-tl-sm p-4 shadow-sm text-slate-800 text-sm leading-relaxed">
+                <p className="font-semibold text-slate-900 mb-1">Hello! I&apos;m the ZEZE Clinical Assistant.</p>
+                <p className="text-slate-600 mb-3">
+                  I&apos;ve analyzed your assessment ({probPercent}% calculated probability). You can ask me any clinical questions or choose from the topics below:
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => handleSendPrompt("which med will work")}
+                    className="text-xs bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                  >
+                    💊 Which med will work?
+                  </button>
+                  <button 
+                    onClick={() => handleSendPrompt("How can I lower my blood pressure effectively?")}
+                    className="text-xs bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 hover:border-blue-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                  >
+                    🩺 How to lower blood pressure?
+                  </button>
+                  <button 
+                    onClick={() => handleSendPrompt("What dietary guidelines should I follow for my heart?")}
+                    className="text-xs bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                  >
+                    🥗 Recommended diet & foods
+                  </button>
+                  <button 
+                    onClick={() => handleSendPrompt("Explain what my risk score means in clinical terms")}
+                    className="text-xs bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-800 border border-slate-200 hover:border-purple-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                  >
+                    ⚡ Explain my risk factors
+                  </button>
+                </div>
+              </div>
             </div>
-            
+
+            {/* Conversation History */}
             {messages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                className={`text-xs sm:text-sm p-4 rounded-2xl w-5/6 font-bold ${msg.role === 'user' ? 'neu-button-green ml-auto rounded-tr-none text-white' : 'neu-inset rounded-tl-none mr-auto text-slate-800'}`}
-              >
-                {msg.role === 'model' ? <div className="prose prose-sm max-w-none prose-p:my-1"><ReactMarkdown>{msg.parts}</ReactMarkdown></div> : msg.parts}
+              <div key={idx} className={`flex gap-3 items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start max-w-[94%]'}`}>
+                {msg.role === 'model' && (
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                )}
+                
+                <div 
+                  className={`p-4 rounded-2xl text-sm leading-relaxed ${
+                    msg.role === 'user' 
+                      ? 'bg-blue-600 text-white font-medium rounded-tr-sm shadow-md shadow-blue-500/15 max-w-[85%]' 
+                      : 'bg-white border border-slate-200/90 text-slate-800 rounded-tl-sm shadow-sm flex-1'
+                  }`}
+                >
+                  {msg.role === 'model' ? (
+                    <div className="prose prose-sm max-w-none text-slate-800 prose-p:my-1.5 prose-headings:font-bold prose-headings:text-slate-900 prose-strong:text-slate-900 prose-ul:my-1.5 prose-li:my-0.5 prose-code:bg-slate-100 prose-code:px-1 prose-code:rounded">
+                      <ReactMarkdown>{msg.parts}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div>{msg.parts}</div>
+                  )}
+                </div>
+
+                {msg.role === 'user' && (
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 font-bold text-xs flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    You
+                  </div>
+                )}
               </div>
             ))}
 
+            {/* Loading / Typing indicator */}
             {isChatLoading && (
-              <div className="neu-inset p-3.5 rounded-2xl rounded-tl-none w-1/3 text-xs flex gap-1.5 items-center">
-                <span className="w-2 h-2 bg-[#17805d] rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-[#17805d] rounded-full animate-bounce" style={{ animationDelay: '0.15s'}}></span>
-                <span className="w-2 h-2 bg-[#17805d] rounded-full animate-bounce" style={{ animationDelay: '0.3s'}}></span>
+              <div className="flex gap-3 items-start max-w-[90%]">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </div>
+                <div className="bg-white border border-slate-200/90 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">Formulating clinical guidance</span>
+                  <div className="flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce"></span>
+                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.15s'}}></span>
+                    <span className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0.3s'}}></span>
+                  </div>
+                </div>
               </div>
             )}
+
+            <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleChatSubmit} className="p-4 neu-convex border-t border-slate-300/60 flex gap-2 w-full">
-            <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Ask a question..." 
-              className="flex-1 neu-input rounded-full px-4 py-2.5 text-xs sm:text-sm font-bold placeholder:text-slate-400"
-            />
-            <button 
-              type="submit"
-              disabled={isChatLoading || !chatInput.trim()}
-              className="neu-button-green rounded-full px-5 py-2.5 font-black text-xs uppercase tracking-wider disabled:opacity-50"
-            >
-              Send
-            </button>
-          </form>
+          {/* Quick suggestions if messages exist */}
+          {messages.length > 0 && !isChatLoading && (
+            <div className="px-4 py-2 bg-slate-50 border-t border-slate-200/80 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
+              <button 
+                onClick={() => handleSendPrompt("which med will work")}
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+              >
+                💊 Which med will work?
+              </button>
+              <button 
+                onClick={() => handleSendPrompt("What are the target blood pressure levels?")}
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+              >
+                🩺 Target BP
+              </button>
+              <button 
+                onClick={() => handleSendPrompt("Guideline statin therapy for high cholesterol?")}
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+              >
+                🫀 Statin therapy
+              </button>
+            </div>
+          )}
+
+          {/* Input Form Area */}
+          <div className="p-3.5 bg-white border-t border-slate-200 shrink-0">
+            <form onSubmit={handleChatSubmit} className="flex items-center gap-2 bg-slate-50 border border-slate-300/80 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 rounded-2xl p-1.5 pl-4 transition-all">
+              <input 
+                type="text" 
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask about medications, BP targets, diet..." 
+                className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm font-medium text-slate-900 placeholder:text-slate-400"
+              />
+              <button 
+                type="submit"
+                disabled={isChatLoading || !chatInput.trim()}
+                className="w-9 h-9 rounded-xl bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors disabled:opacity-40 disabled:hover:bg-blue-600 shadow-sm cursor-pointer shrink-0"
+                title="Send question"
+              >
+                <svg className="w-4 h-4 rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19V5m0 0l-7 7m7-7l7 7" />
+                </svg>
+              </button>
+            </form>
+            <p className="text-[10px] text-center text-slate-400 font-medium mt-2">
+              Clinical decision support reference. Consult licensed practitioner for prescriptions.
+            </p>
+          </div>
         </div>
 
-        {/* 3D FLOATING ACTION TRIGGER */}
+        {/* FLOATING ACTION TRIGGER */}
         <button 
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className={`fixed bottom-6 right-4 sm:right-8 z-50 w-14 h-14 sm:w-16 sm:h-16 rounded-full neu-button flex items-center justify-center transition-transform duration-200 cursor-pointer ${isChatOpen ? 'text-red-600' : 'text-[#17805d]'}`}
-          title="Open AI Chat Assistant"
+          className={`fixed bottom-6 right-4 sm:right-8 z-50 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xl cursor-pointer ${
+            isChatOpen 
+              ? 'bg-slate-900 text-white hover:bg-slate-800' 
+              : 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 text-white hover:scale-105 shadow-blue-500/30'
+          }`}
+          title="Open Clinical AI Assistant"
         >
           {isChatOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           ) : (
-            <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+            <div className="relative flex items-center justify-center">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+              </svg>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></span>
+            </div>
           )}
         </button>
 

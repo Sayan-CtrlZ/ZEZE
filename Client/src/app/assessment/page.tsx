@@ -110,7 +110,7 @@ function AssessmentContent() {
   };
 
   return (
-    <div className="max-w-7xl 2xl:max-w-[1380px] mx-auto relative z-10 w-full px-2 sm:px-6">
+    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-3 sm:px-6 lg:px-8">
       {/* FLOATING PILL TOP BAR */}
       <div className="neu-pill-nav p-3 px-6 mb-8 flex flex-wrap justify-between items-center gap-4">
         <Link 
@@ -123,21 +123,28 @@ function AssessmentContent() {
 
         {/* Role Switcher Pills */}
         <div className="flex items-center gap-2 p-1.5 neu-inset rounded-2xl">
-          <span className="text-[10px] font-black uppercase text-slate-500 px-2">Profile:</span>
-          {(['patient', 'practitioner', 'researcher'] as const).map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setCurrentRole(r)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
-                currentRole === r 
-                  ? 'neu-button-3d text-white shadow-sm' 
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+          <span className="text-[10px] font-black uppercase text-slate-500 px-2">Role:</span>
+          {[
+            { id: 'clinician', label: 'Clinician' },
+            { id: 'trainee', label: 'Healthcare Trainee' },
+            { id: 'patient', label: 'Patient / General' }
+          ].map((r) => {
+            const isSelected = currentRole === r.id || (r.id === 'clinician' && currentRole === 'practitioner');
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setCurrentRole(r.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  isSelected 
+                    ? 'neu-button-3d text-white shadow-sm' 
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                {r.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

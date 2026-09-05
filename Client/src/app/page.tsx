@@ -8,27 +8,13 @@ export default function Home() {
 
   const roles = [
     {
-      id: "patient",
+      id: "clinician",
       num: "01",
-      title: "Patient Care",
-      tagline: "Personalized Health",
-      accentBorder: "card-accent-cyan",
-      iconColor: "text-cyan-600",
-      description: "Get individualized, easy-to-understand health interpretations, dietary adjustments, and preventive lifestyle action steps.",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    },
-    {
-      id: "practitioner",
-      num: "02",
-      title: "Clinical Diagnostic",
-      tagline: "ACC/AHA Guidelines",
+      title: "Clinician / Doctor",
+      tagline: "Primary & Clinical Decision Support",
       accentBorder: "card-accent-navy",
       iconColor: "text-blue-700",
-      description: "Access calibrated cardiovascular risk probabilities, ACC/AHA stage stratifications, and clinical referral documentation.",
+      description: "Enter or scan patient lab data for clinical decision support, calibrated risk stratification, ACC/AHA staging, and clinical review prompts.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -36,16 +22,30 @@ export default function Home() {
       )
     },
     {
-      id: "researcher",
-      num: "03",
-      title: "Model Analytics",
-      tagline: "70k Cohort Data",
+      id: "trainee",
+      num: "02",
+      title: "Healthcare Trainee",
+      tagline: "Supervised Learning & Education",
       accentBorder: "card-accent-violet",
       iconColor: "text-violet-600",
-      description: "Deep dive into 70,000 patient cohort parameters, tree attribution importances, and statistical multi-variable correlations.",
+      description: "Supervised training workspace. Explore underlying physiological mechanisms, feature attributions, and educational clinical rationale.",
       icon: (
         <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      )
+    },
+    {
+      id: "patient",
+      num: "03",
+      title: "Patient / General User",
+      tagline: "Clear Health Guidance",
+      accentBorder: "card-accent-cyan",
+      iconColor: "text-cyan-600",
+      description: "Receive individualized, easy-to-understand health interpretations, clear explanations of what results mean, and actionable lifestyle habits.",
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
         </svg>
       )
     }
@@ -125,17 +125,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PERSONA / ROLE SELECTOR (MATCHING SCREENSHOT 3) */}
+      {/* PERSONA / ROLE SELECTOR (WHO ARE YOU?) */}
       <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-10 px-4 sm:px-6">
         <div className="text-center mb-12">
           <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
-            Core Personas
+            Target Users &amp; Roles
           </span>
           <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
-            Engineered for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">Precision.</span>
+            Who are <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">you?</span>
           </h2>
-          <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest mt-2">
-            Tailored clinical outputs calibrated for your exact clinical context
+          <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto mt-2">
+            Choose your profile to tailor the clinical dashboard, detail level, and medical wording to your workflow.
           </p>
         </div>
 

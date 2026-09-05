@@ -388,16 +388,21 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
           {uploadStep === 'review' && (
             <div className="w-full space-y-8">
               
-              {/* Top Banner: Verification Notice */}
-              <div className="p-6 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+              {/* Top Banner: Verification Notice with Visual Workflow */}
+              <div className="p-6 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white/70 border border-emerald-200/60">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0">
+                  <div className="w-12 h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0 bg-emerald-50">
                     <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                   </div>
                   <div>
-                    <h4 className="text-lg font-black text-slate-900">OCR Extraction Complete</h4>
-                    <p className="text-xs sm:text-sm font-bold text-slate-600 mt-0.5">
-                      Review and adjust the extracted readings below before evaluating cardiovascular risk.
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-lg font-black text-slate-900">Review Extracted Data</h4>
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        {Object.keys(ocrSnippets).length > 0 ? `${Object.keys(ocrSnippets).length} Variables Extracted` : 'AI Parsed'}
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm font-bold text-slate-600">
+                      Report uploaded → AI extracted variables → <span className="text-blue-700 underline">Verify &amp; edit values</span> → Missing fields highlighted in amber below.
                     </p>
                   </div>
                 </div>
@@ -580,22 +585,22 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     <button 
                       type="submit" 
                       disabled={isLoading}
-                      className="neu-button-green w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                      className="neu-button-matte-3d w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
                     >
                       {isLoading ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
-                          Computing Risk...
+                          Running Assessment...
                         </>
                       ) : (
                         <>
                           <svg className="w-4 h-4 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                          Confirm & Calculate Risk
+                          Run Clinical AI Assessment
                         </>
                       )}
                     </button>
                     <p className="text-[11px] text-center text-slate-500 font-bold mt-3 uppercase tracking-wider">
-                      70,000-Record Calibrated Gradient Boosted Model
+                      Calibrated Clinical Decision Support Model
                     </p>
                   </div>
                 </div>
@@ -620,7 +625,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
               <span className="text-xs font-black tracking-wider text-slate-700 uppercase">Presets:</span>
               <button type="button" onClick={() => loadPreset('high')} className="neu-button px-4 py-2 text-xs font-black text-red-700 rounded-full hover:bg-red-50 transition-all">High Risk Male (62y)</button>
               <button type="button" onClick={() => loadPreset('atypical')} className="neu-button px-4 py-2 text-xs font-black text-amber-700 rounded-full hover:bg-amber-50 transition-all">Borderline Risk (54y)</button>
-              <button type="button" onClick={() => loadPreset('low')} className="neu-button-green px-4 py-2 text-xs font-black text-white rounded-full transition-all">Low Risk (32y)</button>
+              <button type="button" onClick={() => loadPreset('low')} className="neu-button px-4 py-2 text-xs font-black text-emerald-700 rounded-full hover:bg-emerald-50 transition-all">Low Risk (32y)</button>
             </div>
             {liveBmi && (
               <div className={`px-4 py-1.5 text-xs font-black rounded-full neu-inset-sm ${liveBmi.color}`}>
@@ -814,7 +819,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="neu-button-green w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                  className="neu-button-matte-3d w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
                 >
                   {isLoading ? (
                     <>

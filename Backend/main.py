@@ -296,7 +296,7 @@ def generate_offline_clinical_report(data: PatientData, probability: float, risk
     if not record.get('active', 1): lifestyle_tags.append("Sedentary Routine")
     if not lifestyle_tags: lifestyle_tags.append("Regular Physical Exercise, Non-smoker")
 
-    if role == "practitioner":
+    if role in ["clinician", "practitioner"]:
         return f"""**Clinical Findings**:
 - **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label})
 - **Body Mass Index**: {bmi} kg/m² ({bmi_label})
@@ -312,18 +312,21 @@ Patient exhibits a **{risk} Risk** cardiovascular risk profile with an estimated
 - Order full fasting lipid panel (HDL-C, LDL-C, Triglycerides) and HbA1c to establish glycemic baseline.
 - Provide structured medical guidance on dietary sodium reduction (<2,000 mg/day) and cardiovascular risk factor modification."""
 
-    elif role == "researcher":
-        return f"""**Anomalous Data Points**:
-- **Hemodynamic Variance**: Systolic Pressure {bp_hi} mmHg represents a marked elevation above the cohort median (120 mmHg).
-- **Pulse Pressure**: {int(record.get('pulse_pressure', 40))} mmHg; elevated pulsatile arterial load suggests diminished systemic arterial compliance.
-- **Metabolic Indicators**: BMI {bmi} kg/m² paired with Cholesterol Tier {record.get('cholesterol', 1)}/3 reinforces compounding atherogenic risk.
+    elif role in ["trainee", "student", "researcher"]:
+        return f"""**Clinical Findings**:
+- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label})
+- **Body Mass Index**: {bmi} kg/m² ({bmi_label})
+- **Serum Cholesterol Profile**: Tier {record.get('cholesterol', 1)}/3 ({chol_label})
+- **Glycemic Status**: Tier {record.get('gluc', 1)}/3 ({gluc_label})
+- **Lifestyle Risk Indicators**: {", ".join(lifestyle_tags)}
 
-**Mechanistic Analysis**:
-Multi-factor gradient boosted evaluation isolates systolic blood pressure and age-vascular stiffness interactions as the primary drivers of the {prob_str} calibrated risk score. Persistent hemodynamic shear stress promotes endothelial dysfunction, facilitating lipid infiltration and arterial remodeling.
+**Differential Assessment**:
+Patient demonstrates **{risk} Risk** ({prob_str} probability). From a pathophysiological perspective, elevated systolic pressure increases left ventricular wall stress and promotes endothelial micro-fissuring, which exponentially accelerates lipid atherogenesis.
 
-**Literature / Pharmacological References**:
-- Consider clinical trial references regarding ACE inhibitors / ARBs for systolic blood pressure optimization.
-- Evaluate guideline-directed statin therapy for primary ASCVD risk reduction in patients with elevated lipid tiers."""
+**Educational & Learning Context**:
+- **Mechanistic Driver**: Notice how systolic pressure ({bp_hi} mmHg) and pulse pressure ({int(record.get('pulse_pressure', 40))} mmHg) interact with cholesterol tier {record.get('cholesterol', 1)} to compound the multi-variable risk score.
+- **Pathophysiological Rationale**: Hemodynamic wall shear stress impairs nitric oxide bioavailability, creating microvascular compliance loss.
+- **Supervised Clinical Review**: Observe that age ({record.get('age_years', 55)} yrs) forms the baseline non-modifiable risk foundation, whereas blood pressure and lipids are the primary modifiable levers for risk reduction."""
 
     else:
         return f"""**Key Findings**:
@@ -345,7 +348,7 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
     if not gemini_client:
         return generate_offline_clinical_report(data, probability, risk, role, record)
 
-    if role == "practitioner":
+    if role in ["clinician", "practitioner"]:
         tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Format like a doctor's chart."
         structure_instruction = """
     **Clinical Findings**:
@@ -357,17 +360,17 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
     **Recommended Clinical Pathways**:
     - (actionable medical steps)
         """
-    elif role == "researcher":
-        tone_instruction = "Use statistical language, discuss multi-factor interaction weights, and physiological mechanisms."
+    elif role in ["trainee", "student", "researcher"]:
+        tone_instruction = "Adopt a supervised medical teaching tone. Explain pathophysiological mechanisms, multi-factor interaction weights, why key variables drove the decision trees, and highlight supervised learning takeaways."
         structure_instruction = """
-    **Anomalous Data Points**:
-    - (detailed notes on high leverage variables)
+    **Clinical Findings**:
+    - (bulleted objective findings)
     
-    **Mechanistic Analysis**:
-    (physiological cardiovascular interaction explanation)
+    **Differential Assessment**:
+    (clinical assessment and physiological mechanisms)
     
-    **Literature / Pharmacological References**:
-    - (relevant pharmacological notes or pathways)
+    **Educational & Learning Context**:
+    - (key learning takeaways, mechanistic analysis, and supervised teaching points)
         """
     else:
         tone_instruction = "Be reassuring, clear, and supportive. Avoid medical jargon. Provide a HIGHLY DETAILED explanation with lifestyle tips."
@@ -483,10 +486,75 @@ class ChatRequest(BaseModel):
     message: str
     context: str
 
+def generate_offline_chat_response(query: str, context: str) -> str:
+    q = query.lower()
+    
+    # 1. Medications & Prescriptions
+    if any(k in q for k in ["med", "drug", "pill", "prescription", "work", "treatment", "medicine"]):
+        return (
+            "**Evidence-Based Guideline Medications (ACC/AHA & FDA Formularies)**:\n\n"
+            "• **For Blood Pressure Reduction**:\n"
+            "  - **Amlodipine** (Calcium Channel Blocker): 5–10 mg **Once Daily (OD)** — First-line arterial vasodilator.\n"
+            "  - **Lisinopril** (ACE Inhibitor): 10–20 mg **Once Daily (OD)** — Cardioprotective renal/arterial agent.\n"
+            "  - **Losartan** (ARB): 50–100 mg **Once Daily (OD)** — Preferred if ACE inhibitors cause cough.\n\n"
+            "• **For Elevated Cholesterol / ASCVD Prevention**:\n"
+            "  - **Atorvastatin**: 20–40 mg **Once Daily (OD)** at bedtime — High-intensity LDL lowering.\n"
+            "  - **Rosuvastatin**: 10–20 mg **Once Daily (OD)** — Potent hydrophilic statin.\n\n"
+            "• **For Metabolic / Glycemic Control**:\n"
+            "  - **Empagliflozin** (SGLT2i): 10 mg **Once Daily (OD)** in morning — Proven cardiovascular & renal protection.\n"
+            "  - **Metformin**: 500–1000 mg **Twice Daily (BD)** with meals.\n\n"
+            "*Important: Prescription selection and titration must be confirmed by your licensed healthcare provider.*"
+        )
+    
+    # 2. Blood Pressure
+    if any(k in q for k in ["bp", "blood pressure", "hypertension", "systolic", "diastolic", "pressure"]):
+        return (
+            "**Blood Pressure Clinical Guidance**:\n\n"
+            "• **Target Blood Pressure**: Clinical guidelines recommend aiming for a resting level **below 120/80 mmHg**.\n"
+            "• **DASH Dietary Pattern**: Restrict sodium to **<2,000 mg/day**; emphasize potassium-rich foods (leafy greens, bananas, legumes).\n"
+            "• **Home Monitoring**: Record seated BP twice daily (morning and evening before meals) resting quietly for 5 minutes.\n"
+            "• **First-Line Formularies**: Amlodipine (5–10 mg once daily) or ACE inhibitors / ARBs are guideline first-line therapies."
+        )
+
+    # 3. Cholesterol & Lipids
+    if any(k in q for k in ["cholesterol", "statin", "lipid", "triglyceride", "ldl", "hdl"]):
+        return (
+            "**Lipid Management & Statin Guidance**:\n\n"
+            "• **Guideline Target**: In elevated cardiovascular risk, guidelines target **≥50% LDL-C reduction** or LDL <70 mg/dL.\n"
+            "• **First-Line Therapy**: High-intensity statins like **Atorvastatin (20–40 mg once daily at bedtime)** or **Rosuvastatin (10–20 mg once daily)**.\n"
+            "• **Dietary Measures**: Eliminate trans-fats, reduce saturated fats to <7% of daily calories, and increase soluble fiber."
+        )
+
+    # 4. Lifestyle, diet, exercise
+    if any(k in q for k in ["diet", "food", "eat", "exercise", "walk", "lifestyle", "habit", "sport"]):
+        return (
+            "**Cardiovascular Lifestyle & Prevention Protocol**:\n\n"
+            "• **Aerobic Activity**: Minimum **150 minutes of moderate-intensity aerobic exercise** (e.g. brisk walking, cycling, swimming) each week.\n"
+            "• **Cardioprotective Nutrition**: Mediterranean or DASH diet with extra-virgin olive oil, nuts, whole grains, and lean proteins.\n"
+            "• **Tobacco Abstinence**: If smoking, cessation within weeks yields dramatic microvascular recovery."
+        )
+
+    # 5. Risk explanation
+    if any(k in q for k in ["risk", "percentage", "score", "high", "moderate", "low", "mean", "calculated"]):
+        return (
+            "**Understanding Your Risk Score**:\n\n"
+            "• Your risk percentage is calculated from our **70,000-cohort calibrated Gradient Boosted Decision Tree model**.\n"
+            "• The model evaluates complex non-linear interactions among systolic blood pressure, cholesterol tier, age, and lifestyle habits.\n"
+            "• Modifiable factors—especially blood pressure and cholesterol—represent high-leverage opportunities: optimizing them can reduce estimated cardiovascular risk significantly."
+        )
+
+    # Generic Clinical Response
+    return (
+        "**Clinical Decision Support Response**:\n\n"
+        "Your cardiovascular risk profile reflects a multi-variable assessment of hemodynamics, lipid biomarkers, and lifestyle factors. "
+        "Key priorities for risk reduction include maintaining resting blood pressure below 120/80 mmHg, following an evidence-based low-sodium/Mediterranean diet, and engaging in ≥150 minutes of weekly aerobic exercise. "
+        "Please discuss personalized medication options and diagnostic follow-up with your healthcare provider."
+    )
+
 @app.post("/chat")
 def chat_follow_up(req: ChatRequest):
     if not gemini_client:
-        raise HTTPException(status_code=503, detail="AI Chat is not configured.")
+        return {"response": generate_offline_chat_response(req.message, req.context)}
         
     try:
         system_instruction = (
@@ -495,7 +563,7 @@ def chat_follow_up(req: ChatRequest):
             "Act as an intelligent, conversational agent and assistant. Answer their follow-up questions clearly and supportively.\n"
             "CRITICAL RULES:\n"
             "1. Be concise. Give exactly the required amount of information—no more, no less.\n"
-            "2. Be helpful. Provide clear health, diet, exercise, and clinical guidance.\n"
+            "2. Be helpful. Provide clear health, medication, diet, exercise, and clinical guidance citing ACC/AHA and FDA standards.\n"
             "3. Keep responses conversational, balanced, and easy to read."
         )
         
@@ -515,8 +583,8 @@ def chat_follow_up(req: ChatRequest):
         response = chat.send_message(req.message)
         return {"response": response.text}
     except Exception as e:
-        logger.error(f"Chat endpoint failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Internal server error during chat sequence.")
+        logger.warning(f"Gemini API chat fallback triggered: {str(e)}")
+        return {"response": generate_offline_chat_response(req.message, req.context)}
 
 from ml.ocr_extractor import process_document_pipeline
 
