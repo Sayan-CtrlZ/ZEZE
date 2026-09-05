@@ -321,17 +321,17 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-5 sm:p-6 lg:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-left cursor-pointer hover:bg-slate-50/60 transition-colors"
+        className="w-full p-4 sm:p-6 lg:p-7 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 text-left cursor-pointer hover:bg-slate-50/60 transition-colors"
       >
-        <div className="flex items-center gap-3.5">
-          <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shrink-0">
-            <Pill className="w-5 h-5" />
+        <div className="flex items-center gap-3 sm:gap-3.5">
+          <span className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-700 text-white flex items-center justify-center shadow-md shrink-0">
+            <Pill className="w-4 h-4 sm:w-5 sm:h-5" />
           </span>
           <div>
-            <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+            <h3 className="text-base sm:text-xl lg:text-2xl font-black text-slate-900 tracking-tight">
               Clinical Pharmacopeia &amp; Drug Reference
             </h3>
-            <p className="text-xs font-bold text-slate-600 mt-0.5">
+            <p className="text-[11px] sm:text-xs font-bold text-slate-600 mt-0.5 sm:mt-1">
               {isClinician 
                 ? 'Evidence-based formulary search with dosing schedules, side effects, and ACC/AHA & FDA guidelines.'
                 : isTrainee
@@ -341,33 +341,33 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto shrink-0">
-          <span className="text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
-            {isClinician ? 'Clinician Decision Support' : isTrainee ? 'Medical Trainee Reference' : 'Clinical Formulary'}
+        <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0 pl-11 sm:pl-0">
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 sm:px-3 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+            {isClinician ? 'Clinician Reference' : isTrainee ? 'Trainee Reference' : 'Formulary'}
           </span>
           <span className="text-xs font-black text-indigo-700 hidden sm:inline">
             {isOpen ? 'Hide Drug Reference' : 'Explore Drug Reference'}
           </span>
-          <ChevronDown className={`w-5 h-5 text-slate-600 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-600 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
         </div>
       </button>
 
       {isOpen && (
-        <div className="p-6 sm:p-8 pt-2 border-t border-slate-200/70 space-y-6">
+        <div className="p-4 sm:p-6 md:p-8 pt-2 border-t border-slate-200/70 space-y-4 sm:space-y-6">
 
       {/* Patient Contextual Recommendation Banner */}
       {(hasHypertension || hasHighCholesterol) && (
-        <div className="p-4 rounded-2xl neu-inset bg-blue-50/60 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5 font-bold text-slate-800">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+        <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-blue-50/60 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
+          <div className="flex items-start sm:items-center gap-2 font-bold text-slate-800">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse mt-1 sm:mt-0 shrink-0"></span>
             <span>
-              <strong>Contextual Guideline Suggestions:</strong> Patient profile exhibits{' '}
+              <strong>Contextual Suggestions:</strong> Patient profile exhibits{' '}
               {hasHypertension && <span className="text-blue-900 underline font-black">Resting BP ≥130 mmHg</span>}
               {hasHypertension && hasHighCholesterol && ' and '}
               {hasHighCholesterol && <span className="text-blue-900 underline font-black">Elevated Cholesterol Tier {cholTier}</span>}.
             </span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap self-start sm:self-auto shrink-0">
             {hasHypertension && (
               <button
                 type="button"
@@ -393,41 +393,41 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
       {/* Search Bar & Category Filters */}
       <div className="space-y-3">
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+          <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-slate-400">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
           </div>
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search medicine by name, brand, side effect, or frequency (e.g. Amlodipine, once daily, edema, statin)..."
-            className="w-full pl-11 pr-4 py-3.5 neu-input rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
+            placeholder="Search medicine by name, brand, or frequency (e.g. Amlodipine, statin)..."
+            className="w-full pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 neu-input rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-slate-400 hover:text-slate-700"
+              className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-slate-400 hover:text-slate-700 cursor-pointer"
             >
               Clear
             </button>
           )}
         </div>
 
-        {/* Category Pills & Quick Controls */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-          <div className="flex flex-wrap gap-2">
+        {/* Category Pills & Quick Controls: Smooth horizontal scrolling on mobile */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar touch-scroll pb-1 sm:pb-0 sm:flex-wrap">
             {[
               { id: 'all', label: 'All Medications' },
-              { id: 'antihypertensive', label: 'Blood Pressure (Antihypertensives)' },
+              { id: 'antihypertensive', label: 'Blood Pressure' },
               { id: 'lipid', label: 'Cholesterol & Statins' },
-              { id: 'metabolic', label: 'Cardiometabolic & Glycemic' },
-              { id: 'antiplatelet', label: 'Antiplatelet & Antithrombotic' }
+              { id: 'metabolic', label: 'Cardiometabolic' },
+              { id: 'antiplatelet', label: 'Antiplatelet' }
             ].map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setActiveCategory(cat.id as any)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                   activeCategory === cat.id
                     ? 'neu-button-3d text-white'
                     : 'neu-inset text-slate-600 hover:text-slate-900 bg-white/60'
@@ -439,7 +439,7 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
           </div>
 
           {/* Quick Reload & View Toggle */}
-          <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
             {!showAll && totalPages > 1 && (
               <button
                 type="button"
@@ -461,9 +461,9 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 transition-all cursor-pointer"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 transition-all cursor-pointer whitespace-nowrap"
             >
-              {showAll ? 'Compact (3 per view)' : `Show All (${totalItems})`}
+              {showAll ? 'Compact (3)' : `Show All (${totalItems})`}
             </button>
           </div>
         </div>
@@ -713,26 +713,26 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
 
       {/* COMPREHENSIVE MODAL FOR EXPANDED CLINICAL DETAIL */}
       {selectedMed && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="neu-flat rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 sm:p-8 space-y-5 bg-white border border-slate-200 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
+          <div className="neu-flat rounded-3xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5 bg-white border border-slate-200 shadow-2xl">
             
             {/* Modal Top Header */}
-            <div className="flex justify-between items-start pb-4 border-b border-slate-200">
+            <div className="flex justify-between items-start pb-3 sm:pb-4 border-b border-slate-200 gap-2.5">
               <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-2xl font-black text-slate-900">{selectedMed.name}</h3>
-                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-black text-slate-900">{selectedMed.name}</h3>
+                  <span className="text-[10px] sm:text-xs font-black px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
                     {selectedMed.frequency}
                   </span>
                 </div>
-                <p className="text-xs font-extrabold text-slate-500 mt-0.5">
+                <p className="text-[11px] sm:text-xs font-extrabold text-slate-500 mt-0.5">
                   Brand: {selectedMed.brandNames} &bull; Class: {selectedMed.drugClass}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedMed(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer"
+                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer shrink-0"
               >
                 <X className="w-4 h-4" />
               </button>

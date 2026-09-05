@@ -298,14 +298,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
     }
   };
 
-  const inputClasses = "w-full neu-input rounded-2xl px-4 py-3.5 outline-none font-extrabold text-slate-900 placeholder:text-slate-400 text-sm sm:text-base transition-all";
+  const inputClasses = "w-full neu-input rounded-2xl px-3.5 sm:px-4 py-3 sm:py-3.5 outline-none font-extrabold text-slate-900 placeholder:text-slate-400 text-base sm:text-sm transition-all";
   const labelClasses = "block text-xs font-black tracking-wider text-slate-700 mb-2 uppercase";
 
   return (
-    <form onSubmit={handleSubmit} className="neu-card-glass p-6 sm:p-10 lg:p-12 w-full max-w-full text-slate-900">
+    <form onSubmit={handleSubmit} className="neu-card-glass p-4 sm:p-8 lg:p-12 w-full max-w-full text-slate-900">
       
       {mode === 'upload' ? (
-        <div className="flex flex-col space-y-8 w-full">
+        <div className="flex flex-col space-y-6 sm:space-y-8 w-full">
           
           {/* STEP 1: DROP / SELECT FILE */}
           {uploadStep === 'drop' && (
@@ -322,7 +322,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     handleStartOcr(e.dataTransfer.files);
                   }
                 }}
-                className={`w-full neu-inset-deep rounded-3xl p-8 sm:p-12 text-center transition-all relative group border-2 border-dashed ${
+                className={`w-full neu-inset-deep rounded-3xl p-5 sm:p-12 text-center transition-all relative group border-2 border-dashed ${
                   isDragging 
                     ? 'border-blue-700 ring-4 ring-blue-700/20 scale-[1.01]' 
                     : 'border-slate-300 hover:border-slate-400'
@@ -389,14 +389,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
             <div className="w-full space-y-8">
               
               {/* Top Banner: Verification Notice with Visual Workflow */}
-              <div className="p-6 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white/70 border border-emerald-200/60">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0 bg-emerald-50">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+              <div className="p-4 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 bg-white/70 border border-emerald-200/60">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0 bg-emerald-50">
+                    <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-lg font-black text-slate-900">Review Extracted Data</h4>
+                      <h4 className="text-base sm:text-lg font-black text-slate-900">Review Extracted Data</h4>
                       <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
                         {Object.keys(ocrSnippets).length > 0 ? `${Object.keys(ocrSnippets).length} Variables Extracted` : 'AI Parsed'}
                       </span>
@@ -409,18 +409,18 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                 <button
                   type="button"
                   onClick={handleClearFiles}
-                  className="neu-button px-5 py-2.5 rounded-2xl text-xs font-black text-slate-800 hover:text-red-700 self-end sm:self-auto transition-all"
+                  className="neu-button px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-black text-slate-800 hover:text-red-700 w-full sm:w-auto text-center transition-all shrink-0"
                 >
                   Upload Another File
                 </button>
               </div>
 
               {/* Editable Fields Grid (Spacious, Un-congested) */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
-                <div className="lg:col-span-8 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 w-full">
+                <div className="lg:col-span-8 space-y-5 sm:space-y-6">
                   
                   {/* 1. Demographics & Anthropometrics */}
-                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                  <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
                       <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
@@ -465,7 +465,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   </div>
 
                   {/* 2. Blood Pressure */}
-                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                  <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                     <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
                       <div className="flex items-center gap-2.5">
                         <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
@@ -484,7 +484,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div>
                         <label className={labelClasses}>Systolic BP (ap_hi)</label>
                         <input required type="number" name="ap_hi" value={formData.ap_hi} onChange={handleChange} className={inputClasses} placeholder="120" min={50} max={260} />
@@ -497,14 +497,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   </div>
 
                   {/* 3. Clinical Laboratory Tiers */}
-                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                  <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                     <div className="pb-2 border-b border-slate-200/60">
                       <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
                         3. Clinical Laboratory Tiers
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                       <div>
                         <div className="flex justify-between items-center mb-1.5">
                           <label className={labelClasses}>Total Cholesterol</label>
@@ -531,14 +531,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   </div>
 
                   {/* 4. Lifestyle Indicators */}
-                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                  <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                     <div className="pb-2 border-b border-slate-200/60">
                       <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
                         4. Lifestyle & Behavioral Factors
                       </h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
                       <div>
                         <label className={labelClasses}>Tobacco / Smoking</label>
                         <select name="smoke" value={formData.smoke} onChange={handleChange} className={inputClasses}>
@@ -566,7 +566,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                 </div>
 
                 {/* Right Column: Symptoms & Final Action */}
-                <div className="lg:col-span-4 flex flex-col justify-between p-6 sm:p-8 neu-flat rounded-3xl space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                <div className="lg:col-span-4 flex flex-col justify-between p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-5 sm:space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                   <div className="space-y-3">
                     <label className={`${labelClasses} flex items-center justify-between`}>
                       <span>Reported Symptoms / Notes</span>
@@ -576,7 +576,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                       name="symptoms" 
                       value={formData.symptoms} 
                       onChange={handleTextChange} 
-                      className="w-full neu-input rounded-2xl p-4 text-slate-900 text-sm placeholder:text-slate-400 outline-none min-h-[220px] resize-none font-semibold leading-relaxed" 
+                      className="w-full neu-input rounded-2xl p-3.5 sm:p-4 text-slate-900 text-sm placeholder:text-slate-400 outline-none min-h-[160px] sm:min-h-[220px] resize-none font-semibold leading-relaxed" 
                       placeholder="Symptoms or clinical notes from report (e.g. chest tightness on exertion, shortness of breath, palpitations)..." 
                     />
                   </div>
@@ -585,7 +585,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     <button 
                       type="submit" 
                       disabled={isLoading}
-                      className="neu-button-matte-3d w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                      className="neu-button-matte-3d w-full py-3.5 sm:py-4.5 rounded-2xl font-black tracking-wider uppercase text-xs sm:text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
                     >
                       {isLoading ? (
                         <>
@@ -620,32 +620,32 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
         /* MANUAL ENTRY MODE (Spacious Neumorphic Layout) */
         <div className="flex flex-col w-full space-y-8">
           {/* Quick Fill Presets */}
-          <div className="w-full flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6 neu-inset rounded-3xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-xs font-black tracking-wider text-slate-700 uppercase">Presets:</span>
-              <button type="button" onClick={() => loadPreset('high')} className="neu-button px-4 py-2 text-xs font-black text-red-700 rounded-full hover:bg-red-50 transition-all">High Risk Male (62y)</button>
-              <button type="button" onClick={() => loadPreset('atypical')} className="neu-button px-4 py-2 text-xs font-black text-amber-700 rounded-full hover:bg-amber-50 transition-all">Borderline Risk (54y)</button>
-              <button type="button" onClick={() => loadPreset('low')} className="neu-button px-4 py-2 text-xs font-black text-emerald-700 rounded-full hover:bg-emerald-50 transition-all">Low Risk (32y)</button>
+          <div className="w-full flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 p-4 sm:p-6 neu-inset rounded-3xl">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <span className="text-[11px] sm:text-xs font-black tracking-wider text-slate-700 uppercase">Presets:</span>
+              <button type="button" onClick={() => loadPreset('high')} className="neu-button px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black text-red-700 rounded-full hover:bg-red-50 transition-all">High Risk Male (62y)</button>
+              <button type="button" onClick={() => loadPreset('atypical')} className="neu-button px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black text-amber-700 rounded-full hover:bg-amber-50 transition-all">Borderline Risk (54y)</button>
+              <button type="button" onClick={() => loadPreset('low')} className="neu-button px-3 sm:px-4 py-1.5 sm:py-2 text-[11px] sm:text-xs font-black text-emerald-700 rounded-full hover:bg-emerald-50 transition-all">Low Risk (32y)</button>
             </div>
             {liveBmi && (
-              <div className={`px-4 py-1.5 text-xs font-black rounded-full neu-inset-sm ${liveBmi.color}`}>
+              <div className={`px-3.5 py-1.5 text-xs font-black rounded-full neu-inset-sm self-start sm:self-auto ${liveBmi.color}`}>
                 BMI: {liveBmi.val} ({liveBmi.cat})
               </div>
             )}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
-            <div className="lg:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 w-full">
+            <div className="lg:col-span-8 space-y-5 sm:space-y-6">
               
               {/* 1. Demographics & Anthropometrics */}
-              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+              <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                 <div className="pb-2 border-b border-slate-200/60">
                   <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
                     1. Demographics & Anthropometrics
                   </h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
                   <div>
                     <label className={labelClasses}>Age (years)</label>
                     <input required type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses} placeholder="55" min={1} max={120} />
@@ -669,7 +669,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
               </div>
 
               {/* 2. Blood Pressure */}
-              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+              <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                 <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
                   <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
@@ -681,7 +681,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className={labelClasses}>Systolic BP (ap_hi)</label>
                     <input required type="number" name="ap_hi" value={formData.ap_hi} onChange={handleChange} className={inputClasses} placeholder="120" min={50} max={260} />
@@ -694,14 +694,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
               </div>
 
               {/* 3. Clinical Laboratory Tiers */}
-              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+              <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                 <div className="pb-2 border-b border-slate-200/60">
                   <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
                     3. Clinical Laboratory Tiers
                   </h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div>
                     <label className={labelClasses}>Total Cholesterol</label>
                     <select name="cholesterol" value={formData.cholesterol} onChange={handleChange} className={inputClasses}>
@@ -722,14 +722,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
               </div>
 
               {/* 4. Lifestyle Indicators */}
-              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+              <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-4 sm:space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
                 <div className="pb-2 border-b border-slate-200/60">
                   <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
                     4. Lifestyle & Behavioral Factors
                   </h4>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
                   <div>
                     <label className={labelClasses}>Smoking Status</label>
                     <select name="smoke" value={formData.smoke} onChange={handleChange} className={inputClasses}>
@@ -759,15 +759,15 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                 <button
                   type="button"
                   onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="neu-button inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 px-5 py-3 rounded-2xl transition-all"
+                  className="neu-button inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 px-4 sm:px-5 py-2.5 sm:py-3 rounded-2xl transition-all"
                 >
                   <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
                   {showAdvanced ? "Hide Advanced Cardiac Markers" : "Add Advanced Clinical Markers (ECG & Stress)"}
                 </button>
 
                 {showAdvanced && (
-                  <div className="mt-4 p-6 sm:p-8 neu-inset rounded-3xl space-y-5 animate-in fade-in slide-in-from-top-2">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                  <div className="mt-4 p-4 sm:p-6 md:p-8 neu-inset rounded-3xl space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
                       <div>
                         <label className={labelClasses}>Chest Pain Type</label>
                         <select name="cp" value={formData.cp} onChange={handleChange} className={inputClasses}>
@@ -800,7 +800,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
             </div>
 
             {/* Right Column: Symptoms & Final Action */}
-            <div className="lg:col-span-4 flex flex-col justify-between p-6 sm:p-8 neu-flat rounded-3xl space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+            <div className="lg:col-span-4 flex flex-col justify-between p-4 sm:p-6 md:p-8 neu-flat rounded-3xl space-y-5 sm:space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
               <div className="space-y-3">
                 <label className={`${labelClasses} flex items-center justify-between`}>
                   <span>Reported Symptoms</span>
@@ -810,7 +810,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   name="symptoms" 
                   value={formData.symptoms} 
                   onChange={handleTextChange} 
-                  className="w-full neu-input rounded-2xl p-4 text-slate-800 text-sm placeholder:text-slate-400 outline-none min-h-[220px] resize-none font-semibold leading-relaxed" 
+                  className="w-full neu-input rounded-2xl p-3.5 sm:p-4 text-slate-800 text-sm placeholder:text-slate-400 outline-none min-h-[160px] sm:min-h-[220px] resize-none font-semibold leading-relaxed" 
                   placeholder="Describe feelings, symptoms, or medical notes (e.g. 'chest tightness on exertion, heavy legs')..." 
                 />
               </div>
@@ -819,7 +819,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="neu-button-matte-3d w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                  className="neu-button-matte-3d w-full py-3.5 sm:py-4.5 rounded-2xl font-black tracking-wider uppercase text-xs sm:text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
                 >
                   {isLoading ? (
                     <>

@@ -310,19 +310,19 @@ Your heart and arteries are currently experiencing elevated stress due to higher
   const probPercent = Number(resultData.probability).toFixed(1);
 
   return (
-    <main className="min-h-screen relative px-2 sm:px-4 lg:px-6 xl:px-8 pt-2 sm:pt-3 pb-16 overflow-y-auto bg-[#e8ecf2]">
-      <div className="w-full max-w-[1720px] mx-auto relative z-10 px-1 sm:px-2">
+    <main className="min-h-screen relative px-3 sm:px-4 lg:px-6 xl:px-8 pt-2 sm:pt-3 pb-20 sm:pb-16 overflow-y-auto bg-[#e8ecf2]">
+      <div className="w-full max-w-[1720px] mx-auto relative z-10 px-0.5 sm:px-2">
         
         {/* Main Dashboard Layout Container */}
         <div 
           ref={reportRef} 
-          className="w-full mb-16 space-y-6 sm:space-y-8"
+          className="w-full mb-12 sm:mb-16 space-y-5 sm:space-y-8"
         >
           {/* Top Nav: with Brand Icon & Action Controls */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-2">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-1 pb-2">
+            <div className="flex items-center justify-between sm:justify-start gap-3">
               <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-8 h-8 rounded-xl neu-flat flex items-center justify-center p-1 bg-[#e8ecf2] border border-slate-300/60 shadow-sm group-hover:scale-105 transition-transform">
+                <div className="w-8 h-8 rounded-xl neu-flat flex items-center justify-center p-1 bg-[#e8ecf2] border border-slate-300/60 shadow-sm group-hover:scale-105 transition-transform shrink-0">
                   <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
                 </div>
                 <div className="flex flex-col">
@@ -332,49 +332,49 @@ Your heart and arteries are currently experiencing elevated stress due to higher
               </Link>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2 sm:gap-2.5 justify-end">
               <Link 
                 href="/" 
                 onClick={() => sessionStorage.removeItem('zeze_form_data')} 
-                className="neu-button text-xs font-black text-slate-700 px-3.5 py-1.5 rounded-xl hover:text-[#17805d] transition-colors flex items-center gap-1.5"
+                className="neu-button text-[11px] sm:text-xs font-black text-slate-700 px-3 sm:px-3.5 py-1.5 rounded-xl hover:text-[#17805d] transition-colors flex items-center gap-1.5 shrink-0"
               >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
-                Start Over
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                <span>Start Over</span>
               </Link>
               <Link 
                 href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
-                className="neu-button text-xs font-black text-blue-600 px-3.5 py-1.5 rounded-xl hover:text-blue-800 transition-colors flex items-center gap-1.5"
+                className="neu-button text-[11px] sm:text-xs font-black text-blue-600 px-3 sm:px-3.5 py-1.5 rounded-xl hover:text-blue-800 transition-colors flex items-center gap-1.5 shrink-0"
               >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
-                Modify Inputs (What-If)
+                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>Modify Inputs</span>
               </Link>
             </div>
           </div>
 
           {/* Header Title with Logo Medallion & Aligned Contrasting Download PDF Button */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
-            <div className="flex items-center gap-4 sm:gap-5">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 sm:pb-2">
+            <div className="flex items-center gap-3.5 sm:gap-5">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
                 <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
               </div>
               <div>
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+                <h1 className="text-xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
                   Clinical Results Dashboard
                 </h1>
-                <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[11px] sm:text-xs mt-0.5">
+                <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[10px] sm:text-xs mt-0.5">
                   Zero Error Zonal Evaluation Model
                 </p>
               </div>
             </div>
 
-            {/* 3D Structured Download PDF Report Button (matching home screen 3D theme) */}
+            {/* 3D Structured Download PDF Report Button */}
             <button 
               id="pdf-btn" 
               onClick={handleDownloadPDF}
-              className="neu-button-3d text-xs sm:text-sm font-black flex items-center gap-2.5 px-6 py-3 rounded-xl uppercase tracking-wider cursor-pointer self-start sm:self-auto shrink-0 shadow-lg"
+              className="neu-button-3d text-xs sm:text-sm font-black flex items-center justify-center gap-2.5 px-5 sm:px-6 py-3 rounded-xl uppercase tracking-wider cursor-pointer w-full sm:w-auto shrink-0 shadow-lg"
             >
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              Download PDF Report
+              <span>Download PDF Report</span>
             </button>
           </div>
 
@@ -390,9 +390,9 @@ Your heart and arteries are currently experiencing elevated stress due to higher
         </div>
 
         {/* MODERN CLINICAL AI BOT DRAWER */}
-        <div className={`fixed bottom-20 sm:bottom-24 right-2 sm:right-6 md:right-8 w-[95%] sm:w-[540px] md:w-[600px] lg:w-[640px] flex flex-col bg-white border-2 border-slate-200/90 rounded-3xl shadow-[0_25px_70px_rgba(15,23,42,0.22)] overflow-hidden h-[680px] max-h-[85vh] z-50 transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
+        <div className={`fixed bottom-20 sm:bottom-24 inset-x-2 sm:inset-x-auto sm:right-6 md:right-8 sm:w-[540px] md:w-[600px] lg:w-[640px] flex flex-col bg-white border-2 border-slate-200/90 rounded-3xl shadow-[0_25px_70px_rgba(15,23,42,0.22)] overflow-hidden h-[640px] max-h-[82vh] z-50 transition-all duration-300 transform origin-bottom-right ${isChatOpen ? 'scale-100 opacity-100' : 'scale-0 opacity-0 pointer-events-none'}`}>
           {/* Header */}
-          <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
+          <div className="px-4 sm:px-5 py-3.5 sm:py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800 shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,7 +597,7 @@ Your heart and arteries are currently experiencing elevated stress due to higher
         {/* FLOATING ACTION TRIGGER */}
         <button 
           onClick={() => setIsChatOpen(!isChatOpen)}
-          className={`fixed bottom-6 right-4 sm:right-8 z-50 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xl cursor-pointer ${
+          className={`fixed bottom-4 sm:bottom-6 right-3 sm:right-8 z-50 w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-xl cursor-pointer ${
             isChatOpen 
               ? 'bg-slate-900 text-white hover:bg-slate-800' 
               : 'bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 text-white hover:scale-105 shadow-blue-500/30'
@@ -605,15 +605,15 @@ Your heart and arteries are currently experiencing elevated stress due to higher
           title="Open Clinical AI Assistant"
         >
           {isChatOpen ? (
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
             </svg>
           ) : (
             <div className="relative flex items-center justify-center">
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse"></span>
             </div>
           )}
         </button>

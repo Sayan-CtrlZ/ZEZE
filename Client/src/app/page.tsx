@@ -52,21 +52,21 @@ export default function Home() {
   ];
 
   return (
-    <main className="min-h-screen relative p-4 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden">
+    <main className="min-h-screen relative p-3 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden">
       
-      {/* FLOATING PILL NAVBAR (MATCHING SCREENSHOT 1-5) */}
-      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-3 px-6 sm:px-8 mb-12 flex items-center justify-between z-30 sticky top-4">
+      {/* FLOATING PILL NAVBAR */}
+      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-2.5 sm:py-3 px-3.5 sm:px-8 mb-8 sm:mb-12 flex items-center justify-between z-30 sticky top-3 sm:top-4">
         {/* Brand Logo with Spark Icon */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/60 group-hover:scale-105 transition-transform">
-            <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/60 group-hover:scale-105 transition-transform shrink-0">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
             </svg>
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">ZEZE</span>
-              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">MED AI</span>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">ZEZE</span>
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">MED AI</span>
             </div>
           </div>
         </Link>
@@ -79,8 +79,8 @@ export default function Home() {
           <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">Manual Form</Link>
         </nav>
 
-        {/* Right Action Button (3D Navy Button matching screenshot) */}
-        <div className="flex items-center gap-3">
+        {/* Right Action Button */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <button 
             type="button"
             className="w-9 h-9 rounded-full neu-inset-sm hidden sm:flex items-center justify-center text-slate-600 hover:text-blue-700 transition-colors"
@@ -91,47 +91,47 @@ export default function Home() {
           
           <Link 
             href="/assessment" 
-            className="neu-button-3d px-5 py-2.5 text-xs font-black"
+            className="neu-button-3d px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0"
           >
             <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            START
+            <span>START</span>
           </Link>
         </div>
       </header>
 
-      {/* HERO SECTION (MATCHING SCREENSHOT 1 & 2) */}
-      <section className="max-w-4xl mx-auto text-center py-6 sm:py-10 relative z-10 w-full">
+      {/* HERO SECTION */}
+      <section className="max-w-4xl mx-auto text-center py-4 sm:py-10 relative z-10 w-full px-2">
         
         {/* Title Tagline */}
-        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 mb-4 leading-tight">
+        <h1 className="text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 mb-3 sm:mb-4 leading-tight">
           Precision <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-blue-900">Cardiology.</span>
         </h1>
         
-        <p className="text-sm sm:text-base font-bold text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+        <p className="text-xs sm:text-base font-bold text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
           Zero Error Zonal Evaluation Engine powered by a calibrated 70,000-cohort gradient boosted model with on-device document OCR.
         </p>
 
-        {/* MAIN 3D CTA BUTTON (MATCHING SCREENSHOT 1 & 2) */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
+        {/* MAIN 3D CTA BUTTON */}
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-10 sm:mb-16">
           <a
             href="#persona-selection"
-            className="neu-button-3d px-8 py-4 text-sm font-black tracking-wider group"
+            className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group"
           >
             <svg className="w-4 h-4 transform -rotate-45 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
-            START YOUR EVALUATION
+            <span>START YOUR EVALUATION</span>
           </a>
         </div>
       </section>
 
       {/* PERSONA / ROLE SELECTOR (WHO ARE YOU?) */}
-      <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-10 px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
+      <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-6 sm:py-10 px-2 sm:px-6">
+        <div className="text-center mb-8 sm:mb-12">
+          <span className="inline-block px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 uppercase mb-2 sm:mb-3">
             Target Users &amp; Roles
           </span>
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
+          <h2 className="text-2xl sm:text-5xl font-black tracking-tight text-slate-900">
             Who are <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">you?</span>
           </h2>
           <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto mt-2">
@@ -140,11 +140,11 @@ export default function Home() {
         </div>
 
         {!selectedRole ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
             {roles.map((role) => (
               <div
                 key={role.id}
-                className={`neu-card-glass ${role.accentBorder} p-8 sm:p-9 flex flex-col justify-between group`}
+                className={`neu-card-glass ${role.accentBorder} p-6 sm:p-8 lg:p-9 flex flex-col justify-between group`}
               >
                 {/* Top Row: Icon Well on Left + Crisp Watermark Number on Right */}
                 <div className="flex items-center justify-between mb-6">

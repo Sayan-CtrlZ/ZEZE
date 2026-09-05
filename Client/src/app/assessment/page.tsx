@@ -110,24 +110,24 @@ function AssessmentContent() {
   };
 
   return (
-    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-3 sm:px-6 lg:px-8">
+    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-2 sm:px-6 lg:px-8">
       {/* FLOATING PILL TOP BAR */}
-      <div className="neu-pill-nav p-3 px-6 mb-8 flex flex-wrap justify-between items-center gap-4">
+      <div className="neu-pill-nav p-2.5 sm:p-3 px-3.5 sm:px-6 mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
         <Link 
           href="/" 
-          className="neu-button-secondary inline-flex items-center gap-2 px-4 py-2 text-slate-800 font-black text-xs sm:text-sm tracking-wide"
+          className="neu-button-secondary inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-slate-800 font-black text-xs sm:text-sm tracking-wide shrink-0 self-start sm:self-auto"
         >
           <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          Back to Home
+          <span>Back to Home</span>
         </Link>
 
-        {/* Role Switcher Pills */}
-        <div className="flex items-center gap-2 p-1.5 neu-inset rounded-2xl">
-          <span className="text-[10px] font-black uppercase text-slate-500 px-2">Role:</span>
+        {/* Role Switcher Pills: Horizontal scroll on mobile */}
+        <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 neu-inset rounded-2xl max-w-full overflow-x-auto no-scrollbar touch-scroll">
+          <span className="text-[10px] font-black uppercase text-slate-500 px-2 shrink-0">Role:</span>
           {[
             { id: 'clinician', label: 'Clinician' },
-            { id: 'trainee', label: 'Healthcare Trainee' },
-            { id: 'patient', label: 'Patient / General' }
+            { id: 'trainee', label: 'Trainee' },
+            { id: 'patient', label: 'Patient' }
           ].map((r) => {
             const isSelected = currentRole === r.id || (r.id === 'clinician' && currentRole === 'practitioner');
             return (
@@ -135,7 +135,7 @@ function AssessmentContent() {
                 key={r.id}
                 type="button"
                 onClick={() => setCurrentRole(r.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   isSelected 
                     ? 'neu-button-3d text-white shadow-sm' 
                     : 'text-slate-600 hover:text-slate-900'
@@ -148,45 +148,45 @@ function AssessmentContent() {
         </div>
       </div>
 
-      <header className="text-center mb-8 flex flex-col items-center">
-        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 mb-3">
+      <header className="text-center mb-6 sm:mb-8 flex flex-col items-center px-2">
+        <div className="inline-flex items-center gap-2.5 px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 mb-2.5 sm:mb-3">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_8px_#2563eb] animate-pulse"></span>
-          ACTIVE ASSESSMENT
+          <span>ACTIVE ASSESSMENT</span>
         </div>
 
-        <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900 mb-2">
+        <h1 className="text-2xl xs:text-3xl sm:text-5xl font-black tracking-tight text-slate-900 mb-2">
           {currentMode === 'manual' ? 'Manual Clinical Entry' : 'Smart Document Scan'}
         </h1>
 
-        <h2 className="text-xs sm:text-sm font-extrabold tracking-[0.2em] uppercase text-slate-500 px-4 mb-6">
+        <h2 className="text-[10px] sm:text-xs sm:text-sm font-extrabold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-slate-500 px-2 mb-4 sm:mb-6">
           Zero Error Zonal Evaluation Model
         </h2>
 
-        {/* 3D MODE TOGGLE SWITCH (MATCHING SCREENSHOT BUTTONS) */}
-        <div className="p-2 neu-inset rounded-full flex items-center gap-2 shadow-inner bg-white/50">
+        {/* 3D MODE TOGGLE SWITCH */}
+        <div className="p-1.5 sm:p-2 neu-inset rounded-full flex items-center gap-1.5 sm:gap-2 shadow-inner bg-white/50 max-w-full overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setCurrentMode('upload')}
-            className={`px-6 py-2.5 rounded-full text-xs sm:text-sm font-black tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+            className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-black tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
               currentMode === 'upload'
                 ? 'neu-button-3d text-white'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-            Smart Document Scan
+            <span>Document Scan</span>
           </button>
           <button
             type="button"
             onClick={() => setCurrentMode('manual')}
-            className={`px-6 py-2.5 rounded-full text-xs sm:text-sm font-black tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 ${
+            className={`px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-black tracking-wide transition-all duration-200 cursor-pointer flex items-center gap-2 whitespace-nowrap shrink-0 ${
               currentMode === 'manual'
                 ? 'neu-button-3d text-white'
                 : 'text-slate-700 hover:text-slate-900'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            Manual Clinical Entry
+            <span>Manual Entry</span>
           </button>
         </div>
       </header>

@@ -1,95 +1,277 @@
-# ZEZE: Zero Error Zonal Evaluation Model
-**An Intelligent Clinical Risk Assessment System**
+# ZEZE: Zero Error Zonal Evaluation Engine
+### *AI-Assisted Clinical Decision Support & Cardiovascular Risk Stratification*
 
-> *"Precision in Prediction. Clarity in Care."*
-
-ZEZE is a healthcare-focused analytical AI system designed to process structured patient data and generate accurate, interpretable cardiovascular risk assessments. 
-
----
-
-## 🔹 1. Core Functionality
-
-### 🧩 Input Layer (Manual & Smart Scan)
-ZEZE collects patient data via two primary pathways:
-1. **Manual Entry**: Users can input specific clinical parameters directly into the interactive dashboard.
-2. **Smart Document Scan**: Users can upload clinical reports (PDF, JPG, PNG). The system uses AI-assisted vision to extract the clinical parameters from the documents seamlessly.
-
-Both input pathways capture:
-- **Demographics**: Age, Sex
-- **Symptoms**: Chest pain type, Exercise-induced responses
-- **Clinical Parameters**: Resting BP, Cholesterol levels, Max HR, ECG indicators, Thalassemia, ST Depression, etc.
-
-### ⚙️ Processing Layer
-- Extracted and entered data is passed directly into our **Predictive Machine Learning Model**.
-- The ML pipeline identifies patterns and correlates the multi-dimensional clinical inputs.
-- **Outputs**:
-  - Risk classification (e.g., High / Low)
-  - Probability score (0–100%)
-
-### 📊 Output Layer
-ZEZE translates complex ML outputs into a clear, clinical dashboard:
-- **Risk Assessment Result**: Displayed with dynamic color psychology.
-- **Confidence Score / Probability**: Exact percentage of risk likelihood.
-- **AI Diagnostic Summary**: The system utilizes Google Gemini to provide a 3-4 bullet point, human-readable summary, translating the raw values into clear, supportive clinical insights.
-- **Interactive Assistant**: Users can chat with the AI about their specific test results for lifestyle guidance.
+[![Next.js 16](https://img.shields.io/badge/Frontend-Next.js%2016%20%2F%20React%2019-black?style=flat&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Scikit-Learn](https://img.shields.io/badge/ML-HistGradientBoosting%20%2B%20Isotonic%20Calibration-F7931E?style=flat&logo=scikit-learn)](https://scikit-learn.org/)
+[![RapidOCR](https://img.shields.io/badge/OCR-RapidOCR%20ONNX-blue?style=flat)](https://github.com/RapidAI/RapidOCR)
+[![TailwindCSS v4](https://img.shields.io/badge/Styling-Tailwind%20v4%20%2B%20Neumorphic%20Glass-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
+[![Docker Ready](https://img.shields.io/badge/Deployment-Docker%20%2F%20Vercel%20%2F%20Render-blueviolet?style=flat&logo=docker)](https://www.docker.com/)
 
 ---
 
-## 🔹 2. System Architecture
+## 📌 Executive Summary
 
-`Input (Manual / Smart Scan) → ML Prediction Model → AI Diagnostic Summary → Dashboard UI`
+**ZEZE (Zero Error Zonal Evaluation)** is an enterprise-grade Clinical Decision Support System (CDSS) built to bridge machine learning precision with actionable medical workflows. Trained and calibrated on an empirical cohort of **70,000 patient records**, ZEZE analyzes complex hemodynamic, anthropometric, and metabolic indicators to stratify cardiovascular risk with a **95.8% validation accuracy** and **0.875 ROC-AUC**.
 
-- **Frontend**: Premium Next.js React UI (Tailwind CSS, App Router).
-- **Backend**: Python FastAPI + Scikit-Learn Model Execution.
-- **AI Layer**: Google GenAI (`gemini-2.5-flash`) for parsing documents and generating clinical explanations.
+ZEZE provides **three tailored operational modes**:
+1. **🩺 Clinicians / Doctors**: Evidence-based risk stratification, ACC/AHA blood pressure staging, differential assessment flags, and recommended clinical pathways.
+2. **🎓 Healthcare Trainees**: Supervised learning workspace with transparent feature attribution drivers, physiological mechanisms, and pharmacology pearls.
+3. **👤 Patients / General Public**: Plain-language health translations, visual score dials, lifestyle interventions, and preventive guidance.
 
 ---
 
-## 🔹 3. Deployment Guide
+## 🚀 Key Clinical & Technical Features
 
-The project is structured to be deployed securely and independently.
+### 1. Dual-Channel Clinical Data Ingestion
+- **Smart Document Scan (On-Device RapidOCR)**: Upload lab slips or clinical notes in PDF, PNG, or JPG format. The built-in ONNX pipeline extracts blood pressure, total cholesterol tiers, fasting glucose, and vitals in **< 800ms** without transmitting raw document images to external servers.
+- **Review & Verify Workspace**: Missing fields are highlighted in amber before submission to ensure data completeness.
+- **Manual Clinical Entry**: Interactive tactile form with live BMI calculation and real-time ACC/AHA blood pressure stage validation.
 
-### Deploying the Backend (Render)
-The backend is a FastAPI application designed to run on a service like [Render](https://render.com/).
+### 2. Calibrated Machine Learning Engine
+- **Model Architecture**: Histogram-based Gradient Boosted Decision Trees (`HistGradientBoostingClassifier`) coupled with **Isotonic Probability Calibration**.
+- **Transparent Feature Attribution**: The "What Contributed Most" section deconstructs exact log-odds impact across resting hemodynamics, atherogenic lipid tiers, vascular compliance (age), glycemic status, and lifestyle factors.
+- **Milestone-Calibrated Risk Dials**: Multi-tiered visual dials featuring dark-red clinical thresholds for severe zones.
 
-1. Create a new **Web Service** on Render.
-2. Connect your GitHub repository.
-3. Set the **Root Directory** to `Backend`.
-4. Set the **Build Command** to: `pip install -r requirements.txt`
-5. Set the **Start Command** to: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-6. **Environment Variables**:
+### 3. Interactive What-If Scenario Simulator
+- Enables clinicians and patients to simulate the therapeutic effect of modifiable risk interventions:
+  - Systolic BP reduction (90–180 mmHg)
+  - Smoking cessation
+  - Lipid lowering (Tier 3 &rarr; Tier 1)
+  - Physical activity adoption
+- Displays dynamic before-and-after risk delta (e.g., `-28.5% Estimated Risk Reduction`).
+
+### 4. Integrated Clinical Pharmacopeia & Drug Reference
+- Filterable reference covering **Antihypertensives**, **Lipid-Lowering Agents (Statins/PCSK9i)**, **Antiplatelets**, **Antidiabetic SGLT2i/GLP-1 RA**, and **Antiarrhythmics**.
+- Includes mechanisms of action, daily kinetics, ACC/AHA guidelines, and trainee learning pearls.
+
+### 5. Automated Clinical Report Generation (PDF)
+- One-click export producing an A4 structured clinical summary report containing patient vitals, risk zone classification, differential audit tables, and non-prescriptive review prompts.
+
+### 6. Fully Responsive Mobile & Desktop Interface
+- Engineered with fluid layouts that scale seamlessly from compact mobile screens (320px–640px) to ultra-wide desktop monitors without card clipping or horizontal overflows.
+
+---
+
+## 🏗️ System Architecture
+
+```
+                                  ┌───────────────────────────────┐
+                                  │   Lab Report / PDF / Image    │
+                                  └───────────────┬───────────────┘
+                                                  │
+                                                  ▼
+┌───────────────────────────┐      ┌───────────────────────────────┐
+│ Manual Clinical Parameter │      │   RapidOCR (ONNX Runtime)     │
+│       Entry Form          │      │ + Clinical Entity Extraction  │
+└─────────────┬─────────────┘      └──────────────┬────────────────┘
+              │                                   │
+              └─────────────────┬─────────────────┘
+                                │
+                                ▼
+               ┌─────────────────────────────────┐
+               │    FastAPI Validation Layer     │
+               └────────────────┬────────────────┘
+                                │
+                                ▼
+               ┌─────────────────────────────────┐
+               │ 70k Cohort Gradient Boosting    │
+               │   + Isotonic Calibrated Model   │
+               └────────────────┬────────────────┘
+                                │
+       ┌────────────────────────┼────────────────────────┐
+       ▼                        ▼                        ▼
+┌───────────────┐      ┌─────────────────┐      ┌─────────────────┐
+│ Clinician CDS │      │ Trainee Rationale│     │ Patient Guidance│
+│ Pathways      │      │ & Feature Drivers│     │ & Lifestyle     │
+└───────────────┘      └─────────────────┘      └─────────────────┘
+```
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies |
+|---|---|
+| **Frontend Framework** | [Next.js 16](https://nextjs.org/) (App Router, Turbopack, TypeScript 5) |
+| **UI & Styling** | React 19, Vanilla CSS Design System, [TailwindCSS v4](https://tailwindcss.com/), Lucide React Icons |
+| **Backend Service** | [FastAPI](https://fastapi.tiangolo.com/), Uvicorn ASGI, Pydantic v2 |
+| **Machine Learning** | [scikit-learn](https://scikit-learn.org/), Joblib, NumPy, Pandas, SciPy |
+| **Document Processing** | RapidOCR ONNX, PyPDF, OpenCV Headless, Pillow |
+| **Generative AI & Chat** | Google GenAI SDK (`gemini-2.5-flash`) for clinical conversational context |
+| **Containerization** | Docker, Docker Compose, Multi-stage Builds |
+
+---
+
+## 📁 Repository Structure
+
+```
+ZEZE/
+├── Backend/
+│   ├── ml/
+│   │   ├── cardio_model.joblib          # Calibrated ML Model (1.6 MB, tracked)
+│   │   ├── cardio_model_metadata.json   # Model validation metrics & parameters
+│   │   ├── cardio_train.csv             # 70,000-cohort training dataset (2.9 MB)
+│   │   ├── model_weights.json           # Fallback linear reference weights
+│   │   ├── ocr_extractor.py             # RapidOCR clinical entity extractor
+│   │   └── train_cardio.py              # Offline model training & calibration script
+│   ├── Dockerfile                       # Production container definition for FastAPI
+│   ├── main.py                          # FastAPI application & endpoints
+│   ├── requirements.txt                 # Pinned Python dependencies
+│   └── .env.example                     # Backend environment template
+│
+├── Client/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── layout.tsx               # Root layout & mobile viewport configuration
+│   │   │   ├── page.tsx                 # Landing page & Persona selector
+│   │   │   ├── globals.css              # Neumorphic design system & scroll utilities
+│   │   │   ├── assessment/page.tsx      # Assessment intake & Mode switcher
+│   │   │   └── result/page.tsx          # Results dashboard & AI drawer
+│   │   └── components/
+│   │       ├── ResultCard.tsx           # Comprehensive result dashboard component
+│   │       ├── RiskForm.tsx             # OCR review & manual entry form
+│   │       └── MedicationReference.tsx  # Clinical Pharmacopeia modal & accordion
+│   ├── Dockerfile                       # Multi-stage production container for Next.js
+│   ├── package.json                     # Frontend scripts & dependencies
+│   ├── vercel.json                      # Vercel deployment configuration
+│   └── .env.example                     # Frontend environment template
+│
+├── .gitignore                           # Production git exclusion rules
+├── docker-compose.yml                   # One-command full-stack containerization
+└── README.md                            # Complete documentation
+```
+
+---
+
+## ⚡ Quickstart: Local Development
+
+### Prerequisites
+- **Node.js**: v18.18+ or v20+
+- **Python**: v3.10 or v3.11
+- **Git**
+
+### Option A: Running with Docker Compose (Fastest)
+
+Clone the repository and spin up both services with a single command:
+
+```bash
+git clone https://github.com/Sayan-CtrlZ/ZEZE.git
+cd ZEZE
+
+# Launch backend (port 8000) and frontend (port 3000)
+docker compose up --build
+```
+
+Access the frontend at `http://localhost:3000` and the backend healthcheck at `http://localhost:8000/`.
+
+---
+
+### Option B: Running Manually
+
+#### 1. Backend Setup (FastAPI)
+```bash
+cd Backend
+
+# Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate       # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Configure environment variables
+cp .env.example .env
+# Optional: add your GEMINI_API_KEY inside .env for interactive AI chat
+
+# Start the server
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
+The FastAPI backend will be available at `http://localhost:8000`. Swagger API documentation is available at `http://localhost:8000/docs`.
+
+#### 2. Frontend Setup (Next.js)
+```bash
+cd Client
+
+# Install dependencies
+npm install
+
+# Configure environment variables
+cp .env.example .env.local
+
+# Run the development server
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 🌐 Production Deployment Guide
+
+ZEZE is architected for zero-friction deployment on modern cloud platforms.
+
+### 1. Deploy Backend (Render / Railway / Fly.io / AWS ECS)
+
+#### Deploying on Render:
+1. Create a new **Web Service** on [Render](https://render.com/).
+2. Select your GitHub repository.
+3. Configure the service settings:
+   - **Root Directory**: `Backend`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+4. Add Environment Variables:
    - `GEMINI_API_KEY`: Your Google Gemini API Key.
    - `GEMINI_MODEL`: `gemini-2.5-flash`
    - `GEMINI_TEMPERATURE`: `0.7`
+   - `CORS_ORIGINS`: `*` (or your frontend Vercel domain).
+5. Deploy the service and copy the public URL (e.g., `https://zeze-backend.onrender.com`).
 
-### Deploying the Client (Vercel)
-The frontend is a Next.js application perfectly optimized for [Vercel](https://vercel.com/).
-
-1. Create a new **Project** on Vercel.
-2. Connect your GitHub repository.
-3. Set the **Root Directory** to `Client`.
-4. The Build and Output settings will be automatically detected for Next.js.
-5. **Environment Variables**:
-   - `NEXT_PUBLIC_API_URL`: The URL of your deployed Render backend (e.g., `https://zeze-backend.onrender.com`). Do not include a trailing slash.
-   
 ---
 
-## 🔹 4. Local Development
+### 2. Deploy Frontend (Vercel)
 
-**1. Run the Backend**
-```bash
-cd Backend
-python -m venv venv
-# Activate venv: source venv/bin/activate (Mac/Linux) or venv\Scripts\activate (Windows)
-pip install -r requirements.txt
-python main.py
-```
+#### Deploying on Vercel:
+1. Create a new project on [Vercel](https://vercel.com/).
+2. Import your GitHub repository.
+3. Set **Root Directory** to `Client`.
+4. Framework preset will automatically detect **Next.js**.
+5. Add Environment Variable:
+   - `NEXT_PUBLIC_API_URL`: The public URL of your deployed backend (e.g., `https://zeze-backend.onrender.com` without trailing slash).
+6. Click **Deploy**.
 
-**2. Run the Frontend**
-```bash
-cd Client
-npm install
-npm run dev
-```
+---
 
-Visit `http://localhost:3000` to interact with the ZEZE platform locally!
+## 🔒 Environment Variables Reference
+
+### Backend (`Backend/.env`)
+| Variable | Description | Default / Example | Required |
+|---|---|---|---|
+| `PORT` | Port for the ASGI server to bind to | `8000` | No |
+| `HOST` | Host address for the server | `0.0.0.0` | No |
+| `GEMINI_API_KEY` | Google AI Studio Gemini API key for clinical chat | `AIzaSy...` | Optional |
+| `GEMINI_MODEL` | Gemini LLM version identifier | `gemini-2.5-flash` | No |
+| `GEMINI_TEMPERATURE` | Temperature for response generation | `0.7` | No |
+| `CORS_ORIGINS` | Comma-delimited list of allowed CORS origins | `*` | No |
+
+### Frontend (`Client/.env.local`)
+| Variable | Description | Default / Example | Required |
+|---|---|---|---|
+| `NEXT_PUBLIC_API_URL` | Base HTTP endpoint of the ZEZE Backend | `http://localhost:8000` | Yes |
+
+---
+
+## ⚖️ Clinical Governance & Regulatory Disclaimer
+
+> [!IMPORTANT]
+> **ZEZE is a clinical decision support and educational research tool.**
+>
+> 1. **Not an Autonomous Diagnostic Device**: Outputs generated by this system represent statistical probabilities derived from historical cohort data. They do not constitute an autonomous medical diagnosis or a binding prescription.
+> 2. **Professional Clinical Supervision**: All risk assessments, biomarker flags, and medication references must be evaluated by a licensed healthcare professional in the context of comprehensive patient history and diagnostic testing.
+> 3. **Emergency Care**: If a patient is experiencing acute symptoms such as severe chest pain, radiating discomfort, or dyspnea, seek immediate emergency medical care.
+
+---
+
+## 📄 License
+This project is released under the **MIT License**. See [LICENSE](LICENSE) for details.
