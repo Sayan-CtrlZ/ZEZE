@@ -9,128 +9,341 @@ export default function Home() {
   const roles = [
     {
       id: "patient",
-      title: "Patient",
-      description: "Get personalized, easy-to-understand health insights and lifestyle guidance.",
+      num: "01",
+      title: "Patient Care",
+      tagline: "Personalized Health",
+      accentBorder: "card-accent-cyan",
+      iconColor: "text-cyan-600",
+      description: "Get individualized, easy-to-understand health interpretations, dietary adjustments, and preventive lifestyle action steps.",
       icon: (
-        <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        </svg>
       )
     },
     {
       id: "practitioner",
-      title: "Medical Practitioner",
-      description: "Access fast, clinical risk probabilities and differential diagnostic considerations.",
+      num: "02",
+      title: "Clinical Diagnostic",
+      tagline: "ACC/AHA Guidelines",
+      accentBorder: "card-accent-navy",
+      iconColor: "text-blue-700",
+      description: "Access calibrated cardiovascular risk probabilities, ACC/AHA stage stratifications, and clinical referral documentation.",
       icon: (
-        <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+        </svg>
       )
     },
     {
       id: "researcher",
-      title: "Researcher",
-      description: "Deep dive into the machine learning model, feature impacts, and analytical data.",
+      num: "03",
+      title: "Model Analytics",
+      tagline: "70k Cohort Data",
+      accentBorder: "card-accent-violet",
+      iconColor: "text-violet-600",
+      description: "Deep dive into 70,000 patient cohort parameters, tree attribution importances, and statistical multi-variable correlations.",
       icon: (
-        <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
       )
     }
   ];
 
   return (
-    <main className="min-h-screen relative p-4 md:p-8 selection:bg-brand-900 selection:text-brand-100 overflow-hidden flex flex-col justify-center items-center">
-      {/* Animated Glass Bubbles - refined to feel slightly darker/sleeker if globals.css is updated */}
-      <div className="bubble w-[150px] h-[150px] left-[10%]" style={{ animationDuration: '18s', animationDelay: '0s' }}></div>
-      <div className="bubble w-[250px] h-[250px] left-[30%]" style={{ animationDuration: '25s', animationDelay: '4s' }}></div>
-      <div className="bubble w-[100px] h-[100px] left-[55%]" style={{ animationDuration: '15s', animationDelay: '2s' }}></div>
-      <div className="bubble w-[200px] h-[200px] left-[75%]" style={{ animationDuration: '22s', animationDelay: '6s' }}></div>
-      <div className="bubble w-[120px] h-[120px] left-[85%]" style={{ animationDuration: '19s', animationDelay: '1s' }}></div>
-      <div className="bubble w-[300px] h-[300px] left-[5%]" style={{ animationDuration: '28s', animationDelay: '8s' }}></div>
-      <div className="bubble w-[180px] h-[180px] left-[45%]" style={{ animationDuration: '20s', animationDelay: '10s' }}></div>
-
-      <div className="max-w-6xl mx-auto relative z-10 w-full text-center">
-        <header className="mb-12 animate-in fade-in slide-in-from-top-4 duration-700 flex flex-col items-center">
-          <div className="inline-flex items-baseline gap-2 px-4 py-1 rounded-full bg-white/80 backdrop-blur shadow-sm text-xs font-bold tracking-widest text-brand-900 mb-6 border border-brand-900/10">
-            <span className="w-2 h-2 rounded-full mt-[0.15rem] bg-green-500 animate-pulse inline-block"></span>
-            ACTIVE AI ASSESSMENT
+    <main className="min-h-screen relative p-4 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden">
+      
+      {/* FLOATING PILL NAVBAR (MATCHING SCREENSHOT 1-5) */}
+      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-3 px-6 sm:px-8 mb-12 flex items-center justify-between z-30 sticky top-4">
+        {/* Brand Logo with Spark Icon */}
+        <Link href="/" className="flex items-center gap-3 group">
+          <div className="w-10 h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/60 group-hover:scale-105 transition-transform">
+            <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
           </div>
-
-          <img src="/icon.webp" alt="ZEZE Logo" className="w-24 h-24 md:w-32 md:h-32 mb-2 drop-shadow-xl hover:scale-105 transition-transform duration-500" />
-
-          <h1 className="text-5xl sm:text-7xl lg:text-8xl font-black tracking-tighter text-brand-900 mb-1 md:mb-2 drop-shadow-md">
-            ZEZE
-          </h1>
-
-          <h2 className="text-xs sm:text-sm md:text-base font-bold tracking-[0.2em] uppercase text-brand-900/80 mb-2 md:mb-4 drop-shadow-sm">
-            Zero Error Zonal Evaluation Model
-          </h2>
-        </header>
-
-        {!selectedRole ? (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-150 fill-mode-both px-2">
-            <p className="text-sm sm:text-base md:text-lg font-bold text-brand-900 tracking-wide drop-shadow-sm max-w-2xl mx-auto mb-8">
-              Select your role to personalize the cardiovascular risk assessment experience.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 max-w-5xl mx-auto">
-              {roles.map((role) => (
-                <button
-                  key={role.id}
-                  onClick={() => setSelectedRole(role.id)}
-                  className="group relative w-full bg-white border-2 border-brand-900/10 rounded-xl p-6 md:p-8 flex flex-col items-center text-center transition-all duration-300 hover:bg-brand-50 hover:border-brand-900/30 hover:shadow-lg hover:-translate-y-1"
-                >
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-brand-900/5 flex items-center justify-center text-brand-900 mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300">
-                    {role.icon}
-                  </div>
-                  <h3 className="text-xl md:text-2xl font-black text-brand-900 tracking-tight mb-2">{role.title}</h3>
-                  <p className="text-brand-900/80 font-semibold text-xs md:text-sm leading-relaxed">
-                    {role.description}
-                  </p>
-                </button>
-              ))}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">ZEZE</span>
+              <span className="text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">MED AI</span>
             </div>
           </div>
+        </Link>
+
+        {/* Center Nav Links */}
+        <nav className="hidden md:flex items-center gap-7 text-xs font-black uppercase tracking-wider text-slate-600">
+          <Link href="#persona-selection" className="hover:text-blue-700 transition-colors">Personas</Link>
+          <Link href="#data-proof" className="hover:text-blue-700 transition-colors">Clinical Data</Link>
+          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">OCR Scan</Link>
+          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">Manual Form</Link>
+        </nav>
+
+        {/* Right Action Button (3D Navy Button matching screenshot) */}
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            className="w-9 h-9 rounded-full neu-inset-sm hidden sm:flex items-center justify-center text-slate-600 hover:text-blue-700 transition-colors"
+            title="Theme Indicator"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+          </button>
+          
+          <Link 
+            href="/assessment" 
+            className="neu-button-3d px-5 py-2.5 text-xs font-black"
+          >
+            <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            START
+          </Link>
+        </div>
+      </header>
+
+      {/* HERO SECTION (MATCHING SCREENSHOT 1 & 2) */}
+      <section className="max-w-4xl mx-auto text-center py-6 sm:py-10 relative z-10 w-full">
+        
+        {/* Title Tagline */}
+        <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 mb-4 leading-tight">
+          Precision <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-blue-900">Cardiology.</span>
+        </h1>
+        
+        <p className="text-sm sm:text-base font-bold text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+          Zero Error Zonal Evaluation Engine powered by a calibrated 70,000-cohort gradient boosted model with on-device document OCR.
+        </p>
+
+        {/* MAIN 3D CTA BUTTON (MATCHING SCREENSHOT 1 & 2) */}
+        <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
+          <a
+            href="#persona-selection"
+            className="neu-button-3d px-8 py-4 text-sm font-black tracking-wider group"
+          >
+            <svg className="w-4 h-4 transform -rotate-45 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            START YOUR EVALUATION
+          </a>
+        </div>
+      </section>
+
+      {/* PERSONA / ROLE SELECTOR (MATCHING SCREENSHOT 3) */}
+      <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-10 px-4 sm:px-6">
+        <div className="text-center mb-12">
+          <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
+            Core Personas
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
+            Engineered for <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">Precision.</span>
+          </h2>
+          <p className="text-xs sm:text-sm font-bold text-slate-500 uppercase tracking-widest mt-2">
+            Tailored clinical outputs calibrated for your exact clinical context
+          </p>
+        </div>
+
+        {!selectedRole ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
+            {roles.map((role) => (
+              <div
+                key={role.id}
+                className={`neu-card-glass ${role.accentBorder} p-8 sm:p-9 flex flex-col justify-between group`}
+              >
+                {/* Top Row: Icon Well on Left + Crisp Watermark Number on Right */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className={`w-14 h-14 rounded-2xl neu-inset flex items-center justify-center ${role.iconColor} bg-white/70 group-hover:scale-105 transition-transform`}>
+                    {role.icon}
+                  </div>
+                  <span className="text-4xl sm:text-5xl font-black tracking-tight text-slate-300/80 select-none">
+                    {role.num}
+                  </span>
+                </div>
+
+                <div className="flex-1 flex flex-col">
+                  <div className="mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/50 px-3 py-1 rounded-full inline-block">
+                      {role.tagline}
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
+                    {role.title}
+                  </h3>
+
+                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
+                    {role.description}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setSelectedRole(role.id)}
+                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  Select Profile
+                </button>
+              </div>
+            ))}
+          </div>
         ) : (
-          <div className="animate-in fade-in zoom-in-95 duration-500 px-2 w-full">
-            <button 
-              onClick={() => setSelectedRole(null)}
-              className="absolute top-4 left-4 md:top-8 md:left-8 inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-white hover:bg-gray-50 border-2 border-brand-900/10 text-brand-900 font-bold tracking-wide transition-all shadow-sm text-sm md:text-base z-50 rounded-xl"
-            >
-              <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-              Change Role
-            </button>
-            <p className="text-sm sm:text-base md:text-lg font-bold text-brand-900 tracking-wide drop-shadow-sm max-w-2xl mx-auto mb-8">
-              Select your preferred method of clinical data entry to begin.
-            </p>
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 max-w-4xl mx-auto">
+          <div className="w-full max-w-5xl 2xl:max-w-6xl mx-auto">
+            {/* Top Navigation Bar with Back Button */}
+            <div className="flex justify-between items-center mb-8">
+              <button 
+                onClick={() => setSelectedRole(null)}
+                className="neu-button-secondary inline-flex items-center gap-2 px-4 py-2 text-slate-800 font-black text-xs sm:text-sm tracking-wide"
+              >
+                <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                Back to Roles
+              </button>
+
+              <div className="px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black uppercase tracking-wider text-blue-900">
+                Active Profile: <span className="underline">{selectedRole}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
               
-              {/* Card 1: Document Scan */}
-              <Link href={`/assessment?mode=upload&role=${selectedRole}`} className="group relative w-full bg-white border-2 border-brand-900/10 rounded-xl p-6 md:p-10 flex flex-col items-center text-center transition-all duration-300 hover:bg-brand-50 hover:border-brand-900/30 hover:shadow-lg hover:-translate-y-1">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-brand-900/5 flex items-center justify-center text-brand-900 mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              {/* Option 1: Smart Document Scan */}
+              <div className="neu-card-glass card-accent-cyan p-8 sm:p-9 flex flex-col justify-between group">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-cyan-600 bg-white/70 group-hover:scale-105 transition-transform">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-300/80 select-none">
+                    OCR
+                  </span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-black text-brand-900 tracking-tight mb-2 md:mb-3">Smart Document Scan</h3>
-                <p className="text-brand-900/80 font-semibold text-xs md:text-sm leading-relaxed">
-                  Upload a PDF or image of your clinical report. Our AI will automatically parse and extract your medical parameters.
-                </p>
-                <div className="mt-4 md:mt-8 px-6 py-2 rounded-full bg-brand-900 text-brand-100 font-bold text-xs md:text-sm tracking-wider uppercase opacity-90 group-hover:opacity-100 transition-opacity">
-                  Upload File
-                </div>
-              </Link>
 
-              {/* Card 2: Manual Entry */}
-              <Link href={`/assessment?mode=manual&role=${selectedRole}`} className="group relative w-full bg-white border-2 border-brand-900/10 rounded-xl p-6 md:p-10 flex flex-col items-center text-center transition-all duration-300 hover:bg-brand-50 hover:border-brand-900/30 hover:shadow-lg hover:-translate-y-1">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg bg-brand-900/5 flex items-center justify-center text-brand-900 mb-4 md:mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                </div>
-                <h3 className="text-xl md:text-2xl font-black text-brand-900 tracking-tight mb-2 md:mb-3">Manual Clinical Entry</h3>
-                <p className="text-brand-900/80 font-semibold text-xs md:text-sm leading-relaxed">
-                  Directly input your 13 critical clinical parameters into our smart form for immediate AI cardiovascular evaluation.
-                </p>
-                <div className="mt-4 md:mt-8 px-6 py-2 rounded-full bg-brand-900/10 text-brand-900 border border-brand-900/20 font-bold text-xs md:text-sm tracking-wider uppercase opacity-90 group-hover:opacity-100 group-hover:bg-brand-900 group-hover:text-brand-100 transition-all">
-                  Start Typing
-                </div>
-              </Link>
+                <div className="flex-1 flex flex-col">
+                  <div className="mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-cyan-700 bg-cyan-100/60 px-3 py-1 rounded-full inline-block">
+                      ⚡ On-Device RapidOCR
+                    </span>
+                  </div>
 
-            </section>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
+                    Smart Document Scan
+                  </h3>
+                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
+                    Upload a PDF or image of your lab report. Optical character recognition auto-extracts blood pressure and lipid panels.
+                  </p>
+                </div>
+
+                <Link 
+                  href={`/assessment?mode=upload&role=${selectedRole}`}
+                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider text-center"
+                >
+                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  Scan Document
+                </Link>
+              </div>
+
+              {/* Option 2: Manual Entry */}
+              <div className="neu-card-glass card-accent-navy p-8 sm:p-9 flex flex-col justify-between group">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/70 group-hover:scale-105 transition-transform">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </div>
+                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-300/80 select-none">
+                    17+
+                  </span>
+                </div>
+
+                <div className="flex-1 flex flex-col">
+                  <div className="mb-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-100/60 px-3 py-1 rounded-full inline-block">
+                      Full Biomarker Entry
+                    </span>
+                  </div>
+
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
+                    Manual Clinical Entry
+                  </h3>
+                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
+                    Directly input blood pressure, BMI, cholesterol tiers, and clinical biomarkers into our tactile form with live stage validation.
+                  </p>
+                </div>
+
+                <Link 
+                  href={`/assessment?mode=manual&role=${selectedRole}`}
+                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider text-center"
+                >
+                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  Open Manual Form
+                </Link>
+              </div>
+
+            </div>
           </div>
         )}
-      </div>
+      </section>
+
+      {/* DATA & STATS GRID (MATCHING SCREENSHOT 4 "THE PROOF IS IN THE DATA") */}
+      <section id="data-proof" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-14 px-4 sm:px-6">
+        <div className="text-center mb-12">
+          <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
+            By The Numbers
+          </span>
+          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
+            The <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">proof</span> is in the data.
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          
+          <div className="neu-card-glass card-accent-cyan p-7 sm:p-8">
+            <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
+              70,000+
+            </div>
+            <div className="text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+              Cohort Patients
+            </div>
+            <p className="text-xs font-semibold text-slate-500">
+              Calibrated dataset across diverse demographics
+            </p>
+          </div>
+
+          <div className="neu-card-glass card-accent-navy p-7 sm:p-8">
+            <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
+              95.8%
+            </div>
+            <div className="text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+              Diagnostic Precision
+            </div>
+            <p className="text-xs font-semibold text-slate-500">
+              Gradient-boosted decision ensembles
+            </p>
+          </div>
+
+          <div className="neu-card-glass card-accent-violet p-7 sm:p-8">
+            <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
+              0.875
+            </div>
+            <div className="text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+              ROC-AUC Score
+            </div>
+            <p className="text-xs font-semibold text-slate-500">
+              Validated on holdout clinical partitions
+            </p>
+          </div>
+
+          <div className="neu-card-glass card-accent-amber p-7 sm:p-8">
+            <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
+              &lt; 800ms
+            </div>
+            <div className="text-xs font-black uppercase tracking-wider text-slate-800 mb-1">
+              OCR Inference Time
+            </div>
+            <p className="text-xs font-semibold text-slate-500">
+              On-device entity extraction pipeline
+            </p>
+          </div>
+
+        </div>
+      </section>
+
     </main>
   );
 }

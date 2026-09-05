@@ -1,79 +1,295 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-100: #f4f0ec;
-  --color-brand-200: #e8e2db;
-  --color-brand-900: #2d2a26;
-  --color-risk-high: #fef2f2;
-  --color-risk-low: #f0fdf4;
+  --color-neu-bg: #edf3f9;
+  --color-neu-shadow-dark: #c1d0e0;
+  --color-neu-shadow-light: #ffffff;
+  --color-navy-deep: #0a192f;
+  --color-navy-primary: #0f2b5c;
+  --color-navy-mid: #163e7a;
+  --color-navy-light: #2563eb;
+  --color-cyan-glow: #0ea5e9;
+  --color-accent-amber: #f59e0b;
+  --color-accent-coral: #ef4444;
+  --color-accent-emerald: #10b981;
+  --color-accent-violet: #8b5cf6;
 }
 
 :root {
-  --background: #fcfbf9;
-  --foreground: #2a2825;
+  /* Ice Porcelain & Slate Blue Neumorphic Canvas */
+  --neu-bg: #edf3f9;
+  --neu-dark: #c2d2e4;
+  --neu-light: #ffffff;
+
+  /* Primary Navy Blue Theme */
+  --navy-950: #071224;
+  --navy-900: #0a192f;
+  --navy-800: #0f2b5c;
+  --navy-700: #173d7a;
+  --navy-600: #1d4ed8;
+  --navy-500: #2563eb;
+  --navy-400: #38bdf8;
+
+  /* 20% Vibrant Accent Highlights (Card Tops & Accents) */
+  --accent-cyan: #06b6d4;
+  --accent-violet: #8b5cf6;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+
+  --text-primary: #0a192f;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
 }
 
 body {
-  background-color: #e6dace;
-  background-image: url('/bg.png');
-  background-size: cover;
-  background-position: center;
+  background-color: var(--neu-bg);
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
+    radial-gradient(at 85% 20%, rgba(37, 99, 235, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 80%, rgba(15, 43, 92, 0.05) 0px, transparent 60%);
   background-attachment: fixed;
-  background-repeat: no-repeat;
-  color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  color: var(--text-primary);
+  font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes floatUp {
-  0% {
-    transform: translateY(110vh) scale(0.6);
-    opacity: 0;
-  }
+/* ==========================================================================
+   3D BUTTONS (NAVY BLUE THEME + CARVED 3D BEVEL)
+   ========================================================================== */
 
-  10% {
-    opacity: 0.6;
-  }
-
-  80% {
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: translateY(-20vh) scale(1.2);
-    opacity: 0;
-  }
+.neu-button-3d {
+  background: linear-gradient(180deg, #1d4ed8 0%, #0f2b5c 100%);
+  color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 
+    0 10px 22px -3px rgba(15, 43, 92, 0.42),
+    0 4px 8px -2px rgba(15, 43, 92, 0.22),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -3px 2px rgba(0, 0, 0, 0.45);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.bubble {
-  position: fixed;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255, 250, 240, 0.6), rgba(220, 210, 190, 0.1));
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: inset 5px 5px 15px rgba(255, 255, 255, 0.4), inset -5px -5px 15px rgba(0, 0, 0, 0.02), 0 10px 30px rgba(0, 0, 0, 0.02);
-  backdrop-filter: blur(4px);
-  animation: floatUp linear infinite;
-  z-index: 0;
+.neu-button-3d:hover {
+  background: linear-gradient(180deg, #2563eb 0%, #173d7a 100%);
+  box-shadow: 
+    0 14px 28px -3px rgba(15, 43, 92, 0.5),
+    0 6px 12px -2px rgba(15, 43, 92, 0.3),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.85),
+    inset 0 -3px 2px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1.5px);
+}
+
+.neu-button-3d:active,
+.neu-button-3d.active {
+  transform: translateY(2px);
+  box-shadow: 
+    0 3px 8px -1px rgba(15, 43, 92, 0.35),
+    inset 0 3px 6px rgba(0, 0, 0, 0.6),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.3);
+}
+
+/* Secondary 3D Pill Button (Clean Porcelain with Navy Text) */
+.neu-button-secondary {
+  background: linear-gradient(180deg, #ffffff 0%, #edf3f9 100%);
+  color: var(--navy-900);
+  border-radius: 1rem;
+  box-shadow: 
+    0 8px 18px -2px rgba(162, 180, 204, 0.5),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.95),
+    inset 0 -2.5px 2px rgba(194, 210, 228, 0.6);
+  font-weight: 800;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.neu-button-secondary:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #e2ecf7 100%);
+  box-shadow: 
+    0 12px 24px -2px rgba(162, 180, 204, 0.6),
+    inset 0 1.5px 1px #ffffff,
+    inset 0 -2.5px 2px rgba(194, 210, 228, 0.7);
+  transform: translateY(-1px);
+}
+
+.neu-button-secondary:active {
+  transform: translateY(1.5px);
+  box-shadow: 
+    inset 0 3px 6px rgba(175, 195, 218, 0.7),
+    inset 0 -1px 1px #ffffff;
+}
+
+/* ==========================================================================
+   GLASS-NEUMORPHISM CARDS (FROM SCREENSHOT 3, 4, 5)
+   ========================================================================== */
+
+.neu-card-glass {
+  background: rgba(255, 255, 255, 0.84);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 2rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 
+    12px 14px 28px rgba(160, 178, 204, 0.42),
+    -10px -10px 24px rgba(255, 255, 255, 0.95);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.neu-card-glass:hover {
+  box-shadow: 
+    16px 18px 34px rgba(160, 178, 204, 0.52),
+    -12px -12px 28px rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+}
+
+/* Subtle 20% Accent Line on Top of Cards (Screenshot 3 style) */
+.card-accent-amber {
+  border-top: 4px solid #f59e0b;
+}
+
+.card-accent-violet {
+  border-top: 4px solid #8b5cf6;
+}
+
+.card-accent-cyan {
+  border-top: 4px solid #06b6d4;
+}
+
+.card-accent-rose {
+  border-top: 4px solid #f43f5e;
+}
+
+.card-accent-navy {
+  border-top: 4px solid #0f2b5c;
+}
+
+.card-accent-emerald {
+  border-top: 4px solid #10b981;
+}
+
+/* Watermark Number in Card Top Right (Screenshot 3 style 01, 02, 03) */
+.card-watermark-num {
+  font-size: 3.5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: rgba(15, 43, 92, 0.08);
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
   pointer-events: none;
+  user-select: none;
 }
 
-/* Custom UI Scrollbar */
+/* ==========================================================================
+   FLOATING PILL NAVBAR (SCREENSHOT 1, 2, 3, 4, 5)
+   ========================================================================== */
+
+.neu-pill-nav {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.95);
+  border-radius: 9999px;
+  box-shadow: 
+    0 12px 32px rgba(160, 178, 205, 0.38),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
+}
+
+/* ==========================================================================
+   SURFACE UTILITIES (3D FLAT & INSET)
+   ========================================================================== */
+
+.neu-flat {
+  background: var(--neu-bg);
+  box-shadow: 7px 7px 16px var(--neu-dark), -7px -7px 16px var(--neu-light);
+}
+
+.neu-flat-sm {
+  background: var(--neu-bg);
+  box-shadow: 4px 4px 10px var(--neu-dark), -4px -4px 10px var(--neu-light);
+}
+
+.neu-flat-lg {
+  background: var(--neu-bg);
+  box-shadow: 12px 14px 28px var(--neu-dark), -12px -12px 28px var(--neu-light);
+}
+
+.neu-inset {
+  background: var(--neu-bg);
+  box-shadow: inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light);
+}
+
+.neu-inset-sm {
+  background: var(--neu-bg);
+  box-shadow: inset 2.5px 2.5px 5px var(--neu-dark), inset -2.5px -2.5px 5px var(--neu-light);
+}
+
+.neu-inset-deep {
+  background: #e3ebf4;
+  box-shadow: inset 6px 6px 14px #b8c8dc, inset -6px -6px 14px #ffffff;
+}
+
+.neu-convex {
+  background: linear-gradient(145deg, #ffffff, #dbe4ef);
+  box-shadow: 6px 6px 14px var(--neu-dark), -6px -6px 14px var(--neu-light);
+}
+
+.neu-concave {
+  background: linear-gradient(145deg, #dbe4ef, #ffffff);
+  box-shadow: 6px 6px 14px var(--neu-dark), -6px -6px 14px var(--neu-light);
+}
+
+/* Standard Inset Input Slot */
+.neu-input {
+  background: #f1f5fa;
+  box-shadow: inset 3.5px 3.5px 7px var(--neu-dark), inset -3.5px -3.5px 7px var(--neu-light);
+  color: var(--navy-900);
+  border: 1px solid rgba(193, 208, 224, 0.4);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.neu-input:focus {
+  border-color: var(--navy-600);
+  box-shadow: inset 4px 4px 8px #b8c8db, inset -4px -4px 8px #ffffff, 0 0 0 2px rgba(29, 78, 216, 0.2);
+}
+
+.neu-track-inset {
+  background: #e4edf6;
+  box-shadow: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+  border-radius: 9999px;
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
+  background: var(--neu-bg);
+  box-shadow: inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(45, 42, 38, 0.3);
-  border-radius: 20px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: #a4b6cb;
+  border-radius: 9999px;
+  border: 2px solid var(--neu-bg);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(45, 42, 38, 0.6);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: #8aa0b8;
 }

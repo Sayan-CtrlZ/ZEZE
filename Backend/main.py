@@ -1,4 +1,5 @@
 import os
+import math
 import joblib
 import numpy as np
 import pandas as pd
@@ -21,7 +22,11 @@ app.add_middleware(
 
 @app.get("/")
 def health_check():
-    return {"status": "ok", "message": "ZEZE Backend is running"}
+    return {
+        "status": "ok", 
+        "message": "ZEZE Backend is running", 
+        "model": "Calibrated_HistGradientBoosting" if cardio_model else "Legacy_LogisticRegression"
+    }
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -32,7 +37,6 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Try to load from backend/.env first, then fallback to Client/.env
 load_dotenv()
 client_env_path = os.path.join(os.path.dirname(__file__), '..', 'Client', '.env')
 if os.path.exists(client_env_path):
@@ -43,45 +47,206 @@ GEMINI_TEMPERATURE = os.getenv("GEMINI_TEMPERATURE")
 
 if GEMINI_API_KEY and GEMINI_MODEL and GEMINI_TEMPERATURE:
     gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+    logger.info(f"Gemini client initialized with model: {GEMINI_MODEL}")
 else:
-    logger.warning("One or more Gemini environment variables (GEMINI_API_KEY, GEMINI_MODEL, GEMINI_TEMPERATURE) are missing. Explanations and AI features will be disabled.")
+    logger.warning("One or more Gemini environment variables missing. AI summaries will use rule-based fallback.")
     gemini_client = None
 
 # Load Models
-# Using relative paths since Render will start from the backend folder
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-WEIGHTS_PATH = os.path.join(BASE_DIR, "ml", "model_weights.json")
+CARDIO_MODEL_PATH = os.path.join(BASE_DIR, "ml", "cardio_model.joblib")
+CARDIO_META_PATH = os.path.join(BASE_DIR, "ml", "cardio_model_metadata.json")
+LEGACY_WEIGHTS_PATH = os.path.join(BASE_DIR, "ml", "model_weights.json")
 
-try:
-    with open(WEIGHTS_PATH, "r") as f:
-        ml_weights = json.load(f)
-    logger.info("Successfully loaded ML weights from JSON.")
-except Exception as e:
-    logger.error(f"Failed to load ML weights: {e}")
-    raise e
+cardio_model = None
+cardio_meta = None
+legacy_weights = None
 
-def predict_risk_from_weights(features: list, weights: dict) -> float:
-    scaled = (np.array(features) - np.array(weights["scaler_mean"])) / np.array(weights["scaler_scale"])
-    logit = np.sum(scaled * np.array(weights["weights"])) + weights["intercept"]
-    prob = 1.0 / (1.0 + np.exp(-logit))
-    return float(prob)
+# Primary: 70,000-record Calibrated Gradient Boosting Model
+if os.path.exists(CARDIO_MODEL_PATH) and os.path.exists(CARDIO_META_PATH):
+    try:
+        cardio_model = joblib.load(CARDIO_MODEL_PATH)
+        with open(CARDIO_META_PATH, "r") as f:
+            cardio_meta = json.load(f)
+        logger.info(f"Loaded Calibrated Cardio Model. Validation ROC-AUC: {cardio_meta['metrics']['roc_auc']}")
+    except Exception as e:
+        logger.error(f"Failed to load cardio_model.joblib: {e}")
+
+# Fallback: Legacy weights
+if os.path.exists(LEGACY_WEIGHTS_PATH):
+    try:
+        with open(LEGACY_WEIGHTS_PATH, "r") as f:
+            legacy_weights = json.load(f)
+    except Exception as e:
+        logger.warning(f"Could not load legacy weights: {e}")
 
 class PatientData(BaseModel):
     role: str = Field("patient", description="User role: patient, practitioner, or researcher")
-    age: float = Field(..., ge=1, le=120, description="Patient age in years")
-    sex: float = Field(..., ge=0, le=1, description="1 = male; 0 = female; 0.5 = other")
-    cp: int = Field(..., ge=0, le=3, description="Chest pain type (0-3)")
-    trestbps: float = Field(..., ge=50, le=250, description="Resting blood pressure in mm Hg")
-    chol: float = Field(..., ge=100, le=600, description="Serum cholesterol in mg/dl")
-    fbs: int = Field(..., ge=0, le=1, description="Fasting blood sugar > 120 mg/dl (1 = true; 0 = false)")
-    restecg: int = Field(..., ge=0, le=2, description="Resting electrocardiographic results (0-2)")
-    thalach: float = Field(..., ge=50, le=250, description="Maximum heart rate achieved")
-    exang: int = Field(..., ge=0, le=1, description="Exercise induced angina (1 = yes; 0 = no)")
-    oldpeak: float = Field(..., ge=0.0, le=10.0, description="ST depression induced by exercise relative to rest")
-    slope: int = Field(..., ge=0, le=2, description="The slope of the peak exercise ST segment (0-2)")
-    ca: int = Field(..., ge=0, le=4, description="Number of major vessels (0-3) colored by fluoroscopy")
-    thal: int = Field(..., ge=0, le=3, description="Thalassemia (0-3)")
+    age: float = Field(50.0, ge=1, le=120, description="Patient age in years")
+    sex: float = Field(1.0, ge=0, le=1, description="1 = male; 0 = female; 0.5 = other")
+
+    # Upgraded Clinical & Lifestyle Parameters
+    height: Optional[float] = Field(None, ge=80, le=250, description="Height in cm")
+    weight: Optional[float] = Field(None, ge=30, le=280, description="Weight in kg")
+    ap_hi: Optional[float] = Field(None, ge=60, le=260, description="Systolic blood pressure in mm Hg")
+    ap_lo: Optional[float] = Field(None, ge=40, le=180, description="Diastolic blood pressure in mm Hg")
+    cholesterol: Optional[int] = Field(None, ge=1, le=3, description="1: Normal (<200 mg/dl), 2: Above Normal, 3: High (>240)")
+    gluc: Optional[int] = Field(None, ge=1, le=3, description="1: Normal (<100 mg/dl), 2: Above Normal, 3: High (>126)")
+    smoke: Optional[int] = Field(0, ge=0, le=1, description="Smoking status: 0 = No, 1 = Yes")
+    alco: Optional[int] = Field(0, ge=0, le=1, description="Alcohol consumption: 0 = No, 1 = Yes")
+    active: Optional[int] = Field(1, ge=0, le=1, description="Regular physical activity: 0 = No, 1 = Yes")
+
+    # Legacy & Supplemental Clinical Parameters
+    trestbps: Optional[float] = Field(None, description="Resting BP in mm Hg (fallback for ap_hi)")
+    chol: Optional[float] = Field(None, description="Serum cholesterol in mg/dl (fallback for cholesterol tier)")
+    fbs: Optional[int] = Field(0, description="Fasting blood sugar > 120 (fallback for gluc tier)")
+    cp: Optional[int] = Field(0, description="Chest pain type (0-3)")
+    restecg: Optional[int] = Field(0, description="Resting ECG (0-2)")
+    thalach: Optional[float] = Field(None, description="Maximum heart rate achieved")
+    exang: Optional[int] = Field(0, description="Exercise induced angina (1=yes, 0=no)")
+    oldpeak: Optional[float] = Field(0.0, description="ST depression")
+    slope: Optional[int] = Field(0, description="Slope of peak exercise ST segment")
+    ca: Optional[int] = Field(0, description="Number of major vessels")
+    thal: Optional[int] = Field(0, description="Thalassemia")
     symptoms: Optional[str] = Field(None, description="Optional natural language description of symptoms")
+
+def compute_cardio_features(data: PatientData):
+    """Engineers clinical cardiology metrics conforming to the trained 70,000-record dataset."""
+    age_years = float(data.age)
+    gender = 1 if data.sex >= 0.5 else 0
+
+    # Height and Weight with population medians (165 cm, 72 kg)
+    height = float(data.height) if data.height and data.height >= 100 else 165.0
+    weight = float(data.weight) if data.weight and data.weight >= 35 else 72.0
+    bmi = round(weight / ((height / 100.0) ** 2), 1)
+
+    # Systolic Blood Pressure
+    if data.ap_hi and data.ap_hi >= 70:
+        ap_hi = float(data.ap_hi)
+    elif data.trestbps and data.trestbps >= 70:
+        ap_hi = float(data.trestbps)
+    else:
+        ap_hi = 120.0
+
+    # Diastolic Blood Pressure
+    if data.ap_lo and data.ap_lo >= 40:
+        ap_lo = float(data.ap_lo)
+    else:
+        # Clinical estimation rule when only systolic is given
+        ap_lo = float(min(max(round(ap_hi * 0.66), 60), 110))
+
+    if ap_hi <= ap_lo:
+        ap_hi = ap_lo + 30.0
+
+    pulse_pressure = ap_hi - ap_lo
+    mean_arterial_pressure = round(ap_lo + (pulse_pressure / 3.0), 1)
+
+    # ACC/AHA Blood Pressure Stages
+    if ap_hi >= 140 or ap_lo >= 90:
+        bp_stage = 3
+    elif (130 <= ap_hi < 140) or (80 <= ap_lo < 90):
+        bp_stage = 2
+    elif (120 <= ap_hi < 130) and ap_lo < 80:
+        bp_stage = 1
+    else:
+        bp_stage = 0
+
+    # WHO BMI Category
+    if bmi < 25.0:
+        bmi_cat = 0
+    elif bmi < 30.0:
+        bmi_cat = 1
+    elif bmi < 35.0:
+        bmi_cat = 2
+    else:
+        bmi_cat = 3
+
+    # Cholesterol tier (1: Normal, 2: Above, 3: Well Above)
+    if data.cholesterol in [1, 2, 3]:
+        chol_cat = int(data.cholesterol)
+    elif data.chol and data.chol > 0:
+        if data.chol < 200:
+            chol_cat = 1
+        elif data.chol < 240:
+            chol_cat = 2
+        else:
+            chol_cat = 3
+    else:
+        chol_cat = 1
+
+    # Fasting Glucose tier
+    if data.gluc in [1, 2, 3]:
+        gluc_cat = int(data.gluc)
+    elif data.fbs == 1:
+        gluc_cat = 2
+    else:
+        gluc_cat = 1
+
+    smoke = 1 if data.smoke == 1 else 0
+    alco = 1 if data.alco == 1 else 0
+    active = 1 if (data.active is None or data.active == 1) else 0
+    lifestyle_risk = smoke + alco + (1 - active)
+
+    record = {
+        'age_years': age_years,
+        'gender': gender,
+        'height': height,
+        'weight': weight,
+        'bmi': bmi,
+        'ap_hi': ap_hi,
+        'ap_lo': ap_lo,
+        'pulse_pressure': pulse_pressure,
+        'map': mean_arterial_pressure,
+        'bp_stage': bp_stage,
+        'bmi_category': bmi_cat,
+        'cholesterol': chol_cat,
+        'gluc': gluc_cat,
+        'smoke': smoke,
+        'alco': alco,
+        'active': active,
+        'lifestyle_risk': lifestyle_risk
+    }
+
+    feature_cols = cardio_meta["feature_names"] if cardio_meta else list(record.keys())
+    df_features = pd.DataFrame([record])[feature_cols]
+    return df_features, record
+
+def compute_feature_impacts(record: dict, meta: dict) -> dict:
+    """Calculates directional risk feature contributions compared to population medians."""
+    impacts = {}
+    importances = meta.get("feature_importances", {})
+    baselines = meta.get("baselines", {})
+
+    labels = {
+        "ap_hi": f"Systolic Blood Pressure ({int(record['ap_hi'])} mmHg)",
+        "age_years": f"Age ({int(record['age_years'])} yrs)",
+        "cholesterol": f"Cholesterol Tier ({record['cholesterol']}/3)",
+        "bmi": f"Body Mass Index (BMI {record['bmi']})",
+        "map": f"Mean Arterial Pressure ({record['map']} mmHg)",
+        "active": f"Physical Activity ({'Active' if record['active'] else 'Sedentary'})",
+        "smoke": f"Smoking Status ({'Smoker' if record['smoke'] else 'Non-smoker'})",
+        "gluc": f"Glucose Tier ({record['gluc']}/3)",
+        "pulse_pressure": f"Pulse Pressure ({int(record['pulse_pressure'])} mmHg)"
+    }
+
+    for key, label in labels.items():
+        if key in record and key in importances and key in baselines:
+            val = record[key]
+            med = baselines[key]["median"]
+            std = baselines[key]["std"] if baselines[key]["std"] > 0 else 1.0
+            imp = importances[key]
+            
+            if key == "active":
+                direction = -1.0 if val == 1 else 1.0
+                impact = direction * imp * 10.0
+            else:
+                z_score = (val - med) / std
+                impact = z_score * imp * 10.0
+
+            if abs(impact) >= 0.01:
+                impacts[label] = round(float(impact), 2)
+
+    return impacts
 
 def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
     if not gemini_client:
@@ -89,18 +254,11 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
     
     prompt = f"""
     You are an AI clinical parser. 
-    The user has selected these structured inputs: Age: {current_data.age}, Sex: {current_data.sex}, Chest Pain (0-3): {current_data.cp}, Blood Pressure: {current_data.trestbps}, Cholesterol: {current_data.chol}, Exercise Angina (0 or 1): {current_data.exang}, etc.
+    The patient provided symptoms: "{symptoms}".
+    Current inputs: Age: {current_data.age}, Systolic BP: {current_data.ap_hi or current_data.trestbps}, Smoke: {current_data.smoke}, Active: {current_data.active}.
     
-    The user also provided this text description of their symptoms:
-    "{symptoms}"
-    
-    Extract any overriding clinical variables strictly conforming to our data types. For example, if they describe "chest pain while walking", they likely have exercise-induced angina (exang = 1) or a specific chest pain type (cp).
-    Possible keys to override: age, sex, cp, trestbps, chol, fbs, restecg, thalach, exang, oldpeak, slope, ca, thal.
-    
-    Return ONLY a valid JSON object. Do not include markdown ticks. Example:
-    {{"exang": 1, "cp": 2}}
-    
-    If nothing needs overriding, return {{}}.
+    Identify any overriding clinical parameters (e.g. mentions 'smokes a pack a day' -> smoke: 1, 'sedentary desk job' -> active: 0, 'blood pressure 145/95' -> ap_hi: 145, ap_lo: 95).
+    Return ONLY a JSON object: {{"smoke": 1}} or {{}}.
     """
     try:
         response = gemini_client.models.generate_content(
@@ -116,88 +274,137 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
             text = text[7:-3].strip()
         elif text.startswith("```"):
             text = text[3:-3].strip()
-            
-        overrides = json.loads(text)
-        return overrides
+        return json.loads(text)
     except Exception as e:
-        logger.error(f"Failed to parse symptoms using Gemini: {e}", exc_info=True)
+        logger.error(f"Failed to parse symptoms using Gemini: {e}")
         return {}
 
-def generate_explanation(data: PatientData, probability: float, risk: str, role: str) -> str:
-    # If Gemini is not configured, silently fallback to rule-based.
-    if not gemini_client:
-        return f"Patient has a {risk.lower()} risk profile. (Gemini AI not configured, fallback used)."
+def generate_offline_clinical_report(data: PatientData, probability: float, risk: str, role: str, record: dict) -> str:
+    prob_str = f"{probability*100:.1f}%" if probability <= 1.0 else f"{probability:.1f}%"
+    bp_hi, bp_lo = int(record.get('ap_hi', 120)), int(record.get('ap_lo', 80))
+    bmi = record.get('bmi', 24.0)
+    bp_stage = record.get('bp_stage', 0)
+    stage_names = ["Normal Blood Pressure", "Elevated Blood Pressure", "Stage 1 Hypertension", "Stage 2 Hypertension"]
+    bp_label = stage_names[bp_stage] if bp_stage < len(stage_names) else "Hypertension"
+    
+    bmi_label = "Normal weight" if bmi < 25 else "Overweight" if bmi < 30 else "Class 1 Obesity" if bmi < 35 else "Severe Obesity"
+    chol_label = "Desirable (<200 mg/dL)" if record.get('cholesterol', 1) == 1 else "Borderline Elevated (200-239 mg/dL)" if record.get('cholesterol', 1) == 2 else "High (≥240 mg/dL)"
+    gluc_label = "Normal (<100 mg/dL)" if record.get('gluc', 1) == 1 else "Elevated / Pre-diabetic (100-125 mg/dL)" if record.get('gluc', 1) == 2 else "Diabetic Range (≥126 mg/dL)"
+    lifestyle_tags = []
+    if record.get('smoke'): lifestyle_tags.append("Active Tobacco Smoker")
+    if record.get('alco'): lifestyle_tags.append("Alcohol Consumer")
+    if not record.get('active', 1): lifestyle_tags.append("Sedentary Routine")
+    if not lifestyle_tags: lifestyle_tags.append("Regular Physical Exercise, Non-smoker")
 
     if role == "practitioner":
-        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Be concise, like a doctor's medical chart."
+        return f"""**Clinical Findings**:
+- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label})
+- **Body Mass Index**: {bmi} kg/m² ({bmi_label})
+- **Serum Cholesterol Profile**: Tier {record.get('cholesterol', 1)}/3 ({chol_label})
+- **Glycemic Status**: Tier {record.get('gluc', 1)}/3 ({gluc_label})
+- **Lifestyle Risk Indicators**: {", ".join(lifestyle_tags)}
+
+**Differential Assessment**:
+Patient exhibits a **{risk} Risk** cardiovascular risk profile with an estimated **{prob_str}** likelihood of active cardiovascular pathology under calibrated tree evaluation. Primary cardiovascular strain is driven by arterial hemodynamics ({bp_hi}/{bp_lo} mmHg) and lipid-metabolic parameters.
+
+**Recommended Clinical Pathways**:
+- Initiate baseline 12-lead Electrocardiogram (ECG) and ambulatory 24-hour blood pressure monitoring.
+- Order full fasting lipid panel (HDL-C, LDL-C, Triglycerides) and HbA1c to establish glycemic baseline.
+- Provide structured medical guidance on dietary sodium reduction (<2,000 mg/day) and cardiovascular risk factor modification."""
+
+    elif role == "researcher":
+        return f"""**Anomalous Data Points**:
+- **Hemodynamic Variance**: Systolic Pressure {bp_hi} mmHg represents a marked elevation above the cohort median (120 mmHg).
+- **Pulse Pressure**: {int(record.get('pulse_pressure', 40))} mmHg; elevated pulsatile arterial load suggests diminished systemic arterial compliance.
+- **Metabolic Indicators**: BMI {bmi} kg/m² paired with Cholesterol Tier {record.get('cholesterol', 1)}/3 reinforces compounding atherogenic risk.
+
+**Mechanistic Analysis**:
+Multi-factor gradient boosted evaluation isolates systolic blood pressure and age-vascular stiffness interactions as the primary drivers of the {prob_str} calibrated risk score. Persistent hemodynamic shear stress promotes endothelial dysfunction, facilitating lipid infiltration and arterial remodeling.
+
+**Literature / Pharmacological References**:
+- Consider clinical trial references regarding ACE inhibitors / ARBs for systolic blood pressure optimization.
+- Evaluate guideline-directed statin therapy for primary ASCVD risk reduction in patients with elevated lipid tiers."""
+
+    else:
+        return f"""**Key Findings**:
+- **Heart Health Score**: Your cardiovascular evaluation places you in the **{risk} Risk** zone ({prob_str} risk likelihood).
+- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg, categorized as **{bp_label}**.
+- **Body Weight & BMI**: Your Body Mass Index is **{bmi} kg/m²** ({bmi_label}).
+- **Cholesterol & Sugar**: Cholesterol is **{chol_label}**, and fasting glucose is **{gluc_label}**.
+
+**What This Means**:
+Your heart and arteries are currently experiencing {"elevated stress due to higher blood pressure and metabolic markers" if risk in ["High", "Moderate"] else "healthy circulatory function with low signs of arterial strain"}. Blood pressure and cholesterol work together over time; maintaining them within optimal ranges protects the blood vessels supplying your heart and brain.
+
+**Lifestyle & Prevention**:
+- **Target Optimal Blood Pressure**: Monitor your BP regularly and aim for a resting level below 120/80 mmHg.
+- **Heart-Healthy Nutrition**: Emphasize whole grains, leafy greens, healthy fats (olive oil, nuts), and reduce dietary sodium.
+- **Daily Physical Activity**: Aim for at least 150 minutes of moderate aerobic exercise (brisk walking, cycling, swimming) each week.
+- **Avoid Tobacco**: If you smoke, quitting is the single most rapid way to lower cardiovascular risk."""
+
+def generate_explanation(data: PatientData, probability: float, risk: str, role: str, record: dict) -> str:
+    if not gemini_client:
+        return generate_offline_clinical_report(data, probability, risk, role, record)
+
+    if role == "practitioner":
+        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Format like a doctor's chart."
         structure_instruction = """
     **Clinical Findings**:
-    - (bulleted objective data)
+    - (bulleted objective findings)
     
     **Differential Assessment**:
     (concise clinical interpretation)
     
     **Recommended Clinical Pathways**:
-    - (short actionable medical steps)
+    - (actionable medical steps)
         """
     elif role == "researcher":
-        tone_instruction = "Use statistical language, focus on the weight of anomalous features, and provide deep analytical interpretations. Provide proper notes for each issue, proper research context, and referenced drugs (e.g., 'Drug X can be used for Y')."
+        tone_instruction = "Use statistical language, discuss multi-factor interaction weights, and physiological mechanisms."
         structure_instruction = """
     **Anomalous Data Points**:
-    - (detailed notes for each issue)
+    - (detailed notes on high leverage variables)
     
     **Mechanistic Analysis**:
-    (detailed research-driven physiological explanation)
+    (physiological cardiovascular interaction explanation)
     
     **Literature / Pharmacological References**:
-    - (list potential referenced drugs, e.g., 'Note: [Drug Name] can be used for [Condition] - Use: [Mechanism]')
+    - (relevant pharmacological notes or pathways)
         """
     else:
-        tone_instruction = "Be reassuring but clear. Use a patient-friendly tone and avoid complex medical jargon. Provide a HIGHLY DETAILED, comprehensive explanation."
+        tone_instruction = "Be reassuring, clear, and supportive. Avoid medical jargon. Provide a HIGHLY DETAILED explanation with lifestyle tips."
         structure_instruction = """
     **Key Findings**:
-    - (short + scannable bullet points)
+    - (scannable bullet points)
     
     **What This Means**:
-    (highly detailed, comprehensive physiological explanation)
+    (plain language explanation of heart and vessel health)
     
-    **Possible Concerns**:
-    (if abnormal, otherwise omit)
-    
-    **Lifestyle / Prevention**:
-    - (short action items)
-    
-    **Additional Information**:
-    (any longer explanations last)
+    **Lifestyle & Prevention**:
+    - (practical action steps for blood pressure, diet, and activity)
         """
 
     prompt = f"""
-    You are ZEZE (Zero Error Zonal Evaluation Model), an AI clinical risk assessment assistant. 
-    A patient's data has been evaluated mathematically.
-    Their predicted cardiovascular risk is {risk} (Probability: {probability*100:.1f}%).
+    You are ZEZE (Zero Error Zonal Evaluation Model), an intelligent clinical cardiovascular risk assessment assistant.
+    A patient's profile has been evaluated by our calibrated Machine Learning model (trained on 70,000 patient records).
     
-    Patient Inputs:
-    - Age: {data.age}
-    - Sex (1=Male, 0=Female): {data.sex}
-    - Chest Pain Type (0-3): {data.cp}
-    - Resting Blood Pressure: {data.trestbps} mm Hg
-    - Cholesterol: {data.chol} mg/dl
-    - Fasting Blood Sugar > 120 (1=True, 0=False): {data.fbs}
-    - Resting ECG (0-2): {data.restecg}
-    - Maximum Heart Rate (thalach): {data.thalach}
-    - Exercise Angina (1=Yes, 0=No): {data.exang}
-    - ST Depression (oldpeak): {data.oldpeak}
-    - Slope (0-2): {data.slope}
-    - Number of major vessels (0-3): {data.ca}
-    - Thalassemia (0-3): {data.thal}
+    Model Result:
+    - Stratified Risk Tier: {risk} Risk
+    - Calibrated Probability: {probability*100:.1f}%
     
-    Provide an explanation interpreting these top factors without diagnosing. 
+    Patient Clinical Vitals:
+    - Age: {record['age_years']} years
+    - Biological Sex: {'Male' if record['gender'] == 1 else 'Female'}
+    - Blood Pressure: {int(record['ap_hi'])}/{int(record['ap_lo'])} mmHg (Stage: {record['bp_stage']})
+    - Body Mass Index (BMI): {record['bmi']} kg/m²
+    - Cholesterol Level: Tier {record['cholesterol']}/3
+    - Fasting Glucose: Tier {record['gluc']}/3
+    - Smoking: {'Yes' if record['smoke'] else 'No'} | Alcohol: {'Yes' if record['alco'] else 'No'} | Exercise: {'Regular' if record['active'] else 'Inactive'}
+    {f"- Reported Symptoms: {data.symptoms}" if data.symptoms else ""}
+
     {tone_instruction}
 
-    CRITICAL REQUIREMENT: Format your response STRICTLY using the following markdown structure. Do not include any introductory or concluding text outside of this structure. Ensure important concepts are bolded.
+    CRITICAL REQUIREMENT: Format your response STRICTLY with these markdown headers:
     {structure_instruction}
     """
-    
     try:
         response = gemini_client.models.generate_content(
             model=GEMINI_MODEL,
@@ -206,54 +413,65 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
         )
         return response.text.strip()
     except Exception as e:
-        logger.error(f"Gemini API failure: {e}", exc_info=True)
-        return f"Patient has a {risk.lower()} risk profile. (AI explanation generation temporarily unavailable)."
+        logger.error(f"Gemini API failure: {e}")
+        return f"Patient assessed at {risk.upper()} risk ({probability*100:.1f}%). (AI summary generation temporarily unavailable)."
 
 @app.post("/predict")
 def predict_risk(data: PatientData):
     logger.info(f"Received prediction request for age: {data.age}, sex: {data.sex}")
     try:
         if data.symptoms:
-            logger.info("Symptom text detected. Parsing overrides...")
             overrides = parse_symptoms(data.symptoms, data)
             if overrides:
-                logger.info(f"Applying NLP overrides: {overrides}")
                 for key, value in overrides.items():
                     if hasattr(data, key):
                         setattr(data, key, value)
-                        
-        # Convert input to array matching model's expected features
-        features = [
-            data.age, data.sex, data.cp, data.trestbps, data.chol,
-            data.fbs, data.restecg, data.thalach, data.exang, 
-            data.oldpeak, data.slope, data.ca, data.thal
-        ]
-        
-        prob = predict_risk_from_weights(features, ml_weights)
-        
-        risk = "High" if prob > 0.7 else "Low"
-        
-        explanation = generate_explanation(data, prob, risk, data.role)
-        
-        # Calculate feature impacts for explainability (SHAP-like values using LR coefficients)
-        feature_impacts = {}
-        if data.role in ["practitioner", "researcher"]:
-            feature_names = ["Age", "Sex", "Chest Pain", "Resting BP", "Cholesterol", "Fasting Blood Sugar", "Resting ECG", "Max HR", "Exercise Angina", "ST Depression", "Slope", "Vessels", "Thalassemia"]
-            scaled_features = (np.array(features) - np.array(ml_weights["scaler_mean"])) / np.array(ml_weights["scaler_scale"])
-            impacts = scaled_features * np.array(ml_weights["weights"])
-            for name, impact in zip(feature_names, impacts):
-                feature_impacts[name] = float(impact)
-        
-        logger.info(f"Successfully generated prediction: Risk={risk}, Probability={prob:.2f}, Role={data.role}")
-        
+
+        # Primary: Predict using 70k Calibrated Gradient Boosting Model
+        if cardio_model and cardio_meta:
+            df_features, record = compute_cardio_features(data)
+            prob = float(cardio_model.predict_proba(df_features)[0, 1])
+            
+            # 3-Tier Clinical Stratification
+            if prob < 0.25:
+                risk = "Low"
+            elif prob < 0.60:
+                risk = "Moderate"
+            else:
+                risk = "High"
+
+            feature_impacts = compute_feature_impacts(record, cardio_meta)
+        else:
+            # Fallback to legacy weights
+            features = [
+                data.age, data.sex, data.cp or 0, data.ap_hi or data.trestbps or 120,
+                data.chol or 200, data.fbs or 0, data.restecg or 0, data.thalach or 150,
+                data.exang or 0, data.oldpeak or 0.0, data.slope or 0, data.ca or 0, data.thal or 0
+            ]
+            scaled = (np.array(features) - np.array(legacy_weights["scaler_mean"])) / np.array(legacy_weights["scaler_scale"])
+            logit = np.sum(scaled * np.array(legacy_weights["weights"])) + legacy_weights["intercept"]
+            prob = float(1.0 / (1.0 + np.exp(-logit)))
+            risk = "High" if prob > 0.7 else "Low"
+            feature_impacts = {}
+            record = {"age_years": data.age, "gender": data.sex, "ap_hi": 120, "ap_lo": 80, "bmi": 24.0, "cholesterol": 1, "gluc": 1, "smoke": 0, "alco": 0, "active": 1, "bp_stage": 0}
+
+        explanation = generate_explanation(data, prob, risk, data.role, record)
+
         return {
             "risk": risk,
-            "probability": round(prob * 100, 2), # percentage
+            "probability": round(prob * 100, 1),
             "explanation": explanation,
-            "feature_impacts": feature_impacts
+            "feature_impacts": feature_impacts,
+            "vitals": {
+                "bmi": record.get("bmi"),
+                "bp": f"{int(record.get('ap_hi', 120))}/{int(record.get('ap_lo', 80))}",
+                "bp_stage": record.get("bp_stage"),
+                "cholesterol": record.get("cholesterol"),
+                "lifestyle_risk": record.get("lifestyle_risk")
+            }
         }
     except Exception as e:
-        logger.error(f"Prediction failed due to error: {str(e)}", exc_info=True)
+        logger.error(f"Prediction failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during risk prediction.")
 
 class ChatMessage(BaseModel):
@@ -271,16 +489,14 @@ def chat_follow_up(req: ChatRequest):
         raise HTTPException(status_code=503, detail="AI Chat is not configured.")
         
     try:
-        # We append the context to the system instruction so the AI knows exactly what to talk about!
         system_instruction = (
             "You are the ZEZE AI Clinical Assistant. The user has just completed a cardiovascular health assessment.\n"
             f"Here is their exact clinical context: {req.context}\n\n"
             "Act as an intelligent, conversational agent and assistant. Answer their follow-up questions clearly and supportively.\n"
             "CRITICAL RULES:\n"
-            "1. Be concise. Do not give long, verbose answers unless explicitly asked. Give exactly the required amount of information—no more, no less.\n"
-            "2. Be helpful. Do not refuse to answer relevant health, lifestyle, or clinical questions. You are fully allowed to provide general medical information and guidance.\n"
-            "3. Keep responses conversational, balanced, and easy to read.\n"
-            "4. Only add medical disclaimers if the user is asking for a deep, complex diagnosis or immediate emergency advice."
+            "1. Be concise. Give exactly the required amount of information—no more, no less.\n"
+            "2. Be helpful. Provide clear health, diet, exercise, and clinical guidance.\n"
+            "3. Keep responses conversational, balanced, and easy to read."
         )
         
         formatted_history = []
@@ -297,113 +513,163 @@ def chat_follow_up(req: ChatRequest):
             history=formatted_history
         )
         response = chat.send_message(req.message)
-        
         return {"response": response.text}
     except Exception as e:
         logger.error(f"Chat endpoint failed: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error during chat sequence.")
 
-class AIPredictionResponse(BaseModel):
-    risk: str = Field(description="Must be exactly 'High' or 'Low'")
-    probability: float = Field(description="A percentage number between 0 and 100")
-    explanation: str = Field(description="A structured patient-friendly explanation. Format STRICTLY with markdown headers.")
+from ml.ocr_extractor import process_document_pipeline
+
+class DocumentExtractionSchema(BaseModel):
+    age: Optional[float] = Field(None, description="Age in years")
+    sex: Optional[float] = Field(None, description="1 for Male, 0 for Female")
+    height: Optional[float] = Field(None, description="Height in cm")
+    weight: Optional[float] = Field(None, description="Weight in kg")
+    ap_hi: Optional[float] = Field(None, description="Systolic blood pressure in mmHg (e.g. 120)")
+    ap_lo: Optional[float] = Field(None, description="Diastolic blood pressure in mmHg (e.g. 80)")
+    cholesterol: Optional[int] = Field(None, description="1: Normal, 2: Above Normal, 3: High")
+    gluc: Optional[int] = Field(None, description="1: Normal, 2: Above Normal, 3: High")
+    smoke: Optional[int] = Field(None, description="1 if smoker, 0 if non-smoker")
+    alco: Optional[int] = Field(None, description="1 if consumes alcohol, 0 if not")
+    active: Optional[int] = Field(None, description="1 if physically active, 0 if sedentary")
+    symptoms: Optional[str] = Field(None, description="Any reported medical symptoms or notes")
+
+@app.post("/extract-vitals")
+async def extract_vitals(
+    files: List[UploadFile] = File(...),
+    symptoms: Optional[str] = Form(None)
+):
+    """
+    Dedicated Multi-Engine OCR & Clinical Extractor:
+    1. Runs PyPDF (vector text) or RapidOCR (scanned images/photos)
+    2. Runs medical regex extractor for BP, Cholesterol, Glucose, BMI, Demographics
+    3. Reconciles with Gemini VLM if available to capture unstructured context
+    4. Returns structured vitals, provenance text snippets, and confidence ratings for user review.
+    """
+    try:
+        files_data = []
+        parts_for_gemini = []
+
+        for file in files:
+            contents = await file.read()
+            mime_type = file.content_type if file.content_type else "application/octet-stream"
+            if mime_type == "application/octet-stream" or not mime_type:
+                if file.filename:
+                    ext = file.filename.split('.')[-1].lower()
+                    if ext == 'pdf': mime_type = "application/pdf"
+                    elif ext in ['jpg', 'jpeg']: mime_type = "image/jpeg"
+                    elif ext == 'png': mime_type = "image/png"
+                    elif ext == 'txt': mime_type = "text/plain"
+
+            files_data.append((file.filename or "uploaded_file", contents, mime_type))
+            parts_for_gemini.append(types.Part.from_bytes(data=contents, mime_type=mime_type))
+
+        # 1. Run local multi-engine OCR & Clinical Regex
+        pipeline_res = process_document_pipeline(files_data, user_symptoms=symptoms)
+        vitals = pipeline_res.get("vitals", {})
+        snippets = pipeline_res.get("snippets", {})
+        confidence = pipeline_res.get("confidence", {})
+        raw_ocr_text = pipeline_res.get("raw_text", "")
+
+        # 2. If Gemini is available, run semantic enrichment to catch anything missed
+        if gemini_client and (len(vitals) < 4 or "ap_hi" not in vitals or "cholesterol" not in vitals):
+            try:
+                gemini_prompt = f"""
+                You are an expert clinical data extraction assistant.
+                We have already performed Optical Character Recognition (OCR) on the attached document with this extracted text:
+                ---
+                {raw_ocr_text[:4000]}
+                ---
+                User reported symptoms: "{symptoms or ''}"
+
+                Carefully inspect the OCR text and original document. Extract any of the following clinical vitals that were detected:
+                - age (years)
+                - sex (1 for male, 0 for female)
+                - height (cm)
+                - weight (kg)
+                - ap_hi (systolic BP in mmHg, e.g. 130)
+                - ap_lo (diastolic BP in mmHg, e.g. 85)
+                - cholesterol (1 for Normal <200, 2 for Borderline 200-239, 3 for High >=240)
+                - gluc (1 for Normal <100, 2 for Borderline 100-125, 3 for High >=126)
+                - smoke (1 for Yes, 0 for No)
+                - alco (1 for Yes, 0 for No)
+                - active (1 for Yes, 0 for No)
+                - symptoms (summary of any noted symptoms, complaints, or diagnoses)
+
+                Return ONLY a JSON object adhering to this schema. If a value cannot be found, omit it or set to null.
+                """
+                gemini_parts = list(parts_for_gemini)
+                gemini_parts.append(gemini_prompt)
+
+                response = gemini_client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=gemini_parts,
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        response_mime_type="application/json",
+                        response_schema=DocumentExtractionSchema
+                    )
+                )
+                ai_extracted = json.loads(response.text.strip())
+                for k, v in ai_extracted.items():
+                    if v is not None and k not in vitals:
+                        vitals[k] = v
+                        confidence[k] = "ai_inferred"
+                        snippets[k] = f"Extracted via AI visual parsing"
+            except Exception as ge:
+                logger.warning(f"Gemini enrichment skipped or failed: {ge}")
+
+        # Ensure all numerical vitals are strictly rounded up to integer values
+        for vk in ["age", "height", "weight", "ap_hi", "ap_lo", "cholesterol", "gluc", "smoke", "alco", "active"]:
+            if vk in vitals and vitals[vk] is not None:
+                try:
+                    vitals[vk] = int(math.ceil(float(vitals[vk])))
+                except (ValueError, TypeError):
+                    pass
+
+        return {
+            "success": True,
+            "vitals": vitals,
+            "snippets": snippets,
+            "confidence": confidence,
+            "raw_text": raw_ocr_text[:1500]
+        }
+
+    except Exception as e:
+        logger.error(f"OCR extraction failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"OCR extraction failed: {str(e)}")
 
 @app.post("/predict-document")
-async def predict_document(files: List[UploadFile] = File(...), symptoms: Optional[str] = Form(None), role: Optional[str] = Form("patient")):
-    if not gemini_client:
-        raise HTTPException(status_code=503, detail="AI parsing is not configured.")
-    
-    SUPPORTED_MIME_TYPES = {
-        "application/pdf", "image/png", "image/jpeg", 
-        "image/jpg", "image/webp", "image/heic", 
-        "image/heif", "text/plain"
-    }
+async def predict_document(
+    files: List[UploadFile] = File(...), 
+    symptoms: Optional[str] = Form(None), 
+    role: Optional[str] = Form("patient")
+):
+    """Direct hybrid document pipeline: runs OCR extraction -> ML model risk calculation -> tailored explanation."""
+    # First extract via our OCR pipeline
+    extraction_res = await extract_vitals(files=files, symptoms=symptoms)
+    extracted = extraction_res.get("vitals", {})
 
-    parts = []
-    for file in files:
-        contents = await file.read()
-        mime_type = file.content_type if file.content_type else "application/octet-stream"
-        
-        # Fallback mapping based on file extension
-        if mime_type == "application/octet-stream" or not mime_type:
-            if file.filename:
-                ext = file.filename.split('.')[-1].lower()
-                if ext == 'pdf': mime_type = "application/pdf"
-                elif ext in ['jpg', 'jpeg']: mime_type = "image/jpeg"
-                elif ext == 'png': mime_type = "image/png"
-                elif ext == 'txt': mime_type = "text/plain"
-        
-        # Validate MIME type
-        if mime_type not in SUPPORTED_MIME_TYPES:
-            raise HTTPException(status_code=400, detail=f"Unsupported file type: {mime_type}. Please upload an image (PNG/JPG) or PDF.")
-            
-        parts.append(types.Part.from_bytes(data=contents, mime_type=mime_type))
-    
-    symptoms_text = f"\nPatient reported symptoms: {symptoms}" if symptoms else ""
+    patient_obj = PatientData(
+        role=role,
+        age=extracted.get("age") or 50.0,
+        sex=extracted.get("sex") if extracted.get("sex") is not None else 1.0,
+        height=extracted.get("height"),
+        weight=extracted.get("weight"),
+        ap_hi=extracted.get("ap_hi"),
+        ap_lo=extracted.get("ap_lo"),
+        cholesterol=extracted.get("cholesterol"),
+        gluc=extracted.get("gluc"),
+        smoke=extracted.get("smoke") or 0,
+        alco=extracted.get("alco") or 0,
+        active=extracted.get("active") if extracted.get("active") is not None else 1,
+        symptoms=extracted.get("symptoms") or symptoms
+    )
 
-    if role == "practitioner":
-        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Be concise, like a doctor's medical chart."
-        structure_instruction = "**Clinical Findings**:\\n- (bulleted objective data)\\n\\n**Differential Assessment**:\\n(concise clinical interpretation)\\n\\n**Recommended Clinical Pathways**:\\n- (short actionable medical steps)"
-    elif role == "researcher":
-        tone_instruction = "Use statistical language, focus on the weight of anomalous features, and provide deep analytical interpretations. Provide proper notes for each issue, proper research context, and referenced drugs (e.g., 'Drug X can be used for Y')."
-        structure_instruction = "**Anomalous Data Points**:\\n- (detailed notes for each issue)\\n\\n**Mechanistic Analysis**:\\n(detailed research-driven physiological explanation)\\n\\n**Literature / Pharmacological References**:\\n- (list potential referenced drugs, e.g., 'Note: [Drug Name] can be used for [Condition] - Use: [Mechanism]')"
-    else:
-        tone_instruction = "Be reassuring but clear. Use a patient-friendly tone and avoid complex medical jargon. Provide a HIGHLY DETAILED, comprehensive explanation."
-        structure_instruction = "**Key Findings**:\\n- (short bullet points)\\n\\n**What This Means**:\\n(highly detailed, comprehensive physiological explanation)\\n\\n**Possible Concerns**:\\n(if abnormal)\\n\\n**Lifestyle / Prevention**:\\n- (short action items)\\n\\n**Additional Information**:\\n(longer explanations last)"
-
-    prompt = f"""
-    You are ZEZE (Zero Error Zonal Evaluation Model), an advanced AI clinical risk assessment assistant.
-    The user has uploaded one or more medical documents (which could be formal reports, handwritten notes, or casual summaries) for a single patient.{symptoms_text}
-    
-    Your job is to act exactly like our machine learning model. You must carefully analyze the documents and any provided symptoms to evaluate the patient's cardiovascular risk.
-    {tone_instruction}
-    
-    CRITICAL INSTRUCTION:
-    Provide the exact same output format as the machine learning model.
-    Return ONLY a valid JSON object mapping these exact keys:
-    - "risk": string (Must be exactly "High" or "Low")
-    - "probability": float (A percentage number between 0 and 100, e.g., 75.5 or 12.0)
-    - "explanation": string (Format STRICTLY with these markdown headers and no extra text outside them: {structure_instruction}. Ensure important concepts are bolded.)
-
-    Do not include markdown ticks or any extra text outside the JSON. Example:
-    {{"risk": "High", "probability": 82.5, "explanation": "{structure_instruction}"}}
-    """
-    
-    try:
-        parts.append(prompt)
-        
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=parts,
-            config=types.GenerateContentConfig(
-                temperature=float(GEMINI_TEMPERATURE),
-                response_mime_type="application/json",
-                response_schema=AIPredictionResponse
-            )
-        )
-        
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:-3].strip()
-        elif text.startswith("```"):
-            text = text[3:-3].strip()
-            
-        prediction_data = json.loads(text)
-        
-        # Validate output structure
-        if "risk" not in prediction_data or "probability" not in prediction_data or "explanation" not in prediction_data:
-            raise ValueError("Gemini returned invalid structure.")
-            
-        logger.info(f"Successfully predicted risk from document: {prediction_data['risk']}")
-        return prediction_data
-    except json.JSONDecodeError:
-        logger.error(f"Failed to parse Gemini JSON: {text}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to parse AI prediction. Please try again.")
-    except Exception as e:
-        logger.error(f"Failed to predict document using Gemini: {e}", exc_info=True)
-        if "429" in str(e) or "Quota exceeded" in str(e):
-            raise HTTPException(status_code=429, detail="AI usage limit reached. Please try again later or use manual entry.")
-        raise HTTPException(status_code=500, detail="Failed to evaluate document. Ensure it is a clear image or PDF.")
+    result = predict_risk(patient_obj)
+    result["extracted_parameters"] = extracted
+    result["ocr_snippets"] = extraction_res.get("snippets", {})
+    return result
 
 if __name__ == "__main__":
     import uvicorn

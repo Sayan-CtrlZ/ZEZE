@@ -8,3 +8,9 @@ joblib
 google-genai
 python-dotenv
 python-multipart
+scipy
+pypdf
+rapidocr-onnxruntime
+Pillow
+opencv-python
+onnxruntime

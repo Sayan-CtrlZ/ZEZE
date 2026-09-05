@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 export type FormData = {
   age: number | '';
   sex: number | '';
+  height: number | '';
+  weight: number | '';
+  ap_hi: number | '';
+  ap_lo: number | '';
+  cholesterol: number | '';
+  gluc: number | '';
+  smoke: number | '';
+  alco: number | '';
+  active: number | '';
+  // Legacy & Advanced Clinical Markers
   cp: number | '';
   trestbps: number | '';
   chol: number | '';
@@ -17,42 +27,121 @@ export type FormData = {
   symptoms: string;
 };
 
-interface RiskFormProps {
+type RiskFormProps = {
   onSubmit: (data: FormData) => void;
   onDocumentSubmit?: (files: FileList | File[], symptoms: string) => void;
   isLoading: boolean;
-  mode?: 'upload' | 'manual';
-}
+  mode?: 'manual' | 'upload';
+};
 
-export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode = 'upload' }: RiskFormProps) {
+export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskFormProps) {
   const [formData, setFormData] = useState<FormData>({
-    age: '', sex: '', cp: '', trestbps: '', chol: '', fbs: '', restecg: '', thalach: '',
-    exang: '', oldpeak: '', slope: '', ca: '', thal: '', symptoms: ''
+    age: '',
+    sex: 1,
+    height: '',
+    weight: '',
+    ap_hi: '',
+    ap_lo: '',
+    cholesterol: 1,
+    gluc: 1,
+    smoke: 0,
+    alco: 0,
+    active: 1,
+    cp: 0,
+    trestbps: '',
+    chol: '',
+    fbs: 0,
+    restecg: 0,
+    thalach: '',
+    exang: 0,
+    oldpeak: '',
+    slope: 0,
+    ca: 0,
+    thal: 1,
+    symptoms: ""
   });
-  
+
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [parseError, setParseError] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Dedicated OCR State Flow
+  const [uploadStep, setUploadStep] = useState<'drop' | 'scanning' | 'review'>('drop');
+  const [scanStatus, setScanStatus] = useState<string>("Preparing document for analysis...");
+  const [ocrSnippets, setOcrSnippets] = useState<Record<string, string>>({});
+  const [ocrConfidence, setOcrConfidence] = useState<Record<string, string>>({});
+  const [rawOcrText, setRawOcrText] = useState<string>("");
+
+  // Live BMI calculation
+  const liveBmi = useMemo(() => {
+    if (formData.height && formData.weight && Number(formData.height) > 0) {
+      const hM = Number(formData.height) / 100;
+      const bmi = Number(formData.weight) / (hM * hM);
+      let cat = 'Normal';
+      let color = 'text-[#17805d] neu-inset-sm';
+      if (bmi < 18.5) {
+        cat = 'Underweight';
+        color = 'text-blue-700 neu-inset-sm';
+      } else if (bmi >= 25 && bmi < 30) {
+        cat = 'Overweight';
+        color = 'text-amber-700 neu-inset-sm';
+      } else if (bmi >= 30) {
+        cat = 'Obese';
+        color = 'text-red-700 neu-inset-sm';
+      }
+      return { val: bmi.toFixed(1), cat, color };
+    }
+    return null;
+  }, [formData.height, formData.weight]);
+
+  // Live BP Stage Indicator
+  const liveBpStage = useMemo(() => {
+    if (formData.ap_hi && formData.ap_lo) {
+      const hi = Number(formData.ap_hi);
+      const lo = Number(formData.ap_lo);
+      if (hi >= 140 || lo >= 90) {
+        return { label: 'Stage 2 Hypertension', color: 'text-red-700' };
+      } else if (hi >= 130 || lo >= 80) {
+        return { label: 'Stage 1 Hypertension', color: 'text-amber-700' };
+      } else if (hi >= 120 && lo < 80) {
+        return { label: 'Elevated BP', color: 'text-yellow-700' };
+      } else {
+        return { label: 'Normal BP', color: 'text-[#17805d]' };
+      }
+    }
+    return { label: null, color: '' };
+  }, [formData.ap_hi, formData.ap_lo]);
+
   const loadPreset = (preset: 'high' | 'atypical' | 'low') => {
     if (preset === 'high') {
       setFormData({
-        age: 65, sex: 1, cp: 0, trestbps: 145, chol: 260, fbs: 1, restecg: 1, thalach: 130,
-        exang: 1, oldpeak: 2.5, slope: 1, ca: 2, thal: 3, symptoms: "Patient experiences tightness in chest when climbing stairs. Feels out of breath easily."
+        age: 62, sex: 1, height: 172, weight: 93, ap_hi: 155, ap_lo: 95,
+        cholesterol: 3, gluc: 2, smoke: 1, alco: 1, active: 0,
+        cp: 2, trestbps: 155, chol: 265, fbs: 1, restecg: 1, thalach: 125,
+        exang: 1, oldpeak: 2.2, slope: 1, ca: 2, thal: 3,
+        symptoms: "Patient experiences severe chest tightness when climbing stairs. Persistent shortness of breath and smoker for 20 years."
       });
     } else if (preset === 'atypical') {
       setFormData({
-        age: 58, sex: 0, cp: 1, trestbps: 130, chol: 240, fbs: 0, restecg: 0, thalach: 155,
-        exang: 0, oldpeak: 0.5, slope: 0, ca: 0, thal: 1, symptoms: "Patient reports general fatigue and occasional sharp pains that don't seem related to exercise."
+        age: 54, sex: 0, height: 162, weight: 77, ap_hi: 135, ap_lo: 85,
+        cholesterol: 2, gluc: 1, smoke: 0, alco: 0, active: 0,
+        cp: 1, trestbps: 135, chol: 220, fbs: 0, restecg: 0, thalach: 145,
+        exang: 0, oldpeak: 0.6, slope: 0, ca: 0, thal: 1,
+        symptoms: "Patient reports general fatigue, occasional atypical discomfort, sedentary desk routine."
       });
     } else if (preset === 'low') {
       setFormData({
-        age: 45, sex: 1, cp: 3, trestbps: 120, chol: 180, fbs: 0, restecg: 0, thalach: 170,
-        exang: 0, oldpeak: 0.0, slope: 0, ca: 0, thal: 1, symptoms: "Routine checkup. No reported symptoms."
+        age: 32, sex: 0, height: 168, weight: 60, ap_hi: 115, ap_lo: 75,
+        cholesterol: 1, gluc: 1, smoke: 0, alco: 0, active: 1,
+        cp: 3, trestbps: 115, chol: 175, fbs: 0, restecg: 0, thalach: 170,
+        exang: 0, oldpeak: 0.0, slope: 0, ca: 0, thal: 1,
+        symptoms: "Routine health screening. Active runner, non-smoker, no cardiovascular complaints."
       });
     }
   };
-  
-  const [parseError, setParseError] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<FileList | File[] | null>(null);
 
-  // Preserve form data when navigating physically back and forth
   useEffect(() => {
     const saved = sessionStorage.getItem('zeze_form_data');
     if (saved) {
@@ -67,8 +156,23 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
   }, [formData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value === '' ? '' : Number(value) >= 0 || value.includes('.') ? Number(value) : value }));
+    const { name, value, type } = e.target;
+    if (value === '') {
+      setFormData(prev => ({ ...prev, [name]: '' }));
+      return;
+    }
+    if (type === 'number') {
+      const parsed = parseFloat(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: isNaN(parsed) ? '' : parsed
+      }));
+    } else if (e.target.tagName === 'SELECT') {
+      const parsed = Number(value);
+      setFormData(prev => ({ ...prev, [name]: isNaN(parsed) ? value : parsed }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -80,272 +184,653 @@ export default function RiskForm({ onSubmit, onDocumentSubmit, isLoading, mode =
     onSubmit(formData);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // OCR Extraction Handler
+  const handleStartOcr = async (filesToProcess: FileList | File[] | null = selectedFiles) => {
+    if (!filesToProcess || (Array.isArray(filesToProcess) ? filesToProcess.length === 0 : filesToProcess.length === 0)) {
+      setParseError("Please select a medical report or document first.");
+      return;
+    }
+
+    setUploadStep('scanning');
+    setParseError("");
+    setScanStatus("Initializing Optical Character Recognition (RapidOCR)...");
+
+    const timer1 = setTimeout(() => {
+      setScanStatus("Parsing text layers & extracting clinical vitals...");
+    }, 900);
+    const timer2 = setTimeout(() => {
+      setScanStatus("Detecting Blood Pressure, Cholesterol tiers & biomarkers...");
+    }, 1800);
+
+    try {
+      const uploadData = new window.FormData();
+      Array.from(filesToProcess).forEach(file => {
+        uploadData.append("files", file);
+      });
+      if (formData.symptoms) {
+        uploadData.append("symptoms", formData.symptoms);
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000";
+      const response = await fetch(`${baseUrl}/extract-vitals`, {
+        method: "POST",
+        body: uploadData,
+      });
+
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+
+      if (!response.ok) {
+        let msg = "OCR failed to parse document.";
+        try {
+          const err = await response.json();
+          if (err && err.detail) msg = err.detail;
+        } catch {
+          // fallback
+        }
+        throw new Error(msg);
+      }
+
+      const res = await response.json();
+      const extracted = res.vitals || {};
+
+      const roundUp = (val: unknown): number | "" => {
+        if (val === undefined || val === null || val === '') return '';
+        const num = Number(val);
+        return isNaN(num) ? '' : Math.ceil(num);
+      };
+
+      setFormData(prev => ({
+        ...prev,
+        age: extracted.age !== undefined && extracted.age !== null ? roundUp(extracted.age) : prev.age,
+        sex: extracted.sex !== undefined && extracted.sex !== null ? extracted.sex : prev.sex,
+        height: extracted.height !== undefined && extracted.height !== null ? roundUp(extracted.height) : prev.height,
+        weight: extracted.weight !== undefined && extracted.weight !== null ? roundUp(extracted.weight) : prev.weight,
+        ap_hi: extracted.ap_hi !== undefined && extracted.ap_hi !== null ? roundUp(extracted.ap_hi) : prev.ap_hi,
+        ap_lo: extracted.ap_lo !== undefined && extracted.ap_lo !== null ? roundUp(extracted.ap_lo) : prev.ap_lo,
+        cholesterol: extracted.cholesterol !== undefined && extracted.cholesterol !== null ? roundUp(extracted.cholesterol) : prev.cholesterol,
+        gluc: extracted.gluc !== undefined && extracted.gluc !== null ? roundUp(extracted.gluc) : prev.gluc,
+        smoke: extracted.smoke !== undefined && extracted.smoke !== null ? roundUp(extracted.smoke) : prev.smoke,
+        alco: extracted.alco !== undefined && extracted.alco !== null ? roundUp(extracted.alco) : prev.alco,
+        active: extracted.active !== undefined && extracted.active !== null ? roundUp(extracted.active) : prev.active,
+        symptoms: extracted.symptoms || prev.symptoms
+      }));
+
+      setOcrSnippets(res.snippets || {});
+      setOcrConfidence(res.confidence || {});
+      setRawOcrText(res.raw_text || "");
+      setUploadStep('review');
+
+    } catch (err: unknown) {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      const msg = err instanceof Error ? err.message : "Could not complete OCR analysis. Please enter values manually or try another file.";
+      setParseError(msg);
+      setUploadStep('drop');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     setSelectedFiles(files);
     setParseError("");
+    handleStartOcr(files);
   };
 
-  const handleDocumentSubmitClick = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedFiles || selectedFiles.length === 0) {
-      setParseError("Please select a document first.");
-      return;
-    }
-    if (onDocumentSubmit) {
-      onDocumentSubmit(selectedFiles, formData.symptoms);
-    }
+  const loadDemoReport = () => {
+    const demoContent = "Patient Age: 58\nSex: Male\nBlood Pressure: 140/90 mmHg\nTotal Cholesterol: 245 mg/dL\nFasting Glucose: 110 mg/dL\nHeight: 175 cm\nWeight: 82 kg\nSymptoms: Mild exertional dyspnea when walking uphill.\n";
+    const blob = new Blob([demoContent], { type: "text/plain" });
+    const demoFile = new File([blob], "sample_lab_report.txt", { type: "text/plain" });
+    setParseError("");
+    handleStartOcr([demoFile]);
   };
 
   const handleClearFiles = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setSelectedFiles(null);
+    setUploadStep('drop');
+    setOcrSnippets({});
+    setOcrConfidence({});
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
-  const inputClasses = "w-full bg-white/50 backdrop-blur-2xl border-2 border-white/60 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-brand-900/40 focus:border-brand-900/60 focus:bg-white/80 transition-all font-semibold text-gray-900 placeholder:font-medium placeholder:text-gray-500 shadow-sm";
-  const labelClasses = "block text-xs font-bold tracking-wider text-gray-800 mb-1.5";
+  const inputClasses = "w-full neu-input rounded-2xl px-4 py-3.5 outline-none font-extrabold text-slate-900 placeholder:text-slate-400 text-sm sm:text-base transition-all";
+  const labelClasses = "block text-xs font-black tracking-wider text-slate-700 mb-2 uppercase";
 
   return (
-    <form onSubmit={mode === 'upload' ? handleDocumentSubmitClick : handleSubmit} className="relative space-y-4 md:space-y-6 backdrop-blur-[64px] bg-white/30 p-4 sm:p-6 lg:p-10 rounded-2xl md:rounded-[2rem] border border-white/50 shadow-[0_16px_48px_0_rgba(0,0,0,0.1)] overflow-hidden flex flex-col justify-center text-brand-900 w-full max-w-full">
+    <form onSubmit={handleSubmit} className="neu-card-glass p-6 sm:p-10 lg:p-12 w-full max-w-full text-slate-900">
       
-      {/* Decorative inner glow */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-white/60 via-brand-100/40 to-white/60 blur-xl opacity-60 z-[-1] pointer-events-none"></div>
-
       {mode === 'upload' ? (
-        <div className="flex flex-col space-y-4 max-w-4xl mx-auto w-full">
-          {/* Smart Document Upload */}
-          <div className="w-full bg-white/40 backdrop-blur-xl border-2 border-dashed border-white/80 rounded-2xl md:rounded-3xl p-6 md:p-8 text-center transition-all hover:bg-white/60 relative group shadow-sm">
-            {selectedFiles && selectedFiles.length > 0 && (
-              <button 
-                type="button"
-                onClick={handleClearFiles}
-                className="absolute top-4 right-4 z-20 w-8 h-8 md:w-10 md:h-10 bg-red-100 text-red-600 rounded-full flex items-center justify-center hover:bg-red-200 hover:scale-110 transition-all shadow-sm cursor-pointer"
-                title="Remove File"
+        <div className="flex flex-col space-y-8 w-full">
+          
+          {/* STEP 1: DROP / SELECT FILE */}
+          {uploadStep === 'drop' && (
+            <div className="space-y-4">
+              <div 
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    setSelectedFiles(e.dataTransfer.files);
+                    setParseError("");
+                    handleStartOcr(e.dataTransfer.files);
+                  }
+                }}
+                className={`w-full neu-inset-deep rounded-3xl p-8 sm:p-12 text-center transition-all relative group border-2 border-dashed ${
+                  isDragging 
+                    ? 'border-blue-700 ring-4 ring-blue-700/20 scale-[1.01]' 
+                    : 'border-slate-300 hover:border-slate-400'
+                }`}
               >
-                <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            )}
-            <input 
-              type="file" 
-              accept="image/*,application/pdf"
-              multiple
-              onChange={handleFileUpload}
-              disabled={isLoading}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed" 
-            />
-            <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
-              {selectedFiles && selectedFiles.length > 0 ? (
-                <>
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-green-500/20 text-green-600 flex items-center justify-center shadow-lg border-2 border-green-500">
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept="image/*,application/pdf,text/plain"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={isLoading}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed" 
+                />
+                <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-inset flex items-center justify-center text-blue-700 group-hover:scale-105 transition-transform bg-white/60">
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                   </div>
-                  <h3 className="font-black text-xl md:text-2xl text-brand-900 tracking-tight">{selectedFiles.length} File{selectedFiles.length > 1 ? 's' : ''} Ready</h3>
-                  <p className="text-xs md:text-sm font-bold tracking-wider text-green-600 uppercase">Click or Drag to change</p>
-                </>
-              ) : (
-                <>
-                  <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-brand-900 flex items-center justify-center text-white group-hover:scale-110 transition-transform shadow-lg">
-                    <svg className="w-6 h-6 md:w-8 md:h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                  <div>
+                    <h3 className="font-black text-xl sm:text-2xl text-slate-900 tracking-tight">Upload Clinical Report / Lab Slip</h3>
+                    <p className="text-xs sm:text-sm font-bold tracking-wider text-slate-500 uppercase mt-1">PDF, PNG, JPG, or TXT (Lipid Profile, Blood Pressure, Medical Records)</p>
                   </div>
-                  <h3 className="font-black text-xl md:text-2xl text-brand-900 tracking-tight">Upload Clinical Report</h3>
-                  <p className="text-xs md:text-sm font-bold tracking-wider text-brand-900/70 uppercase">Drag & Drop (PDF, JPG, PNG)</p>
-                </>
-              )}
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black text-blue-800">
+                    <span>⚡ On-Device RapidOCR + Clinical Entity Extraction</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Action Demo Button (Exact 3D Navy Button) */}
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <span className="text-xs font-bold text-slate-500">Don&apos;t have a report on hand?</span>
+                <button
+                  type="button"
+                  onClick={loadDemoReport}
+                  className="neu-button-3d inline-flex items-center gap-2 px-5 py-2.5 text-xs font-black"
+                >
+                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  Test With Sample Lab Slip
+                </button>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* STEP 2: SCANNING IN PROGRESS STATE */}
+          {uploadStep === 'scanning' && (
+            <div className="w-full neu-inset rounded-3xl p-8 sm:p-12 text-center flex flex-col items-center justify-center space-y-6 bg-white/40">
+              <div className="relative w-24 h-24 flex items-center justify-center neu-convex rounded-full">
+                <div className="absolute inset-0 rounded-full border-4 border-blue-700 border-t-transparent animate-spin"></div>
+                <svg className="w-10 h-10 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+              </div>
+              <div className="space-y-2 max-w-md">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Scanning Document</h3>
+                <p className="text-sm font-extrabold text-blue-700">{scanStatus}</p>
+                <div className="w-full neu-inset-sm rounded-full h-3 overflow-hidden mt-4 p-0.5">
+                  <div className="bg-gradient-to-r from-blue-700 to-sky-500 h-full rounded-full animate-pulse" style={{ width: '85%' }}></div>
+                </div>
+              </div>
+              <span className="text-xs text-slate-500 uppercase tracking-widest font-black">Analyzing parameters...</span>
+            </div>
+          )}
+
+          {/* STEP 3: REVIEW & VERIFY SCREEN */}
+          {uploadStep === 'review' && (
+            <div className="w-full space-y-8">
+              
+              {/* Top Banner: Verification Notice */}
+              <div className="p-6 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0">
+                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-black text-slate-900">OCR Extraction Complete</h4>
+                    <p className="text-xs sm:text-sm font-bold text-slate-600 mt-0.5">
+                      Review and adjust the extracted readings below before evaluating cardiovascular risk.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClearFiles}
+                  className="neu-button px-5 py-2.5 rounded-2xl text-xs font-black text-slate-800 hover:text-red-700 self-end sm:self-auto transition-all"
+                >
+                  Upload Another File
+                </button>
+              </div>
+
+              {/* Editable Fields Grid (Spacious, Un-congested) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+                <div className="lg:col-span-8 space-y-6">
+                  
+                  {/* 1. Demographics & Anthropometrics */}
+                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
+                      <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
+                        1. Demographics & Body Metrics
+                      </h4>
+                      {liveBmi && (
+                        <span className={`text-xs px-3.5 py-1 font-black rounded-full neu-inset-sm ${liveBmi.color}`}>
+                          BMI: {liveBmi.val} ({liveBmi.cat})
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className={labelClasses}>Age (years)</label>
+                          {ocrSnippets.age && <span className="text-[10px] text-[#17805d] neu-inset-sm px-2 py-0.5 rounded-full font-black" title={ocrSnippets.age}>[OCR]</span>}
+                        </div>
+                        <input required type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses} placeholder="55" min={1} max={120} />
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Biological Sex</label>
+                        <select name="sex" value={formData.sex} onChange={handleChange} className={inputClasses}>
+                          <option value={1}>Male</option>
+                          <option value={0}>Female</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className={labelClasses}>Height (cm)</label>
+                          {ocrSnippets.height && <span className="text-[10px] text-[#17805d] neu-inset-sm px-2 py-0.5 rounded-full font-black" title={ocrSnippets.height}>[OCR]</span>}
+                        </div>
+                        <input type="number" name="height" value={formData.height} onChange={handleChange} className={inputClasses} placeholder="170" min={50} max={250} />
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className={labelClasses}>Weight (kg)</label>
+                          {ocrSnippets.weight && <span className="text-[10px] text-[#17805d] neu-inset-sm px-2 py-0.5 rounded-full font-black" title={ocrSnippets.weight}>[OCR]</span>}
+                        </div>
+                        <input type="number" name="weight" value={formData.weight} onChange={handleChange} className={inputClasses} placeholder="75" min={20} max={300} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Blood Pressure */}
+                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                    <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
+                      <div className="flex items-center gap-2.5">
+                        <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
+                          2. Blood Pressure (mmHg)
+                        </h4>
+                        {ocrSnippets.blood_pressure && (
+                          <span className="text-[10px] text-[#17805d] neu-inset-sm px-2.5 py-0.5 rounded-full font-black" title={ocrSnippets.blood_pressure}>
+                            {ocrSnippets.blood_pressure}
+                          </span>
+                        )}
+                      </div>
+                      {liveBpStage.label && (
+                        <span className={`text-xs px-3.5 py-1 font-black rounded-full neu-inset-sm ${liveBpStage.color}`}>
+                          {liveBpStage.label}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label className={labelClasses}>Systolic BP (ap_hi)</label>
+                        <input required type="number" name="ap_hi" value={formData.ap_hi} onChange={handleChange} className={inputClasses} placeholder="120" min={50} max={260} />
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Diastolic BP (ap_lo)</label>
+                        <input required type="number" name="ap_lo" value={formData.ap_lo} onChange={handleChange} className={inputClasses} placeholder="80" min={30} max={180} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Clinical Laboratory Tiers */}
+                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                    <div className="pb-2 border-b border-slate-200/60">
+                      <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
+                        3. Clinical Laboratory Tiers
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className={labelClasses}>Total Cholesterol</label>
+                          {ocrSnippets.cholesterol && <span className="text-[10px] text-[#17805d] neu-inset-sm px-2 py-0.5 rounded-full font-black" title={ocrSnippets.cholesterol}>[OCR]</span>}
+                        </div>
+                        <select name="cholesterol" value={formData.cholesterol} onChange={handleChange} className={inputClasses}>
+                          <option value={1}>Normal (&lt; 200 mg/dL)</option>
+                          <option value={2}>Above Normal (200 - 239 mg/dL)</option>
+                          <option value={3}>Well Above Normal (≥ 240 mg/dL)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <label className={labelClasses}>Fasting Glucose (Blood Sugar)</label>
+                          {ocrSnippets.glucose && <span className="text-[10px] text-[#17805d] neu-inset-sm px-2 py-0.5 rounded-full font-black" title={ocrSnippets.glucose}>[OCR]</span>}
+                        </div>
+                        <select name="gluc" value={formData.gluc} onChange={handleChange} className={inputClasses}>
+                          <option value={1}>Normal (&lt; 100 mg/dL)</option>
+                          <option value={2}>Above Normal (100 - 125 mg/dL)</option>
+                          <option value={3}>Well Above Normal (≥ 126 mg/dL)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Lifestyle Indicators */}
+                  <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                    <div className="pb-2 border-b border-slate-200/60">
+                      <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
+                        4. Lifestyle & Behavioral Factors
+                      </h4>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                      <div>
+                        <label className={labelClasses}>Tobacco / Smoking</label>
+                        <select name="smoke" value={formData.smoke} onChange={handleChange} className={inputClasses}>
+                          <option value={0}>Non-smoker</option>
+                          <option value={1}>Smoker</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Alcohol Consumption</label>
+                        <select name="alco" value={formData.alco} onChange={handleChange} className={inputClasses}>
+                          <option value={0}>No / Minimal</option>
+                          <option value={1}>Regular Consumer</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Physical Activity</label>
+                        <select name="active" value={formData.active} onChange={handleChange} className={inputClasses}>
+                          <option value={1}>Regularly Active</option>
+                          <option value={0}>Sedentary</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Right Column: Symptoms & Final Action */}
+                <div className="lg:col-span-4 flex flex-col justify-between p-6 sm:p-8 neu-flat rounded-3xl space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                  <div className="space-y-3">
+                    <label className={`${labelClasses} flex items-center justify-between`}>
+                      <span>Reported Symptoms / Notes</span>
+                      <span className="text-[10px] neu-inset-sm text-[#17805d] px-2.5 py-0.5 rounded-full font-black">NLP ASSISTED</span>
+                    </label>
+                    <textarea 
+                      name="symptoms" 
+                      value={formData.symptoms} 
+                      onChange={handleTextChange} 
+                      className="w-full neu-input rounded-2xl p-4 text-slate-900 text-sm placeholder:text-slate-400 outline-none min-h-[220px] resize-none font-semibold leading-relaxed" 
+                      placeholder="Symptoms or clinical notes from report (e.g. chest tightness on exertion, shortness of breath, palpitations)..." 
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-200/60">
+                    <button 
+                      type="submit" 
+                      disabled={isLoading}
+                      className="neu-button-green w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                    >
+                      {isLoading ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                          Computing Risk...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                          Confirm & Calculate Risk
+                        </>
+                      )}
+                    </button>
+                    <p className="text-[11px] text-center text-slate-500 font-bold mt-3 uppercase tracking-wider">
+                      70,000-Record Calibrated Gradient Boosted Model
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
 
           {parseError && (
-            <div className="p-4 bg-red-50/80 backdrop-blur border border-red-200 text-red-600 rounded-xl text-center text-sm font-bold tracking-widest uppercase shadow-sm">
+            <div className="p-5 neu-inset text-red-700 rounded-3xl border border-red-200 text-center text-xs sm:text-sm font-black tracking-wider uppercase">
               {parseError}
             </div>
           )}
 
-
-
-          {/* ChatGPT-style input area */}
-          <div className="w-full bg-white/60 backdrop-blur-3xl border border-white/60 rounded-2xl md:rounded-3xl p-3 md:p-4 shadow-xl focus-within:ring-4 focus-within:ring-brand-900/20 transition-all">
-            <textarea 
-              name="symptoms" 
-              value={formData.symptoms} 
-              onChange={handleTextChange} 
-              className="w-full bg-transparent border-none outline-none resize-none min-h-[80px] md:min-h-[100px] p-2 md:p-4 text-brand-900 placeholder:text-brand-900/50 font-medium text-base md:text-lg leading-relaxed" 
-              placeholder="Add any extra symptoms or clinical context here... (e.g. 'Patient reports chest pain when climbing stairs')" 
-            />
-            <div className="flex flex-col sm:flex-row justify-between items-center pt-3 md:pt-4 border-t border-brand-900/10 mt-1 md:mt-2 gap-3 sm:gap-0">
-              <span className="text-[10px] md:text-xs font-bold tracking-widest text-brand-900/40 uppercase px-2 md:px-4">Optional AI Context</span>
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full sm:w-auto px-6 py-3 bg-brand-900 hover:bg-black text-white rounded-xl md:rounded-2xl font-bold tracking-widest uppercase transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg disabled:opacity-70 disabled:hover:scale-100 flex items-center justify-center gap-3 text-sm md:text-base"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Evaluating...
-                  </>
-                ) : (
-                  <>
-                    Predict Risk
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
         </div>
       ) : (
-        <div className="flex flex-col w-full">
-          {/* Pedagogical Quick Fill */}
-          <div className="w-full mb-8 flex flex-col md:flex-row items-center gap-4 bg-white/40 p-4 rounded-2xl border border-white/60">
-            <span className="text-xs font-bold tracking-widest text-brand-900 uppercase">Case Studies:</span>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => loadPreset('high')} className="px-3 py-1.5 text-xs font-bold bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors">Classic High-Risk</button>
-              <button type="button" onClick={() => loadPreset('atypical')} className="px-3 py-1.5 text-xs font-bold bg-yellow-100 text-yellow-700 rounded-full hover:bg-yellow-200 transition-colors">Atypical Female</button>
-              <button type="button" onClick={() => loadPreset('low')} className="px-3 py-1.5 text-xs font-bold bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors">Asymptomatic Low-Risk</button>
+        /* MANUAL ENTRY MODE (Spacious Neumorphic Layout) */
+        <div className="flex flex-col w-full space-y-8">
+          {/* Quick Fill Presets */}
+          <div className="w-full flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6 neu-inset rounded-3xl">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-black tracking-wider text-slate-700 uppercase">Presets:</span>
+              <button type="button" onClick={() => loadPreset('high')} className="neu-button px-4 py-2 text-xs font-black text-red-700 rounded-full hover:bg-red-50 transition-all">High Risk Male (62y)</button>
+              <button type="button" onClick={() => loadPreset('atypical')} className="neu-button px-4 py-2 text-xs font-black text-amber-700 rounded-full hover:bg-amber-50 transition-all">Borderline Risk (54y)</button>
+              <button type="button" onClick={() => loadPreset('low')} className="neu-button-green px-4 py-2 text-xs font-black text-white rounded-full transition-all">Low Risk (32y)</button>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 w-full">
-            {/* Left Column: Essential Clinic Metrics */}
-            <div className="lg:col-span-8 flex flex-col justify-between space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className={labelClasses}>Age limit</label>
-                <input required type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses} placeholder="55" />
+            {liveBmi && (
+              <div className={`px-4 py-1.5 text-xs font-black rounded-full neu-inset-sm ${liveBmi.color}`}>
+                BMI: {liveBmi.val} ({liveBmi.cat})
               </div>
-              <div>
-                <label className={labelClasses}>Gender</label>
-                <select required name="sex" value={formData.sex} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select</option>
-                  <option value={1}>Male</option>
-                  <option value={0}>Female</option>
-                  <option value={0.5}>Non-binary / Trans</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className={labelClasses}>Chest Pain Description</label>
-                <select required name="cp" value={formData.cp} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select...</option>
-                  <option value={0}>Typical Pain</option>
-                  <option value={1}>Atypical Pain</option>
-                  <option value={2}>Non-anginal Pain</option>
-                  <option value={3}>No Pain (Asymptomatic)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className={labelClasses}>Pain from Exercise?</label>
-                <select required name="exang" value={formData.exang} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select</option>
-                  <option value={1}>Yes</option>
-                  <option value={0}>No</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClasses}>Resting Heart Rhythm</label>
-                <select required name="restecg" value={formData.restecg} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select</option>
-                  <option value={0}>Normal</option>
-                  <option value={1}>Abnormal Wave</option>
-                  <option value={2}>Enlarged (LVH)</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClasses}>Heart Rate Slope</label>
-                <select required name="slope" value={formData.slope} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select</option>
-                  <option value={0}>Upsloping</option>
-                  <option value={1}>Flat</option>
-                  <option value={2}>Downsloping</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClasses}>Blocked Vessels</label>
-                <select required name="ca" value={formData.ca} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>0</option>
-                  <option value={0}>0</option>
-                  <option value={1}>1</option>
-                  <option value={2}>2</option>
-                  <option value={3}>3</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div>
-                <label className={labelClasses}>Resting BP (mmHg)</label>
-                <input required type="number" name="trestbps" value={formData.trestbps} onChange={handleChange} className={inputClasses} placeholder="120" />
-              </div>
-              <div>
-                <label className={labelClasses}>Cholesterol</label>
-                <input required type="number" name="chol" value={formData.chol} onChange={handleChange} className={inputClasses} placeholder="200" />
-              </div>
-              <div>
-                <label className={labelClasses}>Max Heart Rate</label>
-                <input required type="number" name="thalach" value={formData.thalach} onChange={handleChange} className={inputClasses} placeholder="150" />
-              </div>
-              <div>
-                <label className={labelClasses}>Stress Test Depress</label>
-                <input required type="number" step="0.1" name="oldpeak" value={formData.oldpeak} onChange={handleChange} className={inputClasses} placeholder="0.0" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="col-span-2">
-                <label className={labelClasses}>High Blood Sugar {'>'} 120</label>
-                <select required name="fbs" value={formData.fbs} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select</option>
-                  <option value={1}>Yes</option>
-                  <option value={0}>No</option>
-                </select>
-              </div>
-              <div className="col-span-2">
-                <label className={labelClasses}>Blood Profile (Thalassemia)</label>
-                <select required name="thal" value={formData.thal} onChange={handleChange} className={inputClasses}>
-                  <option value="" disabled>Select...</option>
-                  <option value={1}>Normal</option>
-                  <option value={2}>Fixed Defect</option>
-                  <option value={3}>Reversible</option>
-                </select>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Right Column: AI Symptoms Input */}
-          <div className="lg:col-span-4 flex flex-col h-full border-t lg:border-t-0 lg:border-l border-white/50 pt-6 mt-4 lg:mt-0 lg:pt-0 lg:pl-8">
-            <div className="flex-1 flex flex-col">
-              <label className={`${labelClasses} flex items-center justify-between mb-3 text-brand-900`}>
-                <span>Patient Symptoms</span>
-                <span className="text-[10px] bg-brand-900 text-brand-100 px-2 md:px-3 py-1 rounded-full shadow-sm tracking-widest">AI POWERED</span>
-              </label>
-              <textarea 
-                name="symptoms" 
-                value={formData.symptoms} 
-                onChange={handleTextChange} 
-                className={`${inputClasses} flex-1 resize-none min-h-[120px] md:min-h-[160px]`} 
-                placeholder="Describe what you're feeling here... e.g. 'chest pain while walking, shortness of breath, etc.' Our AI will map these." 
-              />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full">
+            <div className="lg:col-span-8 space-y-6">
+              
+              {/* 1. Demographics & Anthropometrics */}
+              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                <div className="pb-2 border-b border-slate-200/60">
+                  <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
+                    1. Demographics & Anthropometrics
+                  </h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                  <div>
+                    <label className={labelClasses}>Age (years)</label>
+                    <input required type="number" name="age" value={formData.age} onChange={handleChange} className={inputClasses} placeholder="55" min={1} max={120} />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Biological Sex</label>
+                    <select name="sex" value={formData.sex} onChange={handleChange} className={inputClasses}>
+                      <option value={1}>Male</option>
+                      <option value={0}>Female</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Height (cm)</label>
+                    <input type="number" name="height" value={formData.height} onChange={handleChange} className={inputClasses} placeholder="170" min={50} max={250} />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Weight (kg)</label>
+                    <input type="number" name="weight" value={formData.weight} onChange={handleChange} className={inputClasses} placeholder="75" min={20} max={300} />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Blood Pressure */}
+              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-200/60">
+                  <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_#ef4444]"></span>
+                    2. Blood Pressure (mmHg)
+                  </h4>
+                  {liveBpStage.label && (
+                    <span className={`text-xs px-3.5 py-1 font-black rounded-full neu-inset-sm ${liveBpStage.color}`}>
+                      {liveBpStage.label}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClasses}>Systolic BP (ap_hi)</label>
+                    <input required type="number" name="ap_hi" value={formData.ap_hi} onChange={handleChange} className={inputClasses} placeholder="120" min={50} max={260} />
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Diastolic BP (ap_lo)</label>
+                    <input required type="number" name="ap_lo" value={formData.ap_lo} onChange={handleChange} className={inputClasses} placeholder="80" min={30} max={180} />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Clinical Laboratory Tiers */}
+              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                <div className="pb-2 border-b border-slate-200/60">
+                  <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_#f59e0b]"></span>
+                    3. Clinical Laboratory Tiers
+                  </h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClasses}>Total Cholesterol</label>
+                    <select name="cholesterol" value={formData.cholesterol} onChange={handleChange} className={inputClasses}>
+                      <option value={1}>Normal (&lt; 200 mg/dL)</option>
+                      <option value={2}>Above Normal (200 - 239 mg/dL)</option>
+                      <option value={3}>Well Above Normal (≥ 240 mg/dL)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Fasting Glucose (Blood Sugar)</label>
+                    <select name="gluc" value={formData.gluc} onChange={handleChange} className={inputClasses}>
+                      <option value={1}>Normal (&lt; 100 mg/dL)</option>
+                      <option value={2}>Above Normal (100 - 125 mg/dL)</option>
+                      <option value={3}>Well Above Normal (≥ 126 mg/dL)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Lifestyle Indicators */}
+              <div className="p-6 sm:p-8 neu-flat rounded-3xl space-y-5 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+                <div className="pb-2 border-b border-slate-200/60">
+                  <h4 className="text-xs font-black tracking-widest text-slate-800 uppercase flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#17805d] shadow-[0_0_8px_#17805d]"></span>
+                    4. Lifestyle & Behavioral Factors
+                  </h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div>
+                    <label className={labelClasses}>Smoking Status</label>
+                    <select name="smoke" value={formData.smoke} onChange={handleChange} className={inputClasses}>
+                      <option value={0}>Non-smoker</option>
+                      <option value={1}>Smoker</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Alcohol Consumption</label>
+                    <select name="alco" value={formData.alco} onChange={handleChange} className={inputClasses}>
+                      <option value={0}>No / Minimal</option>
+                      <option value={1}>Regular Consumer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelClasses}>Physical Activity</label>
+                    <select name="active" value={formData.active} onChange={handleChange} className={inputClasses}>
+                      <option value={1}>Regularly Active</option>
+                      <option value={0}>Sedentary</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Collapsible Advanced Cardiac Markers */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="neu-button inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-700 px-5 py-3 rounded-2xl transition-all"
+                >
+                  <svg className={`w-4 h-4 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" /></svg>
+                  {showAdvanced ? "Hide Advanced Cardiac Markers" : "Add Advanced Clinical Markers (ECG & Stress)"}
+                </button>
+
+                {showAdvanced && (
+                  <div className="mt-4 p-6 sm:p-8 neu-inset rounded-3xl space-y-5 animate-in fade-in slide-in-from-top-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+                      <div>
+                        <label className={labelClasses}>Chest Pain Type</label>
+                        <select name="cp" value={formData.cp} onChange={handleChange} className={inputClasses}>
+                          <option value={0}>Typical Angina</option>
+                          <option value={1}>Atypical Angina</option>
+                          <option value={2}>Non-Anginal</option>
+                          <option value={3}>Asymptomatic</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Max Heart Rate</label>
+                        <input type="number" name="thalach" value={formData.thalach} onChange={handleChange} className={inputClasses} placeholder="150" />
+                      </div>
+                      <div>
+                        <label className={labelClasses}>Exercise Angina</label>
+                        <select name="exang" value={formData.exang} onChange={handleChange} className={inputClasses}>
+                          <option value={0}>No</option>
+                          <option value={1}>Yes</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelClasses}>ST Depression</label>
+                        <input type="number" step="0.1" name="oldpeak" value={formData.oldpeak} onChange={handleChange} className={inputClasses} placeholder="0.0" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
-            
-            <div className="pt-6 mt-auto">
-              <button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full px-6 py-4 bg-brand-900 hover:bg-black text-white rounded-xl font-bold tracking-widest uppercase transition-all duration-500 transform hover:scale-[1.02] hover:shadow-2xl hover:shadow-brand-900/30 disabled:opacity-70 disabled:hover:scale-100 flex justify-center items-center gap-2 text-sm md:text-base"
-              >
-                {isLoading ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    Processing...
-                  </>
-                ) : "Predict Risk"}
-              </button>
+
+            {/* Right Column: Symptoms & Final Action */}
+            <div className="lg:col-span-4 flex flex-col justify-between p-6 sm:p-8 neu-flat rounded-3xl space-y-6 border border-white/60 shadow-[6px_6px_16px_rgba(163,177,198,0.3),-6px_-6px_16px_rgba(255,255,255,0.8)]">
+              <div className="space-y-3">
+                <label className={`${labelClasses} flex items-center justify-between`}>
+                  <span>Reported Symptoms</span>
+                  <span className="text-[10px] neu-inset-sm text-[#17805d] px-2.5 py-0.5 rounded-full font-black">NLP ENHANCED</span>
+                </label>
+                <textarea 
+                  name="symptoms" 
+                  value={formData.symptoms} 
+                  onChange={handleTextChange} 
+                  className="w-full neu-input rounded-2xl p-4 text-slate-800 text-sm placeholder:text-slate-400 outline-none min-h-[220px] resize-none font-semibold leading-relaxed" 
+                  placeholder="Describe feelings, symptoms, or medical notes (e.g. 'chest tightness on exertion, heavy legs')..." 
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200/60">
+                <button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="neu-button-green w-full py-4.5 rounded-2xl font-black tracking-wider uppercase text-sm cursor-pointer shadow-xl disabled:opacity-60 flex justify-center items-center gap-2.5"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin"></span>
+                      Evaluating Patient...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                      Predict Cardiovascular Risk
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
+
           </div>
         </div>
       )}
