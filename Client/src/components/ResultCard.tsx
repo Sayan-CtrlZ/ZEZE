@@ -105,10 +105,17 @@ function parseExplanationSections(rawText: string): ParsedSection[] {
 export default function ResultCard({ risk, probability, explanation, role = 'patient', feature_impacts, payload }: ResultCardProps) {
   const [howCalculatedOpen, setHowCalculatedOpen] = useState(false);
 
-  // Normalize Role
+  // Active Role Persona State (initialized from prop, interactive toggleable)
   const roleLower = (role || 'patient').toLowerCase();
-  const isClinician = roleLower === 'clinician' || roleLower === 'practitioner';
-  const isTrainee = roleLower === 'trainee' || roleLower === 'student';
+  const [activeRole, setActiveRole] = useState<'clinician' | 'trainee' | 'patient'>(() => {
+    if (roleLower === 'clinician' || roleLower === 'practitioner' || roleLower === 'doctor') return 'clinician';
+    if (roleLower === 'trainee' || roleLower === 'student') return 'trainee';
+    return 'patient';
+  });
+
+  const isClinician = activeRole === 'clinician';
+  const isTrainee = activeRole === 'trainee';
+  const isPatient = activeRole === 'patient';
   const roleLabel = isClinician ? 'Clinician' : isTrainee ? 'Healthcare Trainee' : 'Patient / General';
 
   // Risk Classification
@@ -126,7 +133,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
     ? 'border-t-[4px] border-t-amber-400 border-x border-b border-slate-300/70' 
     : 'border-t-[4px] border-t-emerald-400 border-x border-b border-slate-300/70';
 
-  // Section Title based on role
+  // Section Title based on active role
   let sectionTitle = "What This Means & Actionable Guidance";
   if (isClinician) sectionTitle = "Clinical Diagnostic & Pathways Report";
   if (isTrainee) sectionTitle = "Supervised Learning & Pathophysiological Analysis";
@@ -447,8 +454,41 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
   }, [ap_hi, ap_lo, cholTier, isSmoker, glucTier, bmiNum]);
 
   return (
-    <div className="w-full text-slate-900 space-y-10 sm:space-y-14 lg:space-y-16">
+    <div className="w-full text-slate-900 space-y-8 sm:space-y-12 lg:space-y-14">
       
+      {/* 0. INTERACTIVE ROLE PERSONA SELECTOR */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl neu-flat bg-white/80 border border-slate-200/80 shadow-[4px_4px_12px_rgba(163,177,198,0.25),-4px_-4px_12px_rgba(255,255,255,0.8)]">
+        <div className="flex items-center gap-2 px-2">
+          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+          <span className="text-[10px] sm:text-xs font-black uppercase text-slate-600 tracking-wider">
+            Tailored Dashboard View:
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#edf3f9] neu-inset shadow-inner overflow-x-auto no-scrollbar">
+          {[
+            { id: 'clinician', label: 'Clinician / Doctor' },
+            { id: 'trainee', label: 'Healthcare Trainee' },
+            { id: 'patient', label: 'Patient / General User' }
+          ].map(r => {
+            const active = activeRole === r.id;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setActiveRole(r.id as any)}
+                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+                  active
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                }`}
+              >
+                {r.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 1. TOP BANNER: RISK ESTIMATE, CATEGORY & CALIBRATION INFO */}
       <div className={`p-4 sm:p-6 lg:p-7 rounded-3xl bg-[#e8ecf2] neu-flat ${topBannerAccentBorder} transition-all min-h-[240px] sm:min-h-[275px] lg:min-h-[295px] flex items-center shadow-[8px_8px_24px_#b8c8dc,-8px_-8px_24px_#ffffff]`}>
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-5 lg:gap-10">
@@ -457,7 +497,13 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             <div>
               <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1.5 rounded-full neu-inset-sm text-slate-900 text-[10px] sm:text-[10.5px] font-black tracking-widest uppercase bg-[#e8ecf2] border border-slate-300/60 shadow-sm max-w-full">
                 <span className={`w-2 h-2 rounded-full shrink-0 ${riskBgPulse}`}></span>
-                <span className="truncate">{roleLabel.toUpperCase()} &bull; DECISION SUPPORT</span>
+                <span className="truncate">
+                  {isClinician 
+                    ? 'CLINICIAN • CLINICAL DECISION SUPPORT' 
+                    : isTrainee 
+                    ? 'HEALTHCARE TRAINEE • SUPERVISED LEARNING' 
+                    : 'PATIENT • CARDIOVASCULAR HEALTH SUMMARY'}
+                </span>
               </div>
             </div>
             
@@ -615,7 +661,14 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                 </div>
 
                 <div className="flex items-center gap-1.5 sm:gap-2 self-start xs:self-auto pl-9 xs:pl-0 sm:pl-0">
-                  <span className="text-[10px] sm:text-xs font-black text-slate-700 bg-white px-2 sm:px-2.5 py-0.5 rounded-full border border-slate-200 shadow-sm">
+                  <span 
+                    className="text-[10px] sm:text-xs font-black px-2 sm:px-2.5 py-0.5 rounded-full border shadow-xs transition-colors"
+                    style={{
+                      backgroundColor: driver.isRisk ? '#fff1f2' : '#f0fdf4',
+                      color: driver.isRisk ? '#be123c' : '#15803d',
+                      borderColor: driver.isRisk ? '#fecdd3' : '#bbf7d0'
+                    }}
+                  >
                     {Math.round(driver.fillPercent)}% impact
                   </span>
                   <span 
@@ -892,347 +945,349 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         </div>
       </div>
 
-      {/* 5. INTERACTIVE WHAT-IF / SCENARIO COMPARISON SIMULATOR */}
-      <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white/95 to-[#eef3f8]/90 shadow-[6px_6px_20px_rgba(163,177,198,0.35),-6px_-6px_20px_rgba(255,255,255,0.9)]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-200/60">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#17805d] text-white flex items-center justify-center shadow-md shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-              </span>
-              <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                COMPARE SCENARIOS / WHAT-IF ANALYSIS
-              </h3>
-            </div>
-            <p className="text-[11px] sm:text-xs font-bold text-slate-600 mt-1">
-              Interactively adjust modifiable factors to observe how risk dynamically recalculates in real time.
-            </p>
-          </div>
-        </div>
-
-        {/* Interactive Controls & Live Outcome */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-          
-          {/* Left Column: Sliders and Toggles */}
-          <div className="lg:col-span-7 space-y-4 sm:space-y-5 flex flex-col justify-between">
-            
-            {/* Control 1: Systolic Blood Pressure with Color Slider & Side Lines */}
-            <div className="p-4 sm:p-5 rounded-2xl neu-inset bg-gradient-to-r from-blue-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-blue-600 space-y-3">
-              <div className="flex justify-between items-center text-xs font-black">
-                <span className="text-slate-900 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-blue-700 shrink-0" />
-                  <span className="font-black text-xs sm:text-sm">Systolic Blood Pressure:</span>
+      {/* 5. INTERACTIVE WHAT-IF / SCENARIO COMPARISON SIMULATOR (CLINICIANS & TRAINEES ONLY) */}
+      {(isClinician || isTrainee) && (
+        <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white/95 to-[#eef3f8]/90 shadow-[6px_6px_20px_rgba(163,177,198,0.35),-6px_-6px_20px_rgba(255,255,255,0.9)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 sm:mb-6 pb-3 sm:pb-4 border-b border-slate-200/60">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#17805d] text-white flex items-center justify-center shadow-md shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                 </span>
-                <span className={`px-2.5 sm:px-3.5 py-1 rounded-xl text-xs sm:text-sm font-black shadow-sm transition-colors ${
-                  simBp < 120 
-                    ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
-                    : simBp < 140 
-                    ? 'bg-amber-100 text-amber-900 border border-amber-300' 
-                    : 'bg-red-100 text-red-950 border border-red-300'
-                }`}>
-                  {simBp} mmHg
-                </span>
+                <h3 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
+                  {isTrainee ? 'EDUCATIONAL SIMULATOR • PATHOPHYSIOLOGICAL SENSITIVITY' : 'COMPARE SCENARIOS / WHAT-IF ANALYSIS'}
+                </h3>
               </div>
-
-              {/* Slider Track with Rich Color Gradient and Milestone Side Lines */}
-              <div className="relative pt-1 pb-1">
-                {/* Colored Gradient Track with Curved Pill Ends and Side Calibration Lines */}
-                <div 
-                  className="relative w-full h-3.5 rounded-full overflow-hidden shadow-inner border border-slate-300/80"
-                  style={{
-                    background: 'linear-gradient(to right, #10b981 0%, #34d399 25%, #f59e0b 45%, #ea580c 65%, #f87171 85%, #ef4444 100%)'
-                  }}
-                >
-                  {/* Left side line on the curve */}
-                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-900/70" title="90 mmHg" />
-                  {/* 120 mmHg milestone line */}
-                  <div className="absolute left-[33.33%] top-0 bottom-0 w-0.5 bg-white shadow-sm" title="120 mmHg Target" />
-                  {/* 140 mmHg milestone line */}
-                  <div className="absolute left-[55.55%] top-0 bottom-0 w-0.5 bg-white shadow-sm" title="140 mmHg Stage 1" />
-                  {/* Right side line on the curve */}
-                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-slate-900/70" title="180 mmHg" />
-                </div>
-
-                {/* Range Input overlaid directly on top for smooth native sliding */}
-                <input 
-                  type="range" 
-                  min={90} 
-                  max={180} 
-                  step={1} 
-                  value={simBp} 
-                  onChange={(e) => setSimBp(Number(e.target.value))}
-                  className="absolute inset-x-0 top-1 w-full h-3.5 opacity-0 cursor-pointer z-20"
-                />
-
-                {/* Visible custom slider thumb indicator with glow */}
-                <div 
-                  className="absolute top-0.5 w-4.5 h-4.5 -ml-2 rounded-full bg-white border-2 border-blue-600 shadow-md pointer-events-none transition-all flex items-center justify-center z-10"
-                  style={{ left: `${((simBp - 90) / 90) * 100}%` }}
-                >
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                </div>
-
-                {/* Milestone tick side lines and clean mobile responsive labels */}
-                <div className="relative w-full flex justify-between mt-2 px-0.5">
-                  <div className="flex flex-col items-start">
-                    <span className="w-0.5 h-1.5 bg-emerald-600 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-emerald-700">90 <span className="hidden sm:inline">(Optimal)</span></span>
-                  </div>
-                  <div className="flex flex-col items-center" style={{ position: 'absolute', left: '33.33%', transform: 'translateX(-50%)' }}>
-                    <span className="w-0.5 h-1.5 bg-amber-500 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-amber-700">120 <span className="hidden sm:inline">(Target)</span></span>
-                  </div>
-                  <div className="flex flex-col items-center" style={{ position: 'absolute', left: '55.55%', transform: 'translateX(-50%)' }}>
-                    <span className="w-0.5 h-1.5 bg-orange-600 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-orange-800">140 <span className="hidden sm:inline">(Stage 1)</span></span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="w-0.5 h-1.5 bg-red-700 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-red-800">180 <span className="hidden sm:inline">(Severe)</span></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Control 2: Smoking Toggle (Red Accent) */}
-            <div className="p-4 sm:p-5 rounded-2xl neu-inset bg-gradient-to-r from-red-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-red-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
-                  <CigaretteOff className="w-4 h-4 text-red-700 shrink-0" />
-                  <span>Smoking Status</span>
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-500 pl-6 block mt-0.5">Cessation rapidly lowers vascular risk</span>
-              </div>
-              <div className="flex items-center gap-1 p-1 neu-inset rounded-xl bg-slate-100/90 border border-slate-200/60 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setSimSmoke(false)}
-                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                    !simSmoke ? 'neu-button-3d text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Non-smoker
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimSmoke(true)}
-                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                    simSmoke ? 'neu-button-3d text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Smoker
-                </button>
-              </div>
-            </div>
-
-            {/* Control 3: Cholesterol Tier (Amber Accent) */}
-            <div className="p-4 sm:p-5 rounded-2xl neu-inset bg-gradient-to-r from-amber-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-amber-500 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
-                  <FlaskConical className="w-4 h-4 text-amber-700 shrink-0" />
-                  <span>Cholesterol Profile</span>
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-500 pl-6 block mt-0.5">Targeting optimal lipid ceiling</span>
-              </div>
-              <select
-                value={simChol}
-                onChange={(e) => setSimChol(Number(e.target.value))}
-                className="neu-input rounded-xl px-3 sm:px-3.5 py-2 text-xs font-black text-slate-800 outline-none cursor-pointer bg-white/90 border border-slate-200 w-full sm:w-auto"
-              >
-                <option value={1}>Tier 1 (&lt; 200 mg/dL)</option>
-                <option value={2}>Tier 2 (200 - 239 mg/dL)</option>
-                <option value={3}>Tier 3 (≥ 240 mg/dL)</option>
-              </select>
-            </div>
-
-            {/* Control 4: Physical Activity (Emerald Accent) */}
-            <div className="p-4 sm:p-5 rounded-2xl neu-inset bg-gradient-to-r from-emerald-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-emerald-600 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs sm:text-sm font-black text-slate-900 flex items-center gap-2">
-                  <HeartPulse className="w-4 h-4 text-emerald-700 shrink-0" />
-                  <span>Aerobic Physical Activity</span>
-                </span>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-500 pl-6 block mt-0.5">≥ 150 min/week aerobic exercise</span>
-              </div>
-              <div className="flex items-center gap-1 p-1 neu-inset rounded-xl bg-slate-100/90 border border-slate-200/60 self-start sm:self-auto">
-                <button
-                  type="button"
-                  onClick={() => setSimActive(true)}
-                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                    simActive ? 'neu-button-3d text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Active
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSimActive(false)}
-                  className={`px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
-                    !simActive ? 'neu-button-3d text-white' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Sedentary
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Right Column: Live Comparison Outcome + Bottom Reset Button */}
-          <div className="lg:col-span-5 flex flex-col justify-between gap-4 h-full">
-            
-            {/* Scenario Comparison Outcome Card */}
-            <div className="flex-1 p-5 sm:p-7 neu-inset rounded-3xl bg-gradient-to-br from-indigo-50/40 via-white to-blue-50/40 border border-slate-200/80 border-l-4 border-l-blue-600 border-r-4 border-r-indigo-600 flex flex-col justify-between text-center space-y-4 shadow-sm relative overflow-hidden">
-              {/* Subtle internal accent side lines hugging the curved edges */}
-              <div className="absolute left-1.5 top-6 bottom-6 w-0.5 bg-gradient-to-b from-blue-400 via-blue-600 to-indigo-500 rounded-full opacity-60" />
-              <div className="absolute right-1.5 top-6 bottom-6 w-0.5 bg-gradient-to-b from-indigo-400 via-indigo-600 to-blue-500 rounded-full opacity-60" />
-
-              <div>
-                <span className="text-[11px] sm:text-xs font-black uppercase tracking-widest text-slate-600">
-                  Scenario Comparison Outcome
-                </span>
-
-                {/* Side by side stats with colored border accents */}
-                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-3 sm:gap-4 w-full pt-3">
-                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-gradient-to-r from-slate-100/70 via-white to-transparent border border-slate-200 border-l-4 border-l-slate-400 text-left">
-                    <span className="text-[10px] font-black uppercase text-slate-500 block">Original Baseline</span>
-                    <span className="text-xl sm:text-3xl font-black text-slate-800">{probability.toFixed(1)}%</span>
-                  </div>
-                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-gradient-to-r from-blue-50/70 via-white to-transparent border border-blue-200 border-l-4 border-l-blue-600 text-left">
-                    <span className="text-[10px] font-black uppercase text-blue-800 block">Simulated Scenario</span>
-                    <span className="text-xl sm:text-3xl font-black text-blue-900">{simulatedProbability.toFixed(1)}%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Net Risk Delta Badge */}
-              <div className="w-full py-1 sm:py-2">
-                {riskDelta < 0 ? (
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-emerald-100/90 to-teal-50 text-emerald-900 border border-emerald-300 border-l-4 border-l-emerald-600 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm">
-                    <svg className="w-4 h-4 text-emerald-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-                    <span>{Math.abs(riskDelta)}% Estimated Risk Reduction</span>
-                  </div>
-                ) : riskDelta > 0 ? (
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-rose-100/90 to-amber-50 text-rose-900 border border-rose-300 border-l-4 border-l-rose-600 font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm">
-                    <svg className="w-4 h-4 text-rose-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-                    <span>+{riskDelta}% Potential Risk Increase</span>
-                  </div>
-                ) : (
-                  <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-100 text-slate-700 border border-slate-200 border-l-4 border-l-slate-400 font-black text-xs sm:text-sm">
-                    Exact Patient Baseline Match
-                  </div>
-                )}
-              </div>
-
-              <p className="text-[11px] sm:text-xs font-semibold text-slate-500 leading-relaxed pt-1">
-                Demonstrates the quantitative clinical benefit of optimizing arterial blood pressure and lifestyle factors.
+              <p className="text-[11px] sm:text-xs font-bold text-slate-600 mt-1">
+                {isTrainee 
+                  ? 'Interactive teaching tool: observe how single modifiable risk shifts dynamically re-weight cardiovascular risk.' 
+                  : 'Interactively adjust modifiable factors to observe how risk dynamically recalculates in real time.'}
               </p>
             </div>
-
-            {/* Bottom Reset Button */}
-            <button
-              type="button"
-              onClick={resetSimulator}
-              className="neu-button-3d w-full py-3.5 px-6 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] shrink-0"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              <span>Reset to Baseline</span>
-            </button>
           </div>
 
+          {/* Interactive Controls & Live Outcome */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+            
+            {/* Left Column: Sliders and Toggles */}
+            <div className="lg:col-span-7 space-y-4 sm:space-y-5 flex flex-col justify-between">
+              
+              {/* Control 1: Systolic Blood Pressure with Color Slider & Side Lines */}
+              <div className="p-4 sm:p-5 rounded-2xl neu-inset bg-gradient-to-r from-blue-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-blue-600 space-y-3">
+                <div className="flex justify-between items-center text-xs font-black">
+                  <span className="text-slate-900 flex items-center gap-2">
+                    <Activity className="w-4 h-4 text-blue-700 shrink-0" />
+                    <span className="font-black text-xs sm:text-sm">Systolic Blood Pressure:</span>
+                  </span>
+                  <span className={`px-2.5 sm:px-3.5 py-1 rounded-xl text-xs sm:text-sm font-black shadow-sm transition-colors ${
+                    simBp < 120 
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                      : simBp < 140 
+                      ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                      : 'bg-red-100 text-red-950 border border-red-300'
+                  }`}>
+                    {simBp} mmHg
+                  </span>
+                </div>
+
+                {/* Slider Track with Rich Color Gradient and Milestone Side Lines */}
+                <div className="relative pt-1 pb-1">
+                  {/* Colored Gradient Track with Curved Pill Ends and Side Calibration Lines */}
+                  <div 
+                    className="relative w-full h-3.5 rounded-full overflow-hidden shadow-inner border border-slate-300/80"
+                    style={{
+                      background: 'linear-gradient(to right, #10b981 0%, #34d399 25%, #f59e0b 45%, #ea580c 65%, #f87171 85%, #ef4444 100%)'
+                    }}
+                  >
+                    {/* Left side line on the curve */}
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-slate-900/70" title="90 mmHg" />
+                    {/* 120 mmHg milestone line */}
+                    <div className="absolute left-[33.33%] top-0 bottom-0 w-0.5 bg-white shadow-sm" title="120 mmHg Target" />
+                    {/* 140 mmHg milestone line */}
+                    <div className="absolute left-[55.55%] top-0 bottom-0 w-0.5 bg-white shadow-sm" title="140 mmHg Stage 1" />
+                    {/* Right side line on the curve */}
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-slate-900/70" title="180 mmHg" />
+                  </div>
+
+                  {/* Range Input overlaid directly on top for smooth native sliding */}
+                  <input
+                    type="range"
+                    min="90"
+                    max="180"
+                    step="1"
+                    value={simBp}
+                    onChange={(e) => setSimBp(Number(e.target.value))}
+                    aria-label="Simulate Systolic Blood Pressure"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-10"
+                  />
+
+                  {/* Visible custom slider thumb indicator with glow */}
+                  <div 
+                    className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-white border-2 border-blue-600 shadow-[0_2px_8px_rgba(37,99,235,0.45)] pointer-events-none transition-all flex items-center justify-center -ml-3"
+                    style={{ left: `${((simBp - 90) / 90) * 100}%` }}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-blue-600" />
+                  </div>
+
+                  {/* Milestone tick side lines and clean mobile responsive labels */}
+                  <div className="flex justify-between text-[9.5px] sm:text-[10.5px] font-black text-slate-500 mt-2 px-0.5 select-none">
+                    <span className="flex flex-col items-start">
+                      <span className="h-1.5 w-0.5 bg-slate-300 mb-0.5"></span>
+                      <span>90</span>
+                    </span>
+                    <span className="flex flex-col items-center text-emerald-700 font-black">
+                      <span className="h-1.5 w-0.5 bg-emerald-500 mb-0.5"></span>
+                      <span>Target &lt;120</span>
+                    </span>
+                    <span className="flex flex-col items-center text-amber-700 font-black">
+                      <span className="h-1.5 w-0.5 bg-amber-500 mb-0.5"></span>
+                      <span>Stage 1 (140)</span>
+                    </span>
+                    <span className="flex flex-col items-end text-rose-700 font-black">
+                      <span className="h-1.5 w-0.5 bg-rose-500 mb-0.5"></span>
+                      <span>180+</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Control 2: Smoking Toggle (Red Accent) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/60 border border-slate-200/70 border-l-4 border-l-rose-500 flex items-center justify-between">
+                <div>
+                  <span className="font-black text-xs sm:text-sm text-slate-900 block">Tobacco Cessation / Status</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-500">
+                    {simSmoke ? 'Patient continues active smoking' : 'Tobacco-free / Cessation achieved'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSimSmoke(!simSmoke)}
+                  className={`w-14 sm:w-16 h-7 sm:h-8 rounded-full transition-all duration-300 p-1 flex items-center shadow-inner cursor-pointer ${
+                    simSmoke ? 'bg-red-500 justify-end' : 'bg-emerald-500 justify-start'
+                  }`}
+                >
+                  <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-white shadow-md flex items-center justify-center text-[9px] font-black uppercase text-slate-800">
+                    {simSmoke ? 'On' : 'Off'}
+                  </div>
+                </button>
+              </div>
+
+              {/* Control 3: Cholesterol Tier (Amber Accent) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/60 border border-slate-200/70 border-l-4 border-l-amber-500 flex flex-col xs:flex-row xs:items-center justify-between gap-2.5">
+                <div>
+                  <span className="font-black text-xs sm:text-sm text-slate-900 block">Serum Cholesterol Profile</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-500">
+                    Tier {simChol}/3 ({simChol === 3 ? '≥240 mg/dL' : simChol === 2 ? '200–239 mg/dL' : '<200 mg/dL'})
+                  </span>
+                </div>
+                <div className="flex gap-1.5 p-1 rounded-xl bg-slate-200/60 neu-inset">
+                  {[1, 2, 3].map((tier) => (
+                    <button
+                      key={tier}
+                      type="button"
+                      onClick={() => setSimChol(tier)}
+                      className={`px-3 py-1 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                        simChol === tier 
+                          ? 'bg-amber-500 text-slate-950 shadow-md scale-105' 
+                          : 'text-slate-700 hover:text-slate-950'
+                      }`}
+                    >
+                      T{tier}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Control 4: Physical Activity (Emerald Accent) */}
+              <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/60 border border-slate-200/70 border-l-4 border-l-emerald-500 flex items-center justify-between">
+                <div>
+                  <span className="font-black text-xs sm:text-sm text-slate-900 block">Aerobic Physical Activity</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-500">
+                    {simActive ? 'Meets recommended 150 min/wk exercise' : 'Sedentary / Inactive lifestyle'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSimActive(!simActive)}
+                  className={`w-14 sm:w-16 h-7 sm:h-8 rounded-full transition-all duration-300 p-1 flex items-center shadow-inner cursor-pointer ${
+                    simActive ? 'bg-emerald-500 justify-end' : 'bg-slate-300 justify-start'
+                  }`}
+                >
+                  <div className="w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-white shadow-md flex items-center justify-center text-[9px] font-black uppercase text-slate-800">
+                    {simActive ? 'Yes' : 'No'}
+                  </div>
+                </button>
+              </div>
+
+            </div>
+
+            {/* Right Column: Live Comparison Outcome + Bottom Reset Button */}
+            <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+              
+              {/* Scenario Comparison Outcome Card */}
+              <div className="p-4 sm:p-6 rounded-3xl neu-flat bg-gradient-to-br from-white via-slate-50 to-blue-50/50 border border-slate-200/80 shadow-md relative overflow-hidden flex-1 flex flex-col justify-between">
+                {/* Subtle internal accent side lines hugging the curved edges */}
+                <div className="absolute top-4 left-2 bottom-4 w-1 bg-gradient-to-b from-blue-500 via-indigo-500 to-teal-500 rounded-full opacity-60"></div>
+                <div className="absolute top-4 right-2 bottom-4 w-1 bg-gradient-to-b from-teal-500 via-blue-500 to-indigo-500 rounded-full opacity-60"></div>
+
+                <div>
+                  <span className="text-[10px] sm:text-xs font-black uppercase text-blue-900 tracking-wider block mb-3 pl-2">
+                    Comparative Outcome Projection
+                  </span>
+
+                  {/* Side by side stats with colored border accents */}
+                  <div className="grid grid-cols-2 gap-3 pl-2 pr-2">
+                    <div className="p-3 sm:p-4 rounded-2xl neu-inset bg-slate-50/80 border border-slate-200/60 border-l-3 border-l-slate-400">
+                      <span className="text-[10px] sm:text-xs font-bold text-slate-500 block">Baseline Risk</span>
+                      <span className="text-xl sm:text-3xl font-black text-slate-800">{probability.toFixed(1)}%</span>
+                    </div>
+                    <div className="p-3 sm:p-4 rounded-2xl neu-inset bg-blue-50/80 border border-blue-200/60 border-l-3 border-l-blue-600">
+                      <span className="text-[10px] sm:text-xs font-bold text-blue-700 block">Simulated Risk</span>
+                      <span className="text-xl sm:text-3xl font-black text-blue-900">{simulatedProbability.toFixed(1)}%</span>
+                    </div>
+                  </div>
+
+                  {/* Net Risk Delta Badge */}
+                  <div className="mt-4 pt-3 border-t border-slate-200/60 flex items-center justify-between pl-2 pr-2">
+                    <span className="text-xs font-black text-slate-700">Projected Risk Change:</span>
+                    <span className={`px-3 py-1 rounded-xl text-xs sm:text-sm font-black shadow-sm ${
+                      riskDelta < -0.5 
+                        ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                        : riskDelta > 0.5 
+                        ? 'bg-red-100 text-red-950 border border-red-300' 
+                        : 'bg-slate-100 text-slate-700 border border-slate-300'
+                    }`}>
+                      {riskDelta > 0 ? `+${riskDelta}% (Higher Risk)` : riskDelta < 0 ? `${riskDelta}% (Risk Reduced)` : 'No Change'}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-4 leading-relaxed pl-2 pr-2">
+                  Demonstrates the quantitative clinical benefit of optimizing arterial blood pressure and lifestyle factors.
+                </p>
+              </div>
+
+              {/* Bottom Reset Button */}
+              <button
+                type="button"
+                onClick={resetSimulator}
+                className="neu-button-3d w-full py-3.5 px-6 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer shadow-lg transition-all hover:scale-[1.01] active:scale-[0.99] shrink-0"
+              >
+                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Reset to Baseline</span>
+              </button>
+            </div>
+
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 6. CLINICAL PHARMACOPEIA & MEDICATION SEARCH (FOR CLINICIANS & TRAINEES) */}
-      <MedicationReference role={roleLower} patientVitals={payload} />
+      {(isClinician || isTrainee) && (
+        <MedicationReference role={activeRole} patientVitals={payload} />
+      )}
 
       {/* 7. CLINICAL GOVERNANCE DISCLAIMER & EXPANDABLE "HOW WAS THIS CALCULATED?" */}
-      <div className="space-y-4">
-        
-        {/* Governance Disclaimer Callout */}
-        <div className="p-4 sm:p-6 neu-inset rounded-3xl bg-amber-50/60 border border-amber-300/80 flex items-start gap-3.5 sm:gap-4 shadow-sm">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md mt-0.5">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+      {(isClinician || isTrainee) ? (
+        <div className="space-y-4">
+          {/* Governance Disclaimer Callout */}
+          <div className="p-4 sm:p-6 neu-inset rounded-3xl bg-amber-50/60 border border-amber-300/80 flex items-start gap-3.5 sm:gap-4 shadow-sm">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md mt-0.5">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            </div>
+            <div>
+              <h4 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-wider">
+                MODEL OUTPUT ≠ CLINICAL DIAGNOSIS
+              </h4>
+              <p className="text-[11px] sm:text-xs font-semibold text-amber-900/90 mt-1 leading-relaxed">
+                This artificial intelligence model provides calibrated risk stratification for clinical decision support and educational exploration. It does not constitute an autonomous medical diagnosis or prescription. All clinical decisions must be made by qualified healthcare practitioners incorporating physical examination, full clinical history, and clinical judgment.
+              </p>
+            </div>
+          </div>
+
+          {/* Expandable Section: "How was this calculated?" */}
+          <div className="neu-flat rounded-3xl border border-slate-200/80 overflow-hidden bg-white/80 transition-all">
+            <button
+              type="button"
+              onClick={() => setHowCalculatedOpen(!howCalculatedOpen)}
+              className="w-full p-4 sm:p-6 flex items-center justify-between text-left cursor-pointer hover:bg-slate-50/50 transition-colors"
+            >
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
+                </span>
+                <div>
+                  <h4 className="text-sm sm:text-base font-black text-slate-900">How was this calculated?</h4>
+                  <p className="text-[11px] sm:text-xs font-bold text-slate-500">Transparent AI methodology without black boxes</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-black text-blue-700 hidden sm:inline">
+                  {howCalculatedOpen ? 'Hide Methodology' : 'Inspect Calculations'}
+                </span>
+                <svg className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-600 transform transition-transform ${howCalculatedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </button>
+
+            {howCalculatedOpen && (
+              <div className="p-4 sm:p-8 pt-0 border-t border-slate-100 text-xs font-medium text-slate-700 space-y-4 leading-relaxed bg-slate-50/40">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-4">
+                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
+                    <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-blue-600">1.</span> 70,000 Patient Training Cohort
+                    </h5>
+                    <p className="text-[11px] sm:text-xs">
+                      Trained across multi-center cardiovascular records capturing systolic and diastolic pressures, lipid tiers, glycemic levels, and behavioral variables.
+                    </p>
+                  </div>
+                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
+                    <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-blue-600">2.</span> Gradient Boosted Trees Ensemble
+                    </h5>
+                    <p className="text-[11px] sm:text-xs">
+                      Evaluates non-linear cross-interactions (e.g. how pulse pressure and age interact with lipid levels) rather than naive linear summation.
+                    </p>
+                  </div>
+                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
+                    <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-blue-600">3.</span> Isotonic Probability Calibration
+                    </h5>
+                    <p className="text-[11px] sm:text-xs">
+                      Post-processed using isotonic calibration, guaranteeing that an estimated risk of 60% corresponds to 60 observed cardiovascular events per 100 cases.
+                    </p>
+                  </div>
+                  <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
+                    <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
+                      <span className="text-blue-600">4.</span> Interpretable Log-Odds Attribution
+                    </h5>
+                    <p className="text-[11px] sm:text-xs">
+                      Every variable contributes inspectable logit shifts relative to baseline cohort medians, completely avoiding opaque black-box deep embeddings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="p-4 sm:p-6 neu-inset rounded-3xl bg-blue-50/60 border border-blue-200/80 flex items-start gap-3.5 sm:gap-4 shadow-sm">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md mt-0.5">
+            <HeartPulse className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <h4 className="text-xs sm:text-sm font-black text-amber-950 uppercase tracking-wider">
-              MODEL OUTPUT ≠ CLINICAL DIAGNOSIS
+            <h4 className="text-xs sm:text-sm font-black text-blue-950 uppercase tracking-wider">
+              Patient Cardiovascular Health Notice
             </h4>
-            <p className="text-[11px] sm:text-xs font-semibold text-amber-900/90 mt-1 leading-relaxed">
-              This artificial intelligence model provides calibrated risk stratification for clinical decision support and educational exploration. It does not constitute an autonomous medical diagnosis or prescription. All clinical decisions must be made by qualified healthcare practitioners incorporating physical examination, full clinical history, and clinical judgment.
+            <p className="text-[11px] sm:text-xs font-semibold text-blue-900/90 mt-1 leading-relaxed">
+              This report provides automated insights into your cardiovascular health indicators based on submitted metrics. It is designed to assist your awareness and should be discussed with your physician or qualified doctor for official clinical guidance and treatment planning.
             </p>
           </div>
         </div>
-
-        {/* Expandable Section: "How was this calculated?" */}
-        <div className="neu-flat rounded-3xl border border-slate-200/80 overflow-hidden bg-white/80 transition-all">
-          <button
-            type="button"
-            onClick={() => setHowCalculatedOpen(!howCalculatedOpen)}
-            className="w-full p-4 sm:p-6 flex items-center justify-between text-left cursor-pointer hover:bg-slate-50/50 transition-colors"
-          >
-            <div className="flex items-center gap-2.5 sm:gap-3">
-              <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-              </span>
-              <div>
-                <h4 className="text-sm sm:text-base font-black text-slate-900">How was this calculated?</h4>
-                <p className="text-[11px] sm:text-xs font-bold text-slate-500">Transparent AI methodology without black boxes</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-black text-blue-700 hidden sm:inline">
-                {howCalculatedOpen ? 'Hide Methodology' : 'Inspect Calculations'}
-              </span>
-              <svg className={`w-4 h-4 sm:w-5 sm:h-5 text-slate-600 transform transition-transform ${howCalculatedOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </button>
-
-          {howCalculatedOpen && (
-            <div className="p-4 sm:p-8 pt-0 border-t border-slate-100 text-xs font-medium text-slate-700 space-y-4 leading-relaxed bg-slate-50/40">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4 pt-4">
-                <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
-                  <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
-                    <span className="text-blue-600">1.</span> 70,000 Patient Training Cohort
-                  </h5>
-                  <p className="text-[11px] sm:text-xs">
-                    Trained across multi-center cardiovascular records capturing systolic and diastolic pressures, lipid tiers, glycemic levels, and behavioral variables.
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
-                  <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
-                    <span className="text-blue-600">2.</span> Gradient Boosted Trees Ensemble
-                  </h5>
-                  <p className="text-[11px] sm:text-xs">
-                    Evaluates non-linear cross-interactions (e.g. how pulse pressure and age interact with lipid levels) rather than naive linear summation.
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
-                  <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
-                    <span className="text-blue-600">3.</span> Isotonic Probability Calibration
-                  </h5>
-                  <p className="text-[11px] sm:text-xs">
-                    Post-processed using isotonic calibration, guaranteeing that an estimated risk of 60% corresponds to 60 observed cardiovascular events per 100 cases.
-                  </p>
-                </div>
-                <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-white/80 border border-slate-200/80">
-                  <h5 className="font-black text-slate-900 mb-1 flex items-center gap-1.5 text-xs sm:text-sm">
-                    <span className="text-blue-600">4.</span> Interpretable Log-Odds Attribution
-                  </h5>
-                  <p className="text-[11px] sm:text-xs">
-                    Every variable contributes inspectable logit shifts relative to baseline cohort medians, completely avoiding opaque black-box deep embeddings.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-      </div>
+      )}
 
       {/* 7. STRUCTURED CLINICAL BREAKDOWN */}
       <div className="space-y-4 sm:space-y-6">

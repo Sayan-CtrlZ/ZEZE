@@ -351,31 +351,19 @@ Your heart and arteries are currently experiencing elevated stress due to higher
             </div>
           </div>
 
-          {/* Header Title with Logo Medallion & Aligned Contrasting Download PDF Button */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1 sm:pb-2">
-            <div className="flex items-center gap-3.5 sm:gap-5">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
-                <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
-              </div>
-              <div>
-                <h1 className="text-xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-                  Clinical Results Dashboard
-                </h1>
-                <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[10px] sm:text-xs mt-0.5">
-                  Zero Error Zonal Evaluation Model
-                </p>
-              </div>
+          {/* Header Title with Logo Medallion */}
+          <div className="flex items-center gap-3.5 sm:gap-5 pb-1 sm:pb-2">
+            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
+              <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
             </div>
-
-            {/* 3D Structured Download PDF Report Button */}
-            <button 
-              id="pdf-btn" 
-              onClick={handleDownloadPDF}
-              className="neu-button-3d text-xs sm:text-sm font-black flex items-center justify-center gap-2.5 px-5 sm:px-6 py-3 rounded-xl uppercase tracking-wider cursor-pointer w-full sm:w-auto shrink-0 shadow-lg"
-            >
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-              <span>Download PDF Report</span>
-            </button>
+            <div>
+              <h1 className="text-xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+                Clinical Results Dashboard
+              </h1>
+              <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[10px] sm:text-xs mt-0.5">
+                Zero Error Zonal Evaluation Model
+              </p>
+            </div>
           </div>
 
           {/* Result Card Component */}
@@ -387,6 +375,27 @@ Your heart and arteries are currently experiencing elevated stress due to higher
             feature_impacts={resultData.feature_impacts}
             payload={resultData.payload}
           />
+
+          {/* Bottom Action Section: Download PDF Report Button (Bottom of screen for desktop & mobile) */}
+          <div className="pt-8 pb-16 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              id="pdf-btn" 
+              onClick={handleDownloadPDF}
+              className="neu-button-3d text-sm sm:text-base font-black flex items-center justify-center gap-3 px-8 sm:px-10 py-4 rounded-2xl uppercase tracking-wider cursor-pointer w-full sm:w-auto shrink-0 shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+            >
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Download Comprehensive PDF Report</span>
+            </button>
+            <Link
+              href="/assessment"
+              className="px-6 py-4 rounded-2xl font-black text-xs sm:text-sm text-slate-700 bg-white border-2 border-slate-200/80 shadow-md hover:bg-slate-50 transition-all flex items-center justify-center gap-2 uppercase tracking-wider w-full sm:w-auto"
+            >
+              <RotateCcw className="w-4 h-4 text-slate-600" />
+              <span>New Assessment</span>
+            </Link>
+          </div>
         </div>
 
         {/* MODERN CLINICAL AI BOT DRAWER */}
