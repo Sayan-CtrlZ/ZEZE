@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
-import { RotateCcw, SlidersHorizontal } from "lucide-react";
+import { RotateCcw, SlidersHorizontal, Pill, Stethoscope, Utensils, Zap, HeartPulse } from "lucide-react";
 import ResultCard from '@/components/ResultCard';
 
 type ChatMessage = { role: "user" | "model"; parts: string };
@@ -452,27 +452,31 @@ Your heart and arteries are currently experiencing elevated stress due to higher
                 <div className="flex flex-wrap gap-2">
                   <button 
                     onClick={() => handleSendPrompt("which med will work")}
-                    className="text-xs bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                    className="text-xs bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 border border-slate-200 hover:border-emerald-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs flex items-center gap-1.5"
                   >
-                    💊 Which med will work?
+                    <Pill className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    Which med will work?
                   </button>
                   <button 
                     onClick={() => handleSendPrompt("How can I lower my blood pressure effectively?")}
-                    className="text-xs bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 hover:border-blue-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                    className="text-xs bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-800 border border-slate-200 hover:border-blue-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs flex items-center gap-1.5"
                   >
-                    🩺 How to lower blood pressure?
+                    <Stethoscope className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    How to lower blood pressure?
                   </button>
                   <button 
                     onClick={() => handleSendPrompt("What dietary guidelines should I follow for my heart?")}
-                    className="text-xs bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                    className="text-xs bg-slate-100 hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs flex items-center gap-1.5"
                   >
-                    🥗 Recommended diet & foods
+                    <Utensils className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    Recommended diet & foods
                   </button>
                   <button 
                     onClick={() => handleSendPrompt("Explain what my risk score means in clinical terms")}
-                    className="text-xs bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-800 border border-slate-200 hover:border-purple-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs"
+                    className="text-xs bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-800 border border-slate-200 hover:border-purple-300 font-semibold px-3 py-1.5 rounded-lg transition-colors cursor-pointer text-left shadow-2xs flex items-center gap-1.5"
                   >
-                    ⚡ Explain my risk factors
+                    <Zap className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    Explain my risk factors
                   </button>
                 </div>
               </div>
@@ -541,21 +545,24 @@ Your heart and arteries are currently experiencing elevated stress due to higher
             <div className="px-4 py-2 bg-slate-50 border-t border-slate-200/80 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
               <button 
                 onClick={() => handleSendPrompt("which med will work")}
-                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
               >
-                💊 Which med will work?
+                <Pill className="w-3 h-3 text-emerald-600 shrink-0" />
+                Which med will work?
               </button>
               <button 
                 onClick={() => handleSendPrompt("What are the target blood pressure levels?")}
-                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
               >
-                🩺 Target BP
+                <Stethoscope className="w-3 h-3 text-blue-600 shrink-0" />
+                Target BP
               </button>
               <button 
                 onClick={() => handleSendPrompt("Guideline statin therapy for high cholesterol?")}
-                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer"
+                className="text-[11px] whitespace-nowrap bg-white hover:bg-slate-100 text-slate-700 font-medium px-3 py-1 rounded-full border border-slate-200 transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
               >
-                🫀 Statin therapy
+                <HeartPulse className="w-3 h-3 text-rose-600 shrink-0" />
+                Statin therapy
               </button>
             </div>
           )}

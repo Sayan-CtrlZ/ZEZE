@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Activity, CigaretteOff, ClipboardCheck, FlaskConical, HeartPulse, Stethoscope } from 'lucide-react';
+import { Activity, CheckCircle2, CigaretteOff, ClipboardCheck, FlaskConical, HeartPulse, Stethoscope } from 'lucide-react';
 import MedicationReference from './MedicationReference';
 
 type ResultCardProps = {
@@ -740,8 +740,9 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   </div>
                 ))
               ) : (
-                <div className="p-8 text-center neu-inset rounded-2xl text-emerald-800 font-black text-sm">
-                  ✓ All submitted clinical parameters are within baseline reference limits.
+                <div className="p-8 text-center neu-inset rounded-2xl text-emerald-800 font-black text-sm flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  All submitted clinical parameters are within baseline reference limits.
                 </div>
               )}
             </div>
