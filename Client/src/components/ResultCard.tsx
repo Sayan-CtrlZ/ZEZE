@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { Activity, CigaretteOff, ClipboardCheck, FlaskConical, HeartPulse, Stethoscope } from 'lucide-react';
 import MedicationReference from './MedicationReference';
 
 type ResultCardProps = {
@@ -185,17 +186,17 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: ap_hi >= 130,
         label: ap_hi >= 140 ? 'Primary Risk Contributor' : ap_hi >= 130 ? 'Elevated Contributor' : 'Optimal Hemodynamics',
         badgeClass: ap_hi >= 140 
-          ? 'bg-rose-500 text-white border-rose-600 shadow-sm' 
+          ? 'bg-red-800 text-white border-red-900 shadow-sm font-black' 
           : ap_hi >= 130 
-          ? 'bg-rose-100 text-rose-900 border-rose-300' 
-          : 'bg-blue-100 text-blue-900 border-blue-300',
-        metricBadgeClass: ap_hi >= 130 ? 'bg-rose-50/90 text-rose-900 border-rose-200' : 'bg-blue-50/90 text-blue-900 border-blue-200',
+          ? 'bg-red-100 text-red-950 border-red-300 font-black' 
+          : 'bg-blue-100 text-blue-900 border-blue-300 font-black',
+        metricBadgeClass: ap_hi >= 130 ? 'bg-red-50 text-red-950 border-red-200' : 'bg-blue-50/90 text-blue-900 border-blue-200',
         pillGradient: ap_hi >= 140 
-          ? 'from-[#fb7185] to-[#e11d48]' 
+          ? 'from-[#b91c1c] to-[#7f1d1d]' 
           : ap_hi >= 130 
-          ? 'from-[#f43f5e] to-[#be123c]' 
+          ? 'from-[#c2410c] to-[#9a3412]' 
           : 'from-[#60a5fa] to-[#2563eb]',
-        dotColor: ap_hi >= 130 ? '#e11d48' : '#2563eb',
+        dotColor: ap_hi >= 130 ? '#991b1b' : '#2563eb',
         explanation: 'Elevated arterial pressure exerts high pulsatile mechanical shear stress against arterial walls, driving cardiac afterload.',
         fillPercent: Math.min(Math.max(((ap_hi - 90) / 90) * 100, 30), 96)
       },
@@ -232,7 +233,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         label: 'Baseline Non-Modifiable Factor',
         badgeClass: 'bg-indigo-100 text-indigo-950 border-indigo-200 font-black',
         metricBadgeClass: 'bg-indigo-50/90 text-indigo-900 border-indigo-200',
-        pillGradient: 'from-[#818cf8] to-[#4f46e5]', // deep indigo/purple like the tallest bar in image!
+        pillGradient: 'from-[#818cf8] to-[#4f46e5]',
         dotColor: '#4f46e5',
         explanation: 'Cumulative physiological arterial stiffness that naturally increases over decades, forming baseline susceptibility.',
         fillPercent: Math.min(Math.max(((ageVal - 20) / 60) * 100, 20), 95)
@@ -246,13 +247,13 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: isSmoker,
         label: isSmoker ? 'Major Modifiable Risk' : 'Protective Factor',
         badgeClass: isSmoker 
-          ? 'bg-neutral-950 text-amber-300 border-neutral-700 shadow-md font-black' 
+          ? 'bg-red-800 text-white border-red-900 shadow-md font-black' 
           : 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black',
-        metricBadgeClass: isSmoker ? 'bg-neutral-900 text-neutral-100 border-neutral-700' : 'bg-emerald-50 text-emerald-900 border-emerald-200',
+        metricBadgeClass: isSmoker ? 'bg-red-50 text-red-950 border-red-200' : 'bg-emerald-50 text-emerald-900 border-emerald-200',
         pillGradient: isSmoker 
-          ? 'from-[#475569] to-[#0f172a]' 
-          : 'from-[#34d399] to-[#059669]', // mint/green like in image
-        dotColor: isSmoker ? '#0f172a' : '#059669',
+          ? 'from-[#b91c1c] to-[#7f1d1d]' 
+          : 'from-[#34d399] to-[#059669]',
+        dotColor: isSmoker ? '#991b1b' : '#059669',
         explanation: isSmoker ? 'Nicotine and carbon monoxide cause acute vasoconstriction, endothelial injury, and hypercoagulability.' : 'Absence of tobacco smoke preserves microvascular health.',
         fillPercent: isSmoker ? 88 : 15
       },
@@ -265,17 +266,17 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: glucTier > 1,
         label: glucTier === 3 ? 'Elevated Glycemic Risk' : glucTier === 2 ? 'Borderline' : 'Normal Glycemia',
         badgeClass: glucTier === 3 
-          ? 'bg-fuchsia-600 text-white border-fuchsia-700 shadow-sm font-black' 
+          ? 'bg-red-800 text-white border-red-900 shadow-sm font-black' 
           : glucTier === 2 
           ? 'bg-lime-100 text-lime-900 border-lime-300 font-black' 
           : 'bg-teal-100 text-teal-900 border-teal-300 font-black',
-        metricBadgeClass: glucTier === 3 ? 'bg-fuchsia-50 text-fuchsia-900 border-fuchsia-200' : glucTier === 2 ? 'bg-lime-50 text-lime-900 border-lime-200' : 'bg-teal-50 text-teal-900 border-teal-200',
+        metricBadgeClass: glucTier === 3 ? 'bg-red-50 text-red-950 border-red-200' : glucTier === 2 ? 'bg-lime-50 text-lime-900 border-lime-200' : 'bg-teal-50 text-teal-900 border-teal-200',
         pillGradient: glucTier === 3 
-          ? 'from-[#f472b6] to-[#c026d3]' // magenta/pink like in image
+          ? 'from-[#b91c1c] to-[#7f1d1d]' 
           : glucTier === 2 
           ? 'from-[#fbbf24] to-[#ea580c]' 
-          : 'from-[#22d3ee] to-[#0891b2]', // cyan/aqua like in image
-        dotColor: glucTier > 1 ? '#c026d3' : '#0891b2',
+          : 'from-[#22d3ee] to-[#0891b2]',
+        dotColor: glucTier === 3 ? '#991b1b' : glucTier === 2 ? '#ea580c' : '#0891b2',
         explanation: 'Chronic hyperglycemia causes advanced glycation end-products and microvascular capillary wall thickening.',
         fillPercent: glucTier === 3 ? 88 : glucTier === 2 ? 55 : 20
       },
@@ -288,17 +289,17 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: bmiNum >= 25,
         label: bmiNum >= 30 ? 'Obesity Category' : bmiNum >= 25 ? 'Overweight Category' : 'Normal Weight',
         badgeClass: bmiNum >= 30 
-          ? 'bg-rose-600 text-white border-rose-700 shadow-sm font-black' 
+          ? 'bg-red-800 text-white border-red-900 shadow-sm font-black' 
           : bmiNum >= 25 
           ? 'bg-orange-100 text-orange-950 border-orange-300 font-black' 
           : 'bg-sky-100 text-sky-900 border-sky-300 font-black',
-        metricBadgeClass: bmiNum >= 30 ? 'bg-rose-50 text-rose-900 border-rose-200' : bmiNum >= 25 ? 'bg-orange-50 text-orange-900 border-orange-200' : 'bg-sky-50 text-sky-900 border-sky-200',
+        metricBadgeClass: bmiNum >= 30 ? 'bg-red-50 text-red-950 border-red-200' : bmiNum >= 25 ? 'bg-orange-50 text-orange-900 border-orange-200' : 'bg-sky-50 text-sky-900 border-sky-200',
         pillGradient: bmiNum >= 30 
-          ? 'from-[#f87171] to-[#dc2626]' 
+          ? 'from-[#b91c1c] to-[#7f1d1d]' 
           : bmiNum >= 25 
-          ? 'from-[#fb923c] to-[#ea580c]' // sunset orange
-          : 'from-[#38bdf8] to-[#0284c7]', // sky blue like in image
-        dotColor: bmiNum >= 25 ? '#ea580c' : '#0284c7',
+          ? 'from-[#fb923c] to-[#ea580c]' 
+          : 'from-[#38bdf8] to-[#0284c7]',
+        dotColor: bmiNum >= 30 ? '#991b1b' : bmiNum >= 25 ? '#ea580c' : '#0284c7',
         explanation: 'Excess visceral adiposity promotes systemic low-grade inflammation and insulin resistance.',
         fillPercent: Math.min(Math.max(((bmiNum - 18) / 22) * 100, 25), 95)
       }
@@ -372,11 +373,11 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
   }, [ap_hi, ap_lo, cholTier, isSmoker, glucTier, bmiNum]);
 
   return (
-    <div className="w-full text-slate-900 space-y-8">
+    <div className="w-full text-slate-900 space-y-12 sm:space-y-14 lg:space-y-16">
       
       {/* 1. TOP BANNER: RISK ESTIMATE, CATEGORY & CALIBRATION INFO */}
-      <div className={`p-6 sm:p-8 lg:p-10 rounded-3xl bg-[#e8ecf2] neu-flat ${topBannerAccentBorder} transition-all min-h-[300px] sm:min-h-[330px] lg:min-h-[350px] flex items-center shadow-[8px_8px_24px_#b8c8dc,-8px_-8px_24px_#ffffff]`}>
-        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-6 lg:gap-12">
+      <div className={`p-5 sm:p-6 lg:p-7 rounded-3xl bg-[#e8ecf2] neu-flat ${topBannerAccentBorder} transition-all min-h-[255px] sm:min-h-[275px] lg:min-h-[295px] flex items-center shadow-[8px_8px_24px_#b8c8dc,-8px_-8px_24px_#ffffff]`}>
+        <div className="w-full flex flex-col md:flex-row items-center justify-between gap-5 lg:gap-10">
           <div className="flex-1 self-stretch flex flex-col justify-between text-left py-1 sm:py-2">
             {/* Top item: Moved higher up */}
             <div>
@@ -387,10 +388,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             </div>
             
             {/* Middle item: Risk Estimate & Category */}
-            <div className="space-y-2 py-3 sm:py-5">
+            <div className="space-y-1.5 py-2 sm:py-3.5">
               <div className="flex flex-wrap items-baseline gap-3">
-                <span className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Risk Estimate:</span>
-                <span className={`text-5xl sm:text-6xl md:text-7xl font-black tracking-tight ${riskTextColor}`}>
+                <span className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Risk Estimate:</span>
+                <span className={`text-5xl sm:text-6xl md:text-6.5xl font-black tracking-tight ${riskTextColor}`}>
                   {probability.toFixed(1)}%
                 </span>
               </div>
@@ -401,7 +402,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                 </span>
                 <span className={`px-3.5 py-1 rounded-full text-xs font-black shadow-sm uppercase tracking-wider ${
                   isHighRisk 
-                    ? 'bg-red-100 text-red-800 border border-red-300' 
+                    ? 'bg-red-100 text-red-900 border border-red-300' 
                     : isModerateRisk 
                     ? 'bg-amber-100 text-amber-800 border border-amber-300' 
                     : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -412,7 +413,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             </div>
 
             {/* Bottom item: Moved lower down */}
-            <div className="pt-3 border-t border-slate-300/70 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs font-bold text-slate-600">
+            <div className="pt-2.5 border-t border-slate-300/70 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs font-bold text-slate-600">
               <span className="flex items-center gap-1.5 text-blue-900 font-extrabold">
                 <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 Model Confidence: High (95.8% Validation Accuracy)
@@ -424,11 +425,11 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             </div>
           </div>
 
-          {/* NEUMORPHIC SCULPTED TORUS / DONUT RING GAUGE */}
-          <div className="relative w-64 h-64 sm:w-72 sm:h-72 md:w-80 md:h-80 lg:w-[330px] lg:h-[330px] shrink-0 md:mr-6 lg:mr-12 xl:mr-16 flex items-center justify-center">
+          {/* NEUMORPHIC SCULPTED TORUS / DONUT RING GAUGE (Scaled down ~12-15%) */}
+          <div className="relative w-56 h-56 sm:w-64 sm:h-64 md:w-72 md:h-72 lg:w-[280px] lg:h-[280px] shrink-0 md:mr-4 lg:mr-8 xl:mr-12 flex items-center justify-center">
             
             {/* Outer Inset Torus Trench */}
-            <div className="w-full h-full rounded-full bg-[#e8ecf2] shadow-[inset_14px_14px_24px_#b4c4d7,inset_-14px_-14px_24px_#ffffff] flex items-center justify-center relative">
+            <div className="w-full h-full rounded-full bg-[#e8ecf2] shadow-[inset_12px_12px_22px_#b4c4d7,inset_-12px_-12px_22px_#ffffff] flex items-center justify-center relative">
               
               {/* Circumference Fill SVG Arc: Perfectly spans the entire radial width of the trench */}
               <svg viewBox="0 0 300 300" className="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none">
@@ -436,21 +437,21 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   <linearGradient id="heroTorusGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     {isHighRisk ? (
                       <>
-                        <stop offset="0%" stopColor="#fb7185" />
-                        <stop offset="50%" stopColor="#f43f5e" />
-                        <stop offset="100%" stopColor="#e11d48" />
+                        <stop offset="0%" stopColor="#b91c1c" />
+                        <stop offset="50%" stopColor="#991b1b" />
+                        <stop offset="100%" stopColor="#7f1d1d" />
                       </>
                     ) : isModerateRisk ? (
                       <>
-                        <stop offset="0%" stopColor="#fbbf24" />
-                        <stop offset="50%" stopColor="#f59e0b" />
-                        <stop offset="100%" stopColor="#ea580c" />
+                        <stop offset="0%" stopColor="#d97706" />
+                        <stop offset="50%" stopColor="#b45309" />
+                        <stop offset="100%" stopColor="#92400e" />
                       </>
                     ) : (
                       <>
-                        <stop offset="0%" stopColor="#34d399" />
-                        <stop offset="50%" stopColor="#10b981" />
-                        <stop offset="100%" stopColor="#047857" />
+                        <stop offset="0%" stopColor="#059669" />
+                        <stop offset="50%" stopColor="#047857" />
+                        <stop offset="100%" stopColor="#065f46" />
                       </>
                     )}
                   </linearGradient>
@@ -486,20 +487,20 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
               </svg>
 
               {/* Inner Raised Island Center: Flush with the trench inner boundary (71% diameter) */}
-              <div className="w-[71%] h-[71%] rounded-full bg-[#e8ecf2] shadow-[10px_10px_20px_#b4c4d7,-10px_-10px_20px_#ffffff] z-10 flex flex-col items-center justify-center text-center select-none p-3">
-                <span className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-none">
+              <div className="w-[71%] h-[71%] rounded-full bg-[#e8ecf2] shadow-[8px_8px_18px_#b4c4d7,-8px_-8px_18px_#ffffff] z-10 flex flex-col items-center justify-center text-center select-none p-3">
+                <span className="text-2.5xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-none">
                   {probability.toFixed(0)}%
                 </span>
-                <span className={`text-[10px] sm:text-[11px] font-black uppercase tracking-widest mt-2 px-3 py-0.5 rounded-full ${
+                <span className={`text-[9.5px] sm:text-[10.5px] font-black uppercase tracking-widest mt-1.5 px-2.5 py-0.5 rounded-full ${
                   isHighRisk 
-                    ? 'text-red-700 bg-red-100/90 border border-red-200' 
+                    ? 'text-red-900 bg-red-100/90 border border-red-200' 
                     : isModerateRisk 
                     ? 'text-amber-800 bg-amber-100/90 border border-amber-200' 
                     : 'text-emerald-800 bg-emerald-100/90 border border-emerald-200'
                 }`}>
                   {riskCategory}
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mt-1">
+                <span className="text-[9px] sm:text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">
                   Probability
                 </span>
               </div>
@@ -611,7 +612,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     <td className="py-3 px-3 font-black text-slate-900">{ap_hi} mmHg</td>
                     <td className="py-3 px-3 text-slate-500">&lt; 120 mmHg</td>
                     <td className="py-3 px-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${ap_hi >= 140 ? 'bg-rose-100 text-rose-800' : ap_hi >= 130 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${ap_hi >= 140 ? 'bg-red-100 text-red-900 border border-red-200' : ap_hi >= 130 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {ap_hi >= 140 ? 'Stage 2' : ap_hi >= 130 ? 'Stage 1' : 'Normal'}
                       </span>
                     </td>
@@ -621,7 +622,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     <td className="py-3 px-3 font-black text-slate-900">{ap_lo} mmHg</td>
                     <td className="py-3 px-3 text-slate-500">&lt; 80 mmHg</td>
                     <td className="py-3 px-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${ap_lo >= 90 ? 'bg-rose-100 text-rose-800' : ap_lo >= 80 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${ap_lo >= 90 ? 'bg-red-100 text-red-900 border border-red-200' : ap_lo >= 80 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {ap_lo >= 90 ? 'Elevated' : ap_lo >= 80 ? 'Borderline' : 'Normal'}
                       </span>
                     </td>
@@ -631,7 +632,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     <td className="py-3 px-3 font-black text-slate-900">{bmiNum} kg/m²</td>
                     <td className="py-3 px-3 text-slate-500">18.5 – 24.9 kg/m²</td>
                     <td className="py-3 px-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${bmiNum >= 30 ? 'bg-rose-100 text-rose-800' : bmiNum >= 25 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${bmiNum >= 30 ? 'bg-red-100 text-red-900 border border-red-200' : bmiNum >= 25 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {bmiNum >= 30 ? 'Obese' : bmiNum >= 25 ? 'Overweight' : 'Normal'}
                       </span>
                     </td>
@@ -641,7 +642,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     <td className="py-3 px-3 font-black text-slate-900">Tier {cholTier}/3</td>
                     <td className="py-3 px-3 text-slate-500">Tier 1 (&lt;200 mg/dL)</td>
                     <td className="py-3 px-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${cholTier === 3 ? 'bg-rose-100 text-rose-800' : cholTier === 2 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${cholTier === 3 ? 'bg-red-100 text-red-900 border border-red-200' : cholTier === 2 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
                         {cholTier === 3 ? 'High' : cholTier === 2 ? 'Borderline' : 'Normal'}
                       </span>
                     </td>
@@ -775,7 +776,8 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-blue-50/40 via-white to-transparent border-l-4 border-blue-600 space-y-1.5">
             <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
-              <span className="text-blue-700">🩺</span> Review blood pressure status
+              <Stethoscope className="w-4 h-4 text-blue-700 shrink-0" />
+              <span>Review blood pressure status</span>
             </h4>
             <p className="text-xs font-medium text-slate-700 leading-relaxed">
               Assess resting arterial hemodynamics; consider ambulatory 24-hour pressure recording or repeated readings to distinguish sustained hypertension from episodic elevation.
@@ -784,16 +786,18 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
 
           <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-amber-50/40 via-white to-transparent border-l-4 border-amber-500 space-y-1.5">
             <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
-              <span className="text-amber-700">🧪</span> Consider assessment of lipid profile
+              <FlaskConical className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>Consider assessment of lipid profile</span>
             </h4>
             <p className="text-xs font-medium text-slate-700 leading-relaxed">
               Order complete fasting lipid panel (total cholesterol, HDL-C, LDL-C, triglycerides, and non-HDL) to accurately quantify circulating atherogenic particle density.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-rose-50/40 via-white to-transparent border-l-4 border-rose-500 space-y-1.5">
+          <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-red-50/40 via-white to-transparent border-l-4 border-red-700 space-y-1.5">
             <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
-              <span className="text-rose-700">🚭</span> Review smoking status
+              <CigaretteOff className="w-4 h-4 text-red-700 shrink-0" />
+              <span>Review smoking status</span>
             </h4>
             <p className="text-xs font-medium text-slate-700 leading-relaxed">
               Evaluate tobacco exposure and pack-year history; discuss structured smoking cessation counseling, behavioral support, and nicotine replacement therapies if applicable.
@@ -802,7 +806,8 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
 
           <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-emerald-50/40 via-white to-transparent border-l-4 border-emerald-600 space-y-1.5">
             <h4 className="font-black text-sm text-slate-900 flex items-center gap-2">
-              <span className="text-emerald-700">📋</span> Consider further clinical evaluation where appropriate
+              <ClipboardCheck className="w-4 h-4 text-emerald-700 shrink-0" />
+              <span>Consider further clinical evaluation where appropriate</span>
             </h4>
             <p className="text-xs font-medium text-slate-700 leading-relaxed">
               Correlate algorithmic risk findings with baseline 12-lead ECG, family history of premature cardiovascular disease, and comprehensive physician physical examination.
@@ -839,7 +844,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-blue-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-blue-600 space-y-3">
               <div className="flex justify-between items-center text-xs font-black">
                 <span className="text-slate-900 flex items-center gap-2">
-                  <span className="text-blue-700 text-base">🩺</span>
+                  <Activity className="w-4 h-4 text-blue-700 shrink-0" />
                   <span className="font-black text-sm">Systolic Blood Pressure:</span>
                 </span>
                 <span className={`px-3.5 py-1 rounded-xl text-sm font-black shadow-sm transition-colors ${
@@ -847,7 +852,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
                     : simBp < 140 
                     ? 'bg-amber-100 text-amber-900 border border-amber-300' 
-                    : 'bg-rose-100 text-rose-900 border border-rose-300'
+                    : 'bg-red-100 text-red-950 border border-red-300'
                 }`}>
                   {simBp} mmHg
                 </span>
@@ -859,7 +864,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                 <div 
                   className="relative w-full h-3.5 rounded-full overflow-hidden shadow-inner border border-slate-300/80"
                   style={{
-                    background: 'linear-gradient(to right, #10b981 0%, #34d399 25%, #f59e0b 45%, #f97316 65%, #ef4444 85%, #dc2626 100%)'
+                    background: 'linear-gradient(to right, #10b981 0%, #34d399 25%, #f59e0b 45%, #ea580c 65%, #b91c1c 85%, #7f1d1d 100%)'
                   }}
                 >
                   {/* Left side line on the curve */}
@@ -902,25 +907,25 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                     <span className="text-[10px] font-bold text-amber-700">120 (Target)</span>
                   </div>
                   <div className="flex flex-col items-center" style={{ position: 'absolute', left: '55.55%', transform: 'translateX(-50%)' }}>
-                    <span className="w-0.5 h-1.5 bg-orange-500 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-orange-700">140 (Hypertension)</span>
+                    <span className="w-0.5 h-1.5 bg-orange-600 mb-0.5"></span>
+                    <span className="text-[10px] font-bold text-orange-800">140 (Hypertension)</span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="w-0.5 h-1.5 bg-rose-600 mb-0.5"></span>
-                    <span className="text-[10px] font-bold text-rose-700">180 (Severe)</span>
+                    <span className="w-0.5 h-1.5 bg-red-700 mb-0.5"></span>
+                    <span className="text-[10px] font-bold text-red-800">180 (Severe)</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Control 2: Smoking Toggle (Rose Accent) */}
-            <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-rose-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-rose-500 flex items-center justify-between">
+            {/* Control 2: Smoking Toggle (Red Accent) */}
+            <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-red-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-red-700 flex items-center justify-between">
               <div>
                 <span className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <span className="text-rose-700 text-base">🚭</span>
+                  <CigaretteOff className="w-4 h-4 text-red-700 shrink-0" />
                   <span>Smoking Status</span>
                 </span>
-                <span className="text-xs font-bold text-slate-500 pl-7 block mt-0.5">Cessation rapidly lowers vascular risk</span>
+                <span className="text-xs font-bold text-slate-500 pl-6 block mt-0.5">Cessation rapidly lowers vascular risk</span>
               </div>
               <div className="flex items-center gap-1 p-1 neu-inset rounded-xl bg-slate-100/90 border border-slate-200/60">
                 <button
@@ -948,10 +953,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-amber-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-amber-500 flex items-center justify-between">
               <div>
                 <span className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <span className="text-amber-700 text-base">🧪</span>
+                  <FlaskConical className="w-4 h-4 text-amber-700 shrink-0" />
                   <span>Cholesterol Profile</span>
                 </span>
-                <span className="text-xs font-bold text-slate-500 pl-7 block mt-0.5">Targeting optimal lipid ceiling</span>
+                <span className="text-xs font-bold text-slate-500 pl-6 block mt-0.5">Targeting optimal lipid ceiling</span>
               </div>
               <select
                 value={simChol}
@@ -968,10 +973,10 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
             <div className="p-5 rounded-2xl neu-inset bg-gradient-to-r from-emerald-50/40 via-white to-transparent border border-slate-200/80 border-l-4 border-l-emerald-600 flex items-center justify-between">
               <div>
                 <span className="text-sm font-black text-slate-900 flex items-center gap-2">
-                  <span className="text-emerald-700 text-base">📋</span>
+                  <HeartPulse className="w-4 h-4 text-emerald-700 shrink-0" />
                   <span>Aerobic Physical Activity</span>
                 </span>
-                <span className="text-xs font-bold text-slate-500 pl-7 block mt-0.5">≥ 150 minutes weekly aerobic exercise</span>
+                <span className="text-xs font-bold text-slate-500 pl-6 block mt-0.5">≥ 150 minutes weekly aerobic exercise</span>
               </div>
               <div className="flex items-center gap-1 p-1 neu-inset rounded-xl bg-slate-100/90 border border-slate-200/60">
                 <button

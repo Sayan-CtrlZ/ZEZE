@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
+import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import ResultCard from '@/components/ResultCard';
 
 type ChatMessage = { role: "user" | "model"; parts: string };
@@ -317,22 +318,37 @@ Your heart and arteries are currently experiencing elevated stress due to higher
           ref={reportRef} 
           className="w-full mb-16 space-y-6 sm:space-y-8"
         >
-          {/* Top Nav: Moved higher up with minimal top margin */}
-          <div className="flex items-center gap-3 pt-0.5 pb-1">
-            <Link 
-              href="/" 
-              onClick={() => sessionStorage.removeItem('zeze_form_data')} 
-              className="neu-button text-xs font-black text-slate-800 px-3.5 py-1.5 rounded-lg hover:text-[#17805d] transition-colors"
-            >
-              ← Start Over
-            </Link>
-            <span className="text-slate-400 font-bold">•</span>
-            <Link 
-              href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
-              className="neu-button text-xs font-black text-blue-600 px-3.5 py-1.5 rounded-lg hover:text-blue-800 transition-colors"
-            >
-              Modify Inputs (What-If)
-            </Link>
+          {/* Top Nav: with Brand Icon & Action Controls */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1 pb-2">
+            <div className="flex items-center gap-3">
+              <Link href="/" className="flex items-center gap-2.5 group">
+                <div className="w-8 h-8 rounded-xl neu-flat flex items-center justify-center p-1 bg-[#e8ecf2] border border-slate-300/60 shadow-sm group-hover:scale-105 transition-transform">
+                  <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-black text-sm tracking-tight text-slate-900 leading-none">ZEZE</span>
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest leading-none mt-0.5">Clinical Decision Support</span>
+                </div>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <Link 
+                href="/" 
+                onClick={() => sessionStorage.removeItem('zeze_form_data')} 
+                className="neu-button text-xs font-black text-slate-700 px-3.5 py-1.5 rounded-xl hover:text-[#17805d] transition-colors flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                Start Over
+              </Link>
+              <Link 
+                href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
+                className="neu-button text-xs font-black text-blue-600 px-3.5 py-1.5 rounded-xl hover:text-blue-800 transition-colors flex items-center gap-1.5"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600" />
+                Modify Inputs (What-If)
+              </Link>
+            </div>
           </div>
 
           {/* Header Title with Logo Medallion & Aligned Contrasting Download PDF Button */}
