@@ -174,6 +174,76 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
     setSimActive(!isSedentary);
   };
 
+  // Dynamic Circle Ring Spectrum Configuration (Calculated dynamically for real or mock data)
+  const circleConfig = useMemo(() => {
+    if (probability >= 80) {
+      return {
+        stops: [
+          { offset: "0%", color: "#f59e0b" },   // Amber Gold
+          { offset: "30%", color: "#f43f5e" },  // Coral Rose
+          { offset: "65%", color: "#dc2626" },  // Crimson
+          { offset: "100%", color: "#9333ea" }, // Deep Violet / Electric Purple
+        ],
+        filter: "drop-shadow(0px 4px 16px rgba(220, 38, 38, 0.45))",
+        textGradient: "from-rose-500 via-red-600 to-purple-600",
+        badgeClass: "text-rose-700 bg-rose-50 border border-rose-200",
+        label: "High Risk",
+      };
+    } else if (probability >= 65) {
+      return {
+        stops: [
+          { offset: "0%", color: "#fbbf24" },   // Amber
+          { offset: "35%", color: "#f97316" },  // Vivid Orange
+          { offset: "70%", color: "#f43f5e" },  // Rose Coral
+          { offset: "100%", color: "#e11d48" }, // Crimson
+        ],
+        filter: "drop-shadow(0px 4px 14px rgba(244, 63, 94, 0.42))",
+        textGradient: "from-amber-500 to-rose-600",
+        badgeClass: "text-rose-700 bg-rose-50 border border-rose-200",
+        label: "High Risk",
+      };
+    } else if (probability >= 45) {
+      return {
+        stops: [
+          { offset: "0%", color: "#a3e635" },   // Lime
+          { offset: "35%", color: "#facc15" },  // Yellow Gold
+          { offset: "70%", color: "#f59e0b" },  // Amber
+          { offset: "100%", color: "#ea580c" }, // Deep Orange
+        ],
+        filter: "drop-shadow(0px 4px 14px rgba(245, 158, 11, 0.42))",
+        textGradient: "from-amber-500 to-orange-600",
+        badgeClass: "text-amber-800 bg-amber-50 border border-amber-200",
+        label: "Moderate Risk",
+      };
+    } else if (probability >= 25) {
+      return {
+        stops: [
+          { offset: "0%", color: "#38bdf8" },   // Sky Blue
+          { offset: "35%", color: "#2dd4bf" },  // Teal
+          { offset: "70%", color: "#34d399" },  // Mint Green
+          { offset: "100%", color: "#059669" }, // Emerald
+        ],
+        filter: "drop-shadow(0px 4px 14px rgba(16, 185, 129, 0.38))",
+        textGradient: "from-teal-500 to-emerald-600",
+        badgeClass: "text-teal-800 bg-teal-50 border border-teal-200",
+        label: "Mild Risk",
+      };
+    } else {
+      return {
+        stops: [
+          { offset: "0%", color: "#60a5fa" },   // Cobalt Blue
+          { offset: "35%", color: "#38bdf8" },  // Sky Blue
+          { offset: "70%", color: "#2dd4bf" },  // Teal
+          { offset: "100%", color: "#10b981" }, // Bright Emerald
+        ],
+        filter: "drop-shadow(0px 4px 14px rgba(56, 189, 248, 0.38))",
+        textGradient: "from-sky-500 to-teal-600",
+        badgeClass: "text-emerald-800 bg-emerald-50 border border-emerald-200",
+        label: "Low Risk",
+      };
+    }
+  }, [probability]);
+
   // WHAT CONTRIBUTED MOST? (Derived from feature impacts or clinical vitals)
   const topDrivers = useMemo(() => {
     const drivers = [
@@ -266,17 +336,17 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: glucTier > 1,
         label: glucTier === 3 ? 'Elevated Glycemic Risk' : glucTier === 2 ? 'Borderline' : 'Normal Glycemia',
         badgeClass: glucTier === 3 
-          ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-rose-600 shadow-sm font-black' 
+          ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-700 shadow-sm font-black' 
           : glucTier === 2 
           ? 'bg-lime-100 text-lime-900 border-lime-300 font-black' 
           : 'bg-teal-100 text-teal-900 border-teal-300 font-black',
-        metricBadgeClass: glucTier === 3 ? 'bg-rose-50 text-rose-700 border-rose-200' : glucTier === 2 ? 'bg-lime-50 text-lime-900 border-lime-200' : 'bg-teal-50 text-teal-900 border-teal-200',
+        metricBadgeClass: glucTier === 3 ? 'bg-pink-50 text-pink-700 border-pink-200' : glucTier === 2 ? 'bg-lime-50 text-lime-900 border-lime-200' : 'bg-teal-50 text-teal-900 border-teal-200',
         pillGradient: glucTier === 3 
-          ? 'from-[#fca5a5] via-[#f87171] to-[#ef4444]' 
+          ? 'from-[#f472b6] via-[#fb7185] to-[#e11d48]' 
           : glucTier === 2 
           ? 'from-[#fcd34d] to-[#f59e0b]' 
           : 'from-[#22d3ee] to-[#0891b2]',
-        dotColor: glucTier === 3 ? '#f43f5e' : glucTier === 2 ? '#f59e0b' : '#0891b2',
+        dotColor: glucTier === 3 ? '#db2777' : glucTier === 2 ? '#f59e0b' : '#0891b2',
         explanation: 'Chronic hyperglycemia causes advanced glycation end-products and microvascular capillary wall thickening.',
         fillPercent: glucTier === 3 ? 88 : glucTier === 2 ? 55 : 20
       },
@@ -289,17 +359,17 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         isRisk: bmiNum >= 25,
         label: bmiNum >= 30 ? 'Obesity Category' : bmiNum >= 25 ? 'Overweight Category' : 'Normal Weight',
         badgeClass: bmiNum >= 30 
-          ? 'bg-gradient-to-r from-rose-500 to-red-500 text-white border-rose-600 shadow-sm font-black' 
+          ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white border-orange-700 shadow-sm font-black' 
           : bmiNum >= 25 
           ? 'bg-orange-100 text-orange-950 border-orange-300 font-black' 
           : 'bg-sky-100 text-sky-900 border-sky-300 font-black',
-        metricBadgeClass: bmiNum >= 30 ? 'bg-rose-50 text-rose-700 border-rose-200' : bmiNum >= 25 ? 'bg-orange-50 text-orange-900 border-orange-200' : 'bg-sky-50 text-sky-900 border-sky-200',
+        metricBadgeClass: bmiNum >= 30 ? 'bg-orange-50 text-orange-800 border-orange-200' : bmiNum >= 25 ? 'bg-orange-50 text-orange-900 border-orange-200' : 'bg-sky-50 text-sky-900 border-sky-200',
         pillGradient: bmiNum >= 30 
-          ? 'from-[#fca5a5] via-[#f87171] to-[#ef4444]' 
+          ? 'from-[#fdba74] via-[#fb923c] to-[#ea580c]' 
           : bmiNum >= 25 
-          ? 'from-[#fb923c] to-[#ea580c]' 
+          ? 'from-[#fed7aa] to-[#fb923c]' 
           : 'from-[#38bdf8] to-[#0284c7]',
-        dotColor: bmiNum >= 30 ? '#f43f5e' : bmiNum >= 25 ? '#ea580c' : '#0284c7',
+        dotColor: bmiNum >= 30 ? '#ea580c' : bmiNum >= 25 ? '#f97316' : '#0284c7',
         explanation: 'Excess visceral adiposity promotes systemic low-grade inflammation and insulin resistance.',
         fillPercent: Math.min(Math.max(((bmiNum - 18) / 22) * 100, 25), 95)
       }
@@ -435,28 +505,9 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
               <svg viewBox="0 0 300 300" className="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none">
                 <defs>
                   <linearGradient id="heroTorusGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                    {isHighRisk ? (
-                      <>
-                        <stop offset="0%" stopColor="#fca5a5" />
-                        <stop offset="30%" stopColor="#fb7185" />
-                        <stop offset="65%" stopColor="#f43f5e" />
-                        <stop offset="100%" stopColor="#e11d48" />
-                      </>
-                    ) : isModerateRisk ? (
-                      <>
-                        <stop offset="0%" stopColor="#fef08a" />
-                        <stop offset="35%" stopColor="#fcd34d" />
-                        <stop offset="70%" stopColor="#f59e0b" />
-                        <stop offset="100%" stopColor="#ea580c" />
-                      </>
-                    ) : (
-                      <>
-                        <stop offset="0%" stopColor="#a7f3d0" />
-                        <stop offset="35%" stopColor="#34d399" />
-                        <stop offset="70%" stopColor="#10b981" />
-                        <stop offset="100%" stopColor="#047857" />
-                      </>
-                    )}
+                    {circleConfig.stops.map((s, idx) => (
+                      <stop key={idx} offset={s.offset} stopColor={s.color} />
+                    ))}
                   </linearGradient>
                 </defs>
 
@@ -484,34 +535,18 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   strokeLinecap="round" 
                   className="transition-all duration-1000 ease-out" 
                   style={{
-                    filter: isHighRisk 
-                      ? "drop-shadow(0px 4px 14px rgba(244, 63, 94, 0.45))" 
-                      : isModerateRisk 
-                      ? "drop-shadow(0px 4px 14px rgba(245, 158, 11, 0.45))" 
-                      : "drop-shadow(0px 4px 14px rgba(16, 185, 129, 0.45))"
+                    filter: circleConfig.filter
                   }}
                 />
               </svg>
 
               {/* Inner Raised Island Center */}
               <div className="w-[71%] h-[71%] rounded-full bg-[#e8ecf2] shadow-[6px_6px_14px_#b4c4d7,-6px_-6px_14px_#ffffff] z-10 flex flex-col items-center justify-center text-center select-none p-2 sm:p-3">
-                <span className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none ${
-                  isHighRisk 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-br from-rose-500 to-red-600' 
-                    : isModerateRisk 
-                    ? 'text-transparent bg-clip-text bg-gradient-to-br from-amber-500 to-orange-600' 
-                    : 'text-transparent bg-clip-text bg-gradient-to-br from-emerald-500 to-teal-600'
-                }`}>
+                <span className={`text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-none text-transparent bg-clip-text bg-gradient-to-br ${circleConfig.textGradient}`}>
                   {probability.toFixed(0)}%
                 </span>
-                <span className={`text-[9px] sm:text-[10.5px] font-black uppercase tracking-widest mt-1 sm:mt-1.5 px-2.5 py-0.5 rounded-full ${
-                  isHighRisk 
-                    ? 'text-rose-700 bg-rose-50 border border-rose-200' 
-                    : isModerateRisk 
-                    ? 'text-amber-800 bg-amber-50 border border-amber-200' 
-                    : 'text-emerald-800 bg-emerald-50 border border-emerald-200'
-                }`}>
-                  {riskCategory}
+                <span className={`text-[9px] sm:text-[10.5px] font-black uppercase tracking-widest mt-1 sm:mt-1.5 px-2.5 py-0.5 rounded-full ${circleConfig.badgeClass}`}>
+                  {circleConfig.label}
                 </span>
                 <span className="text-[8.5px] sm:text-[9.5px] font-extrabold text-slate-400 uppercase tracking-widest mt-0.5">
                   Probability
