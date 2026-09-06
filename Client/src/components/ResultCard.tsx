@@ -188,7 +188,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "65%", color: "#dc2626" },  // Crimson
           { offset: "100%", color: "#9333ea" }, // Deep Violet / Electric Purple
         ],
-        filter: "drop-shadow(0px 4px 16px rgba(220, 38, 38, 0.45))",
         textGradientStyle: "linear-gradient(135deg, #f43f5e 0%, #dc2626 50%, #9333ea 100%)",
         badgeBg: "#ffe4e6",
         badgeText: "#be123c",
@@ -203,7 +202,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "70%", color: "#f43f5e" },  // Rose Coral
           { offset: "100%", color: "#e11d48" }, // Crimson
         ],
-        filter: "drop-shadow(0px 4px 14px rgba(244, 63, 94, 0.42))",
         textGradientStyle: "linear-gradient(135deg, #f59e0b 0%, #e11d48 100%)",
         badgeBg: "#ffe4e6",
         badgeText: "#be123c",
@@ -218,7 +216,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "70%", color: "#f59e0b" },  // Amber
           { offset: "100%", color: "#ea580c" }, // Deep Orange
         ],
-        filter: "drop-shadow(0px 4px 14px rgba(245, 158, 11, 0.42))",
         textGradientStyle: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
         badgeBg: "#fef3c7",
         badgeText: "#92400e",
@@ -233,7 +230,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "70%", color: "#34d399" },  // Mint Green
           { offset: "100%", color: "#059669" }, // Emerald
         ],
-        filter: "drop-shadow(0px 4px 14px rgba(16, 185, 129, 0.38))",
         textGradientStyle: "linear-gradient(135deg, #0d9488 0%, #059669 100%)",
         badgeBg: "#dcfce7",
         badgeText: "#166534",
@@ -248,7 +244,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           { offset: "70%", color: "#2dd4bf" },  // Teal
           { offset: "100%", color: "#10b981" }, // Bright Emerald
         ],
-        filter: "drop-shadow(0px 4px 14px rgba(56, 189, 248, 0.38))",
         textGradientStyle: "linear-gradient(135deg, #0284c7 0%, #0d9488 100%)",
         badgeBg: "#dcfce7",
         badgeText: "#166534",
@@ -513,7 +508,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
           <div className="relative w-48 h-48 sm:w-60 sm:h-60 md:w-68 md:h-68 lg:w-[280px] lg:h-[280px] shrink-0 md:mr-4 lg:mr-8 xl:mr-12 flex items-center justify-center my-2 sm:my-0">
             
             {/* Outer Inset Torus Trench */}
-            <div className="w-full h-full rounded-full bg-[#e8ecf2] shadow-[inset_10px_10px_20px_#b4c4d7,inset_-10px_-10px_20px_#ffffff] flex items-center justify-center relative">
+            <div className="w-full h-full rounded-full bg-[#e8ecf2] shadow-[inset_10px_10px_20px_#b4c4d7,inset_-10px_-10px_20px_#ffffff] flex items-center justify-center relative overflow-hidden">
               
               {/* Circumference Fill SVG Arc */}
               <svg viewBox="0 0 300 300" className="absolute inset-0 w-full h-full transform -rotate-90 pointer-events-none">
@@ -548,9 +543,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   strokeDashoffset={792 * (1 - Math.min(Math.max(probability, 0), 100) / 100)} 
                   strokeLinecap="round" 
                   className="transition-all duration-1000 ease-out" 
-                  style={{
-                    filter: circleConfig.filter
-                  }}
                 />
               </svg>
 
