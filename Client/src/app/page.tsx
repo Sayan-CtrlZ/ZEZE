@@ -1,25 +1,63 @@
 "use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useState } from "react";
+import ProfileModal from "@/components/ProfileModal";
+import {
+  Stethoscope,
+  GraduationCap,
+  User,
+  ArrowRight,
+  FileUp,
+  FileText,
+  Activity,
+  Cpu,
+  Layers,
+  ShieldCheck,
+  CheckCircle2,
+  Lock,
+  ChevronRight,
+  Sparkles,
+} from "lucide-react";
 
 export default function Home() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [modalRole, setModalRole] = useState<string>("clinician");
+  const [modalTab, setModalTab] = useState<"signup" | "signin">("signup");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("zeze_selected_role");
+      if (saved) {
+        setSelectedRole(saved);
+      }
+    }
+  }, []);
+
+  const openProfileWithRole = (roleId: string, tab: "signup" | "signin" = "signup") => {
+    setModalRole(roleId);
+    setModalTab(tab);
+    setProfileModalOpen(true);
+  };
 
   const roles = [
     {
       id: "clinician",
       num: "01",
       title: "Clinician / Doctor",
-      tagline: "Primary & Clinical Decision Support",
+      tagline: "Primary Clinical Decision Support",
       accentBorder: "card-accent-navy",
       iconColor: "text-blue-700",
-      description: "Enter or scan patient lab data for clinical decision support, calibrated risk stratification, ACC/AHA staging, and clinical review prompts.",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-        </svg>
-      )
+      description:
+        "Designed for cardiologists and attending physicians. Provides ACC/AHA staging, clinical pharmacopeia, differential assessments, and immediate diagnostic pathways.",
+      icon: <Stethoscope className="w-7 h-7 text-blue-700" />,
+      features: [
+        "ACC/AHA Hypertension & ASCVD Staging",
+        "Clinical Pharmacopeia & Drug Reference",
+        "What-If Real-Time Risk Simulator",
+        "Calibrated Gradient Boosted Predictions",
+      ],
     },
     {
       id: "trainee",
@@ -28,12 +66,15 @@ export default function Home() {
       tagline: "Supervised Learning & Education",
       accentBorder: "card-accent-violet",
       iconColor: "text-violet-600",
-      description: "Supervised training workspace. Explore underlying physiological mechanisms, feature attributions, and educational clinical rationale.",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-      )
+      description:
+        "Designed for medical students and cardiology residents. Focuses on underlying pathophysiological mechanisms, Laplace wall stress, and educational decision rationale.",
+      icon: <GraduationCap className="w-7 h-7 text-violet-600" />,
+      features: [
+        "Pathophysiological Mechanism Breakdowns",
+        "Feature Attribution & SHAP Weights",
+        "Educational Pharmacology Pearls",
+        "Sensitivity Analysis Simulator",
+      ],
     },
     {
       id: "patient",
@@ -42,113 +83,144 @@ export default function Home() {
       tagline: "Clear Health Guidance",
       accentBorder: "card-accent-cyan",
       iconColor: "text-cyan-600",
-      description: "Receive individualized, easy-to-understand health interpretations, clear explanations of what results mean, and actionable lifestyle habits.",
-      icon: (
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      )
-    }
+      description:
+        "Plain-language cardiovascular guidance with zero medical jargon. Understand what your numbers mean, learn actionable lifestyle habits, and get questions for your doctor.",
+      icon: <User className="w-7 h-7 text-cyan-600" />,
+      features: [
+        "Jargon-Free Vitals Breakdown",
+        "Personalized Lifestyle & Diet Roadmap",
+        "Protective vs Risk Factor Clarity",
+        "Doctor Discussion Talking Points",
+      ],
+    },
   ];
 
   return (
-    <main className="min-h-screen relative p-3 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden">
-      
-      {/* FLOATING PILL NAVBAR */}
-      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-2.5 sm:py-3 px-3.5 sm:px-8 mb-8 sm:mb-12 flex items-center justify-between z-30 sticky top-3 sm:top-4">
-        {/* Brand Logo with Spark Icon */}
+    <main className="min-h-screen relative p-3 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden bg-[#edf3f9]">
+      {/* =========================================================================
+          1. FLOATING PILL NAVBAR
+         ========================================================================= */}
+      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-2.5 sm:py-3 px-3.5 sm:px-8 mb-8 sm:mb-12 flex items-center justify-between z-30 sticky top-3 sm:top-4 bg-white/90 backdrop-blur-md">
+        {/* Brand Logo with Medallion */}
         <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/60 group-hover:scale-105 transition-transform shrink-0">
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-            </svg>
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/70 group-hover:scale-105 transition-transform shrink-0">
+            <img src="/icon.webp" alt="ZEZE" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">ZEZE</span>
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">MED AI</span>
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">
+                MED AI
+              </span>
             </div>
           </div>
         </Link>
 
         {/* Center Nav Links */}
         <nav className="hidden md:flex items-center gap-7 text-xs font-black uppercase tracking-wider text-slate-600">
-          <Link href="#persona-selection" className="hover:text-blue-700 transition-colors">Personas</Link>
-          <Link href="#data-proof" className="hover:text-blue-700 transition-colors">Clinical Data</Link>
-          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">OCR Scan</Link>
-          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">Manual Form</Link>
+          <Link href="#persona-selection" className="hover:text-blue-700 transition-colors">
+            Personas
+          </Link>
+          <Link href="#how-it-works" className="hover:text-blue-700 transition-colors">
+            How It Works
+          </Link>
+          <Link href="#data-proof" className="hover:text-blue-700 transition-colors">
+            Clinical Data
+          </Link>
+          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">
+            OCR Scan
+          </Link>
+          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">
+            Manual Form
+          </Link>
         </nav>
 
-        {/* Right Action Button */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
-          <button 
+        {/* Right Action Controls: Sign In & Sign Up / Start */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <button
             type="button"
-            className="w-9 h-9 rounded-full neu-inset-sm hidden sm:flex items-center justify-center text-slate-600 hover:text-blue-700 transition-colors"
-            title="Theme Indicator"
+            onClick={() => openProfileWithRole(selectedRole || "clinician", "signin")}
+            className="neu-button-secondary px-3 sm:px-4 py-2 text-xs font-black text-slate-800 transition-colors cursor-pointer hidden xs:inline-flex items-center gap-1.5"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            <Lock className="w-3.5 h-3.5 text-slate-500" />
+            <span>Sign In</span>
           </button>
-          
-          <Link 
-            href="/assessment" 
-            className="neu-button-3d px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0"
+
+          <button
+            type="button"
+            onClick={() => openProfileWithRole(selectedRole || "clinician", "signup")}
+            className="neu-button-3d px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer"
           >
-            <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            <span>START</span>
-          </Link>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Create Profile</span>
+          </button>
         </div>
       </header>
 
-      {/* HERO SECTION */}
+      {/* =========================================================================
+          2. HERO SECTION
+         ========================================================================= */}
       <section className="max-w-4xl mx-auto text-center py-4 sm:py-10 relative z-10 w-full px-2">
-        
-        {/* Title Tagline */}
+        <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 uppercase mb-4 sm:mb-6">
+          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+          <span>Zero Error Zonal Evaluation • 70,000 Patient Cohort</span>
+        </div>
+
         <h1 className="text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight text-slate-900 mb-3 sm:mb-4 leading-tight">
           Precision <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-sky-600 to-blue-900">Cardiology.</span>
         </h1>
-        
+
         <p className="text-xs sm:text-base font-bold text-slate-600 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed">
-          Zero Error Zonal Evaluation Engine powered by a calibrated 70,000-cohort gradient boosted model with on-device document OCR.
+          Calibrated gradient boosted risk engine with on-device document OCR and persona-tailored clinical intelligence for doctors, trainees, and patients.
         </p>
 
-        {/* MAIN 3D CTA BUTTON */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-10 sm:mb-16">
+        {/* CTA BUTTONS */}
+        <div className="flex flex-wrap items-center justify-center gap-3.5 sm:gap-4 mb-10 sm:mb-16">
+          <button
+            type="button"
+            onClick={() => openProfileWithRole("clinician")}
+            className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group cursor-pointer flex items-center gap-2"
+          >
+            <span>Create Profile &amp; Start</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
           <a
             href="#persona-selection"
-            className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group"
+            className="neu-button-secondary px-5 sm:px-7 py-3.5 sm:py-4 text-xs sm:text-sm font-black text-slate-800 tracking-wide transition-all"
           >
-            <svg className="w-4 h-4 transform -rotate-45 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-            </svg>
-            <span>START YOUR EVALUATION</span>
+            Explore Personas
           </a>
         </div>
       </section>
 
-      {/* PERSONA / ROLE SELECTOR (WHO ARE YOU?) */}
-      <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-6 sm:py-10 px-2 sm:px-6">
+      {/* =========================================================================
+          3. PERSONA / ROLE SELECTOR (WHO ARE YOU?)
+         ========================================================================= */}
+      <section id="persona-selection" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-8 sm:py-14 px-2 sm:px-6">
         <div className="text-center mb-8 sm:mb-12">
           <span className="inline-block px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 uppercase mb-2 sm:mb-3">
-            Target Users &amp; Roles
+            Role Architecture
           </span>
           <h2 className="text-2xl sm:text-5xl font-black tracking-tight text-slate-900">
             Who are <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">you?</span>
           </h2>
           <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto mt-2">
-            Choose your profile to tailor the clinical dashboard, detail level, and medical wording to your workflow.
+            Select your persona profile. The platform will tailor the evaluation tools, detail level, and medical wording to your workflow.
           </p>
         </div>
 
-        {!selectedRole ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
-            {roles.map((role) => (
-              <div
-                key={role.id}
-                className={`neu-card-glass ${role.accentBorder} p-6 sm:p-8 lg:p-9 flex flex-col justify-between group`}
-              >
-                {/* Top Row: Icon Well on Left + Crisp Watermark Number on Right */}
+        {/* Persona Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-10">
+          {roles.map((role) => (
+            <div
+              key={role.id}
+              className={`neu-card-glass ${role.accentBorder} p-6 sm:p-8 lg:p-9 flex flex-col justify-between group rounded-3xl`}
+            >
+              <div>
+                {/* Top Row: Icon + Watermark */}
                 <div className="flex items-center justify-between mb-6">
-                  <div className={`w-14 h-14 rounded-2xl neu-inset flex items-center justify-center ${role.iconColor} bg-white/70 group-hover:scale-105 transition-transform`}>
+                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center bg-white/70 group-hover:scale-105 transition-transform">
                     {role.icon}
                   </div>
                   <span className="text-4xl sm:text-5xl font-black tracking-tight text-slate-300/80 select-none">
@@ -156,144 +228,164 @@ export default function Home() {
                   </span>
                 </div>
 
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-200/50 px-3 py-1 rounded-full inline-block">
-                      {role.tagline}
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
-                    {role.title}
-                  </h3>
-
-                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
-                    {role.description}
-                  </p>
+                <div className="mb-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 bg-slate-200/50 px-3 py-1 rounded-full inline-block">
+                    {role.tagline}
+                  </span>
                 </div>
 
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
+                  {role.title}
+                </h3>
+
+                <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-6">
+                  {role.description}
+                </p>
+
+                {/* Features Bullet List */}
+                <ul className="space-y-2 mb-8 border-t border-slate-200/80 pt-4">
+                  {role.features.map((feat, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Action Buttons for this Persona */}
+              <div className="space-y-2 pt-2 border-t border-slate-200/60">
                 <button
-                  onClick={() => setSelectedRole(role.id)}
-                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider cursor-pointer"
+                  type="button"
+                  onClick={() => openProfileWithRole(role.id)}
+                  className="neu-button-3d w-full py-3 text-xs font-black tracking-wider cursor-pointer flex items-center justify-center gap-2"
                 >
-                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                  Select Profile
+                  <span>Select &amp; Create Profile</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="w-full max-w-5xl 2xl:max-w-6xl mx-auto">
-            {/* Top Navigation Bar with Back Button */}
-            <div className="flex justify-between items-center mb-8">
-              <button 
-                onClick={() => setSelectedRole(null)}
-                className="neu-button-secondary inline-flex items-center gap-2 px-4 py-2 text-slate-800 font-black text-xs sm:text-sm tracking-wide"
-              >
-                <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                Back to Roles
-              </button>
 
-              <div className="px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black uppercase tracking-wider text-blue-900">
-                Active Profile: <span className="underline">{selectedRole}</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href={`/assessment?mode=upload&role=${role.id}`}
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        sessionStorage.setItem("zeze_selected_role", role.id);
+                      }
+                    }}
+                    className="neu-button-secondary py-2 text-[11px] font-black text-slate-700 text-center flex items-center justify-center gap-1.5"
+                  >
+                    <FileUp className="w-3 h-3 text-slate-500" />
+                    <span>OCR Scan</span>
+                  </Link>
+                  <Link
+                    href={`/assessment?mode=manual&role=${role.id}`}
+                    onClick={() => {
+                      if (typeof window !== "undefined") {
+                        sessionStorage.setItem("zeze_selected_role", role.id);
+                      }
+                    }}
+                    className="neu-button-secondary py-2 text-[11px] font-black text-slate-700 text-center flex items-center justify-center gap-1.5"
+                  >
+                    <FileText className="w-3 h-3 text-slate-500" />
+                    <span>Manual Form</span>
+                  </Link>
+                </div>
               </div>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10">
-              
-              {/* Option 1: Smart Document Scan */}
-              <div className="neu-card-glass card-accent-cyan p-8 sm:p-9 flex flex-col justify-between group">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-cyan-600 bg-white/70 group-hover:scale-105 transition-transform">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-300/80 select-none">
-                    OCR
-                  </span>
-                </div>
-
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-cyan-700 bg-cyan-100/60 px-3 py-1 rounded-full inline-block">
-                      ⚡ On-Device RapidOCR
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
-                    Smart Document Scan
-                  </h3>
-                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
-                    Upload a PDF or image of your lab report. Optical character recognition auto-extracts blood pressure and lipid panels.
-                  </p>
-                </div>
-
-                <Link 
-                  href={`/assessment?mode=upload&role=${selectedRole}`}
-                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider text-center"
-                >
-                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                  Scan Document
-                </Link>
-              </div>
-
-              {/* Option 2: Manual Entry */}
-              <div className="neu-card-glass card-accent-navy p-8 sm:p-9 flex flex-col justify-between group">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="w-14 h-14 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/70 group-hover:scale-105 transition-transform">
-                    <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </div>
-                  <span className="text-3xl sm:text-4xl font-black tracking-tight text-slate-300/80 select-none">
-                    17+
-                  </span>
-                </div>
-
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-100/60 px-3 py-1 rounded-full inline-block">
-                      Full Biomarker Entry
-                    </span>
-                  </div>
-
-                  <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-3">
-                    Manual Clinical Entry
-                  </h3>
-                  <p className="text-slate-600 font-medium text-xs sm:text-sm leading-relaxed mb-8 flex-1">
-                    Directly input blood pressure, BMI, cholesterol tiers, and clinical biomarkers into our tactile form with live stage validation.
-                  </p>
-                </div>
-
-                <Link 
-                  href={`/assessment?mode=manual&role=${selectedRole}`}
-                  className="neu-button-3d w-full py-3.5 text-xs font-black tracking-wider text-center"
-                >
-                  <svg className="w-3.5 h-3.5 transform -rotate-45" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                  Open Manual Form
-                </Link>
-              </div>
-
-            </div>
-          </div>
-        )}
+          ))}
+        </div>
       </section>
 
-      {/* DATA & STATS GRID (MATCHING SCREENSHOT 4 "THE PROOF IS IN THE DATA") */}
-      <section id="data-proof" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-14 px-4 sm:px-6">
-        <div className="text-center mb-12">
+      {/* =========================================================================
+          4. HOW IT WORKS / CLINICAL PIPELINE SECTION
+         ========================================================================= */}
+      <section id="how-it-works" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-10 sm:py-16 px-4 sm:px-6">
+        <div className="text-center mb-10 sm:mb-14">
           <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
-            By The Numbers
+            Architecture &amp; Workflow
+          </span>
+          <h2 className="text-2xl sm:text-5xl font-black tracking-tight text-slate-900">
+            How ZEZE <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">Evaluates Risk</span>
+          </h2>
+          <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto mt-2">
+            A complete 4-step pipeline bridging computer vision OCR, gradient boosting calibration, and generative clinical synthesis.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              step: "01",
+              title: "Create Profile",
+              desc: "Select Clinician, Trainee, or Patient persona to tailor the workspace and medical terminology.",
+              icon: User,
+              color: "text-blue-600",
+            },
+            {
+              step: "02",
+              title: "Input Biomarkers",
+              desc: "Upload a lab report PDF for RapidOCR extraction or enter systolic, diastolic, and lipid vitals directly.",
+              icon: FileUp,
+              color: "text-cyan-600",
+            },
+            {
+              step: "03",
+              title: "Calibrated ML Evaluation",
+              desc: "Evaluated by our 70,000-cohort gradient boosted decision ensemble with isotonic probability calibration.",
+              icon: Cpu,
+              color: "text-violet-600",
+            },
+            {
+              step: "04",
+              title: "Persona-Tailored Report",
+              desc: "Receive customized clinical decision pathways for doctors, learning pearls for trainees, or plain advice for patients.",
+              icon: Activity,
+              color: "text-emerald-600",
+            },
+          ].map((item, i) => {
+            const IconComponent = item.icon;
+            return (
+              <div key={i} className="neu-card-glass p-6 sm:p-7 rounded-3xl relative flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-3xl font-black text-slate-300 select-none">
+                      {item.step}
+                    </span>
+                    <div className="w-10 h-10 rounded-xl neu-inset flex items-center justify-center bg-white/70">
+                      <IconComponent className={`w-5 h-5 ${item.color}`} />
+                    </div>
+                  </div>
+                  <h4 className="text-lg font-black text-slate-900 tracking-tight mb-2">
+                    {item.title}
+                  </h4>
+                  <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                    {item.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* =========================================================================
+          5. DATA & EVIDENCE SECTION ("THE PROOF IS IN THE DATA")
+         ========================================================================= */}
+      <section id="data-proof" className="w-full max-w-7xl 2xl:max-w-[1380px] mx-auto py-10 sm:py-16 px-4 sm:px-6">
+        <div className="text-center mb-10 sm:mb-12">
+          <span className="inline-block px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black tracking-widest text-blue-900 uppercase mb-3">
+            Empirical Validation
           </span>
           <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-slate-900">
             The <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-sky-600">proof</span> is in the data.
           </h2>
+          <p className="text-xs sm:text-sm font-bold text-slate-600 max-w-xl mx-auto mt-2">
+            Rigorous performance metrics evaluated on holdout clinical test partitions.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-          
-          <div className="neu-card-glass card-accent-cyan p-7 sm:p-8">
+          <div className="neu-card-glass card-accent-cyan p-7 sm:p-8 rounded-3xl">
             <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
               70,000+
             </div>
@@ -305,7 +397,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="neu-card-glass card-accent-navy p-7 sm:p-8">
+          <div className="neu-card-glass card-accent-navy p-7 sm:p-8 rounded-3xl">
             <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
               95.8%
             </div>
@@ -317,7 +409,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="neu-card-glass card-accent-violet p-7 sm:p-8">
+          <div className="neu-card-glass card-accent-violet p-7 sm:p-8 rounded-3xl">
             <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
               0.875
             </div>
@@ -329,7 +421,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="neu-card-glass card-accent-amber p-7 sm:p-8">
+          <div className="neu-card-glass card-accent-amber p-7 sm:p-8 rounded-3xl">
             <div className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 mb-1">
               &lt; 800ms
             </div>
@@ -340,10 +432,40 @@ export default function Home() {
               On-device entity extraction pipeline
             </p>
           </div>
-
         </div>
       </section>
 
+      {/* =========================================================================
+          6. FOOTER
+         ========================================================================= */}
+      <footer className="w-full max-w-7xl mx-auto pt-10 pb-8 px-4 sm:px-8 border-t border-slate-300/60 mt-12 text-center sm:text-left flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-bold text-slate-500">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg neu-flat flex items-center justify-center p-1 bg-white">
+            <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
+          </div>
+          <span>© 2026 ZEZE MED AI. Clinical Decision Support System.</span>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <Link href="/signup" className="hover:text-blue-700 transition-colors">
+            Sign Up
+          </Link>
+          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">
+            Manual Form
+          </Link>
+          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">
+            Document Scan
+          </Link>
+        </div>
+      </footer>
+
+      {/* Profile Onboarding Modal */}
+      <ProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        initialRole={modalRole}
+        initialTab={modalTab}
+      />
     </main>
   );
 }

@@ -105,17 +105,14 @@ function parseExplanationSections(rawText: string): ParsedSection[] {
 export default function ResultCard({ risk, probability, explanation, role = 'patient', feature_impacts, payload }: ResultCardProps) {
   const [howCalculatedOpen, setHowCalculatedOpen] = useState(false);
 
-  // Active Role Persona State (initialized from prop, interactive toggleable)
-  const roleLower = (role || 'patient').toLowerCase();
-  const [activeRole, setActiveRole] = useState<'clinician' | 'trainee' | 'patient'>(() => {
-    if (roleLower === 'clinician' || roleLower === 'practitioner' || roleLower === 'doctor') return 'clinician';
-    if (roleLower === 'trainee' || roleLower === 'student') return 'trainee';
-    return 'patient';
-  });
+  // Active Role Persona: derived strictly from the evaluated assessment role
+  const resolvedRole = (payload?.role as string) || role || 'patient';
+  const roleLower = resolvedRole.toLowerCase();
+  const isClinician = roleLower === 'clinician' || roleLower === 'practitioner' || roleLower === 'doctor';
+  const isTrainee = roleLower === 'trainee' || roleLower === 'student';
+  const isPatient = !isClinician && !isTrainee;
+  const activeRole: 'clinician' | 'trainee' | 'patient' = isClinician ? 'clinician' : isTrainee ? 'trainee' : 'patient';
 
-  const isClinician = activeRole === 'clinician';
-  const isTrainee = activeRole === 'trainee';
-  const isPatient = activeRole === 'patient';
   const roleLabel = isClinician ? 'Clinician' : isTrainee ? 'Healthcare Trainee' : 'Patient / General';
 
   // Risk Classification
@@ -456,39 +453,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
   return (
     <div className="w-full text-slate-900 space-y-8 sm:space-y-12 lg:space-y-14">
       
-      {/* 0. INTERACTIVE ROLE PERSONA SELECTOR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl neu-flat bg-white/80 border border-slate-200/80 shadow-[4px_4px_12px_rgba(163,177,198,0.25),-4px_-4px_12px_rgba(255,255,255,0.8)]">
-        <div className="flex items-center gap-2 px-2">
-          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-          <span className="text-[10px] sm:text-xs font-black uppercase text-slate-600 tracking-wider">
-            Tailored Dashboard View:
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#edf3f9] neu-inset shadow-inner overflow-x-auto no-scrollbar">
-          {[
-            { id: 'clinician', label: 'Clinician / Doctor' },
-            { id: 'trainee', label: 'Healthcare Trainee' },
-            { id: 'patient', label: 'Patient / General User' }
-          ].map(r => {
-            const active = activeRole === r.id;
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setActiveRole(r.id as any)}
-                className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                  active
-                    ? 'bg-slate-900 text-white shadow-md'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-                }`}
-              >
-                {r.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* 1. TOP BANNER: RISK ESTIMATE, CATEGORY & CALIBRATION INFO */}
       <div className={`p-4 sm:p-6 lg:p-7 rounded-3xl bg-[#e8ecf2] neu-flat ${topBannerAccentBorder} transition-all min-h-[240px] sm:min-h-[275px] lg:min-h-[295px] flex items-center shadow-[8px_8px_24px_#b8c8dc,-8px_-8px_24px_#ffffff]`}>
         <div className="w-full flex flex-col md:flex-row items-center justify-between gap-5 lg:gap-10">

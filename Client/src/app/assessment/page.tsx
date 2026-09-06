@@ -4,12 +4,14 @@ import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import RiskForm, { FormData } from "@/components/RiskForm";
 import Link from "next/link";
+import AppNavbar from "@/components/AppNavbar";
 
 function AssessmentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialMode = (searchParams.get("mode") as "upload" | "manual") || "upload";
-  const initialRole = searchParams.get("role") || "patient";
+  const roleParam = searchParams.get("role");
+  const initialRole = roleParam || (typeof window !== "undefined" ? sessionStorage.getItem("zeze_selected_role") : null) || "patient";
   
   const [currentMode, setCurrentMode] = useState<"upload" | "manual">(initialMode);
   const [currentRole, setCurrentRole] = useState<string>(initialRole);
@@ -53,7 +55,10 @@ function AssessmentContent() {
       }
 
       const responseData = await response.json();
-      sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload }));
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("zeze_selected_role", currentRole);
+        sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload }));
+      }
       router.push('/result');
 
     } catch (e: unknown) {
@@ -99,7 +104,17 @@ function AssessmentContent() {
       }
 
       const responseData = await response.json();
-      sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload: { symptoms, role: currentRole } }));
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("zeze_selected_role", currentRole);
+        sessionStorage.setItem('zeze_result', JSON.stringify({ 
+          ...responseData, 
+          payload: { 
+            ...(responseData.extracted_parameters || {}),
+            symptoms, 
+            role: currentRole 
+          } 
+        }));
+      }
       router.push('/result');
 
     } catch (e: unknown) {
@@ -111,42 +126,14 @@ function AssessmentContent() {
 
   return (
     <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-2 sm:px-6 lg:px-8">
-      {/* FLOATING PILL TOP BAR */}
-      <div className="neu-pill-nav p-2.5 sm:p-3 px-3.5 sm:px-6 mb-6 sm:mb-8 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-        <Link 
-          href="/" 
-          className="neu-button-secondary inline-flex items-center justify-center gap-2 px-3.5 sm:px-4 py-2 text-slate-800 font-black text-xs sm:text-sm tracking-wide shrink-0 self-start sm:self-auto"
-        >
-          <svg className="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          <span>Back to Home</span>
-        </Link>
-
-        {/* Role Switcher Pills: Horizontal scroll on mobile */}
-        <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 neu-inset rounded-2xl max-w-full overflow-x-auto no-scrollbar touch-scroll">
-          <span className="text-[10px] font-black uppercase text-slate-500 px-2 shrink-0">Role:</span>
-          {[
-            { id: 'clinician', label: 'Clinician' },
-            { id: 'trainee', label: 'Trainee' },
-            { id: 'patient', label: 'Patient' }
-          ].map((r) => {
-            const isSelected = currentRole === r.id || (r.id === 'clinician' && currentRole === 'practitioner');
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setCurrentRole(r.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  isSelected 
-                    ? 'neu-button-3d text-white shadow-sm' 
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                {r.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* RESPONSIVE TOP BAR: MOBILE HAMBURGER & NESTED MENU / DESKTOP PILL */}
+      <AppNavbar
+        currentRole={currentRole}
+        currentMode={currentMode}
+        onRoleChange={(role) => setCurrentRole(role)}
+        onModeChange={(mode) => setCurrentMode(mode)}
+        pageType="assessment"
+      />
 
       <header className="text-center mb-6 sm:mb-8 flex flex-col items-center px-2">
         <div className="inline-flex items-center gap-2.5 px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 mb-2.5 sm:mb-3">
@@ -155,11 +142,14 @@ function AssessmentContent() {
         </div>
 
         <h1 className="text-2xl xs:text-3xl sm:text-5xl font-black tracking-tight text-slate-900 mb-2">
-          {currentMode === 'manual' ? 'Manual Clinical Entry' : 'Smart Document Scan'}
+          {currentMode === 'manual' 
+            ? (currentRole === 'trainee' ? 'Supervised Training Entry' : currentRole === 'patient' ? 'Personal Health Check' : 'Manual Clinical Entry')
+            : (currentRole === 'trainee' ? 'Supervised Document Scan' : currentRole === 'patient' ? 'Personal Health Report Scan' : 'Smart Document Scan')
+          }
         </h1>
 
         <h2 className="text-[10px] sm:text-xs sm:text-sm font-extrabold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-slate-500 px-2 mb-4 sm:mb-6">
-          Zero Error Zonal Evaluation Model
+          Zero Error Zonal Evaluation Model • {currentRole.toUpperCase()} WORKSPACE
         </h2>
 
         {/* 3D MODE TOGGLE SWITCH */}

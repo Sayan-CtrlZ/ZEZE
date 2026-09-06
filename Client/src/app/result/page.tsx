@@ -7,6 +7,7 @@ import Link from "next/link";
 import ReactMarkdown from 'react-markdown';
 import { RotateCcw, SlidersHorizontal, Pill, Stethoscope, Utensils, Zap, HeartPulse } from "lucide-react";
 import ResultCard from '@/components/ResultCard';
+import AppNavbar from '@/components/AppNavbar';
 
 type ChatMessage = { role: "user" | "model"; parts: string };
 
@@ -318,51 +319,33 @@ Your heart and arteries are currently experiencing elevated stress due to higher
           ref={reportRef} 
           className="w-full mb-12 sm:mb-16 space-y-5 sm:space-y-8"
         >
-          {/* Top Nav: with Brand Icon & Action Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 sm:gap-3 pt-1 pb-2">
-            <div className="flex items-center justify-between sm:justify-start gap-3">
-              <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-8 h-8 rounded-xl neu-flat flex items-center justify-center p-1 bg-[#e8ecf2] border border-slate-300/60 shadow-sm group-hover:scale-105 transition-transform shrink-0">
-                  <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-black text-sm tracking-tight text-slate-900 leading-none">ZEZE</span>
-                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-widest leading-none mt-0.5">Clinical Decision Support</span>
-                </div>
-              </Link>
-            </div>
+          {/* RESPONSIVE TOP BAR: MOBILE HAMBURGER & NESTED MENU / DESKTOP PILL */}
+          <AppNavbar
+            currentRole={(resultData.payload?.role as string) || 'clinician'}
+            pageType="result"
+          />
 
-            <div className="flex items-center gap-2 sm:gap-2.5 justify-end">
-              <Link 
-                href="/" 
-                onClick={() => sessionStorage.removeItem('zeze_form_data')} 
-                className="neu-button text-[11px] sm:text-xs font-black text-slate-700 px-3 sm:px-3.5 py-1.5 rounded-xl hover:text-[#17805d] transition-colors flex items-center gap-1.5 shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                <span>Start Over</span>
-              </Link>
-              <Link 
-                href={`/assessment?mode=manual&role=${(resultData.payload?.role as string) || 'patient'}`} 
-                className="neu-button text-[11px] sm:text-xs font-black text-blue-600 px-3 sm:px-3.5 py-1.5 rounded-xl hover:text-blue-800 transition-colors flex items-center gap-1.5 shrink-0"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                <span>Modify Inputs</span>
-              </Link>
+          {/* Compact Refined Dashboard Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-1 pt-0.5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_8px_#2563eb] animate-pulse shrink-0"></div>
+              <div>
+                <h1 className="text-lg sm:text-2xl font-black tracking-tight text-[#0a192f] leading-tight">
+                  {(resultData.payload?.role === 'trainee' || resultData.payload?.role === 'student')
+                    ? 'Supervised Learning Dashboard'
+                    : (resultData.payload?.role === 'patient')
+                    ? 'Health Assessment Dashboard'
+                    : 'Clinical Results Dashboard'}
+                </h1>
+                <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[10px] sm:text-xs mt-0.5">
+                  Zero Error Zonal Evaluation Model • Assessment Verified
+                </p>
+              </div>
             </div>
-          </div>
-
-          {/* Header Title with Logo Medallion */}
-          <div className="flex items-center gap-3.5 sm:gap-5 pb-1 sm:pb-2">
-            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-2xl neu-flat flex items-center justify-center p-2 shrink-0">
-              <img src="/icon.webp" alt="ZEZE Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h1 className="text-xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-                Clinical Results Dashboard
-              </h1>
-              <p className="text-slate-500 font-extrabold tracking-widest uppercase text-[10px] sm:text-xs mt-0.5">
-                Zero Error Zonal Evaluation Model
-              </p>
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="neu-inset-sm px-3 py-1 rounded-full text-[10px] font-black text-blue-900 uppercase tracking-wider">
+                Evaluation Complete
+              </span>
             </div>
           </div>
 

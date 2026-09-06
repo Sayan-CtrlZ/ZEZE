@@ -296,93 +296,114 @@ def generate_offline_clinical_report(data: PatientData, probability: float, risk
     if not record.get('active', 1): lifestyle_tags.append("Sedentary Routine")
     if not lifestyle_tags: lifestyle_tags.append("Regular Physical Exercise, Non-smoker")
 
-    if role in ["clinician", "practitioner"]:
+    role_clean = (role or "patient").lower()
+    if role_clean in ["clinician", "practitioner", "doctor"]:
         return f"""**Clinical Findings**:
-- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label})
+- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label}) [Stage {record.get('bp_stage', 0)}]
 - **Body Mass Index**: {bmi} kg/m² ({bmi_label})
 - **Serum Cholesterol Profile**: Tier {record.get('cholesterol', 1)}/3 ({chol_label})
 - **Glycemic Status**: Tier {record.get('gluc', 1)}/3 ({gluc_label})
-- **Lifestyle Risk Indicators**: {", ".join(lifestyle_tags)}
+- **Lifestyle & Clinical Markers**: {", ".join(lifestyle_tags)}
 
 **Differential Assessment**:
-Patient exhibits a **{risk} Risk** cardiovascular risk profile with an estimated **{prob_str}** likelihood of active cardiovascular pathology under calibrated tree evaluation. Primary cardiovascular strain is driven by arterial hemodynamics ({bp_hi}/{bp_lo} mmHg) and lipid-metabolic parameters.
+Patient exhibits a **{risk} Risk** cardiovascular profile with an estimated **{prob_str}** calibrated probability of significant cardiovascular pathology. Arterial hemodynamics ({bp_hi}/{bp_lo} mmHg, Pulse Pressure: {int(record.get('pulse_pressure', 40))} mmHg, MAP: {record.get('map', 95)} mmHg) combined with atherogenic lipid parameters represent the primary modifiable cardiovascular risk drivers. Evidence points to increased cardiac afterload and early microvascular endothelial strain.
 
 **Recommended Clinical Pathways**:
-- Initiate baseline 12-lead Electrocardiogram (ECG) and ambulatory 24-hour blood pressure monitoring.
-- Order full fasting lipid panel (HDL-C, LDL-C, Triglycerides) and HbA1c to establish glycemic baseline.
-- Provide structured medical guidance on dietary sodium reduction (<2,000 mg/day) and cardiovascular risk factor modification."""
+- **Diagnostic Baseline**: Order 12-lead Electrocardiogram (ECG) and consider 24-hour ambulatory blood pressure monitoring (ABPM) to rule out nocturnal non-dipping.
+- **Laboratory Workup**: Fasting comprehensive lipid subfractions (ApoB, LDL-P), hs-CRP, renal panel with eGFR, and HbA1c to assess concurrent metabolic risk.
+- **Pharmacological Considerations**: Review indication for guideline-directed antihypertensive monotherapy/combination (ACEi/ARB or DHP-CCB) and moderate-to-high intensity statin therapy if indicated by cumulative 10-year ASCVD risk.
+- **Follow-up Protocol**: Re-evaluate blood pressure in 4 weeks and recheck lipid profile at 12 weeks."""
 
-    elif role in ["trainee", "student", "researcher"]:
+    elif role_clean in ["trainee", "student", "researcher"]:
         return f"""**Clinical Findings**:
-- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label})
+- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg ({bp_label}) [ACC/AHA Stage {record.get('bp_stage', 0)}]
 - **Body Mass Index**: {bmi} kg/m² ({bmi_label})
 - **Serum Cholesterol Profile**: Tier {record.get('cholesterol', 1)}/3 ({chol_label})
 - **Glycemic Status**: Tier {record.get('gluc', 1)}/3 ({gluc_label})
-- **Lifestyle Risk Indicators**: {", ".join(lifestyle_tags)}
+- **Lifestyle Indicators**: {", ".join(lifestyle_tags)}
 
 **Differential Assessment**:
-Patient demonstrates **{risk} Risk** ({prob_str} probability). From a pathophysiological perspective, elevated systolic pressure increases left ventricular wall stress and promotes endothelial micro-fissuring, which exponentially accelerates lipid atherogenesis.
+Patient presents with **{risk} Risk** ({prob_str} calibrated likelihood). From a pathophysiological perspective, chronic elevated systolic pressure increases left ventricular wall stress according to Laplace's Law (Wall Stress = P × r / 2h). The resulting high oscillatory wall shear stress damages endothelial glycocalyx and downregulates endothelial nitric oxide synthase (eNOS), creating a permissive environment for subendothelial LDL retention and accelerated atherogenesis.
 
 **Educational & Learning Context**:
-- **Mechanistic Driver**: Notice how systolic pressure ({bp_hi} mmHg) and pulse pressure ({int(record.get('pulse_pressure', 40))} mmHg) interact with cholesterol tier {record.get('cholesterol', 1)} to compound the multi-variable risk score.
-- **Pathophysiological Rationale**: Hemodynamic wall shear stress impairs nitric oxide bioavailability, creating microvascular compliance loss.
-- **Supervised Clinical Review**: Observe that age ({record.get('age_years', 55)} yrs) forms the baseline non-modifiable risk foundation, whereas blood pressure and lipids are the primary modifiable levers for risk reduction."""
+- **Mechanistic Driver Analysis**: Notice the strong synergistic risk weighting between systolic pressure ({bp_hi} mmHg) and lipid tier {record.get('cholesterol', 1)}. In our tree ensemble, the concurrent presence of hypertension and dyslipidemia multiplies cardiovascular risk non-linearly compared to either variable alone.
+- **Hemodynamic Principle**: Pulse pressure ({int(record.get('pulse_pressure', 40))} mmHg) is a clinical surrogate for arterial stiffness and central aortic compliance loss, particularly prominent in patients over age {int(record.get('age_years', 50))}.
+- **Pharmacology Learning Pearl**: First-line RAAS blockade (ACEi/ARB) reduces afterload and provides end-organ anti-remodeling protection, while HMG-CoA reductase inhibitors (statins) stabilize existing plaque membranes beyond LDL lowering."""
 
     else:
+        # Patient / General User: ZERO jargon, warm, empowering, actionable
         return f"""**Key Findings**:
-- **Heart Health Score**: Your cardiovascular evaluation places you in the **{risk} Risk** zone ({prob_str} risk likelihood).
-- **Blood Pressure**: {bp_hi}/{bp_lo} mmHg, categorized as **{bp_label}**.
+- **Heart Health Score**: Your cardiovascular checkup places your overall risk in the **{risk} Risk** category ({prob_str} likelihood).
+- **Blood Pressure**: Your reading is **{bp_hi}/{bp_lo} mmHg** ({bp_label}).
 - **Body Weight & BMI**: Your Body Mass Index is **{bmi} kg/m²** ({bmi_label}).
-- **Cholesterol & Sugar**: Cholesterol is **{chol_label}**, and fasting glucose is **{gluc_label}**.
+- **Cholesterol Level**: Rated as **{chol_label}**.
+- **Blood Sugar**: Rated as **{gluc_label}**.
+- **Daily Habits**: {", ".join(lifestyle_tags)}.
 
 **What This Means**:
-Your heart and arteries are currently experiencing {"elevated stress due to higher blood pressure and metabolic markers" if risk in ["High", "Moderate"] else "healthy circulatory function with low signs of arterial strain"}. Blood pressure and cholesterol work together over time; maintaining them within optimal ranges protects the blood vessels supplying your heart and brain.
+{"Your heart and blood vessels are currently under extra pressure. When blood pressure and cholesterol levels stay above optimal ranges, the blood vessels that supply blood to your heart work harder, which can gradually stiffen arteries over time." if risk in ["High", "Moderate"] else "Your heart numbers indicate healthy circulation with low signs of vascular strain. Keeping these numbers in balance helps preserve your long-term vitality and heart health."} The good news is that these indicators are highly responsive to healthy daily choices you can start making today.
 
 **Lifestyle & Prevention**:
-- **Target Optimal Blood Pressure**: Monitor your BP regularly and aim for a resting level below 120/80 mmHg.
-- **Heart-Healthy Nutrition**: Emphasize whole grains, leafy greens, healthy fats (olive oil, nuts), and reduce dietary sodium.
-- **Daily Physical Activity**: Aim for at least 150 minutes of moderate aerobic exercise (brisk walking, cycling, swimming) each week.
-- **Avoid Tobacco**: If you smoke, quitting is the single most rapid way to lower cardiovascular risk."""
+- **Target Everyday Blood Pressure**: Check your blood pressure periodically at home or at your local pharmacy. Aim to keep resting numbers below 120/80 mmHg.
+- **Heart-Protective Nutrition**: Prioritize whole grains, dark leafy vegetables, berries, olive oil, and unsalted nuts. Cut down on sodium (salt) and processed foods.
+- **Consistent Physical Movement**: Aim for at least 30 minutes of moderate aerobic activity (like brisk walking, swimming, or cycling) on most days of the week.
+- **Tobacco & Rest**: If you smoke, stopping is the single fastest way to lower heart strain. Prioritize 7–8 hours of restful sleep each night.
+- **Questions for Your Doctor**: Bring this report to your next primary care appointment to discuss your blood pressure trends and whether any routine lab tests are recommended."""
 
 def generate_explanation(data: PatientData, probability: float, risk: str, role: str, record: dict) -> str:
+    role_clean = (role or "patient").lower()
     if not gemini_client:
-        return generate_offline_clinical_report(data, probability, risk, role, record)
+        return generate_offline_clinical_report(data, probability, risk, role_clean, record)
 
-    if role in ["clinician", "practitioner"]:
-        tone_instruction = "Use clinical terminology, provide a concise differential assessment, and focus on data-driven metrics. Format like a doctor's chart."
+    if role_clean in ["clinician", "practitioner", "doctor"]:
+        tone_instruction = """
+        TARGET AUDIENCE: Board-certified Physician / Clinical Cardiologist.
+        TONE: Concise, highly professional, evidence-based, clinical chart style.
+        FOCUS: ACC/AHA staging, hemodynamics (systolic/diastolic/pulse pressure), pharmacological therapy considerations (first-line agents, statin tier), and clear diagnostic pathways (ECG, ambulatory monitoring, lab intervals).
+        """
         structure_instruction = """
     **Clinical Findings**:
-    - (bulleted objective findings)
+    - (bulleted objective findings with exact numbers, staging, and metrics)
     
     **Differential Assessment**:
-    (concise clinical interpretation)
+    (concise clinical assessment, hemodynamic afterload, and cardiovascular risk drivers)
     
     **Recommended Clinical Pathways**:
-    - (actionable medical steps)
+    - (actionable diagnostic next steps, monitoring protocols, and pharmacological considerations)
         """
-    elif role in ["trainee", "student", "researcher"]:
-        tone_instruction = "Adopt a supervised medical teaching tone. Explain pathophysiological mechanisms, multi-factor interaction weights, why key variables drove the decision trees, and highlight supervised learning takeaways."
+    elif role_clean in ["trainee", "student", "researcher"]:
+        tone_instruction = """
+        TARGET AUDIENCE: Healthcare Trainee, Medical Student, or Resident.
+        TONE: Supervised medical teaching tone, academic, explanatory, and pedagogical.
+        FOCUS: Deeply explain pathophysiological mechanisms (Laplace law of wall tension, endothelial shear stress, eNOS downregulation, lipid oxidation), why multi-variable tree features compounded the risk score, and provide clinical learning pearls.
+        """
         structure_instruction = """
     **Clinical Findings**:
-    - (bulleted objective findings)
+    - (bulleted objective findings with stage classifications)
     
     **Differential Assessment**:
-    (clinical assessment and physiological mechanisms)
+    (clinical assessment detailing underlying pathophysiological and hemodynamic mechanisms)
     
     **Educational & Learning Context**:
-    - (key learning takeaways, mechanistic analysis, and supervised teaching points)
+    - (mechanistic driver analysis, feature interaction weighting rationale, and pharmacology teaching points)
         """
     else:
-        tone_instruction = "Be reassuring, clear, and supportive. Avoid medical jargon. Provide a HIGHLY DETAILED explanation with lifestyle tips."
+        # Patient / General User
+        tone_instruction = """
+        TARGET AUDIENCE: The patient / general individual reading their personal health summary.
+        TONE: Warm, empathetic, reassuring, and completely easy to understand.
+        CRITICAL RULE: DO NOT use complex medical jargon (e.g. avoid 'atherogenesis', 'hemodynamics', 'pharmacopeia', 'nitric oxide bioavailability', 'subendothelial infiltration'). Translate every vital into clear language.
+        FOCUS: Explain clearly what their blood pressure and cholesterol numbers mean, explain their risk tier reassuringly, and provide actionable lifestyle recommendations (DASH diet, daily exercise, lower sodium) and talking points for their doctor.
+        """
         structure_instruction = """
     **Key Findings**:
-    - (scannable bullet points)
+    - (plain-language bullet points of their vitals and what they mean)
     
     **What This Means**:
-    (plain language explanation of heart and vessel health)
+    (supportive explanation of heart and vessel health in everyday terms)
     
     **Lifestyle & Prevention**:
-    - (practical action steps for blood pressure, diet, and activity)
+    - (practical, encouraging daily steps for nutrition, physical activity, rest, and questions for their doctor)
         """
 
     prompt = f"""
@@ -392,6 +413,7 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
     Model Result:
     - Stratified Risk Tier: {risk} Risk
     - Calibrated Probability: {probability*100:.1f}%
+    - Assigned Persona: {role_clean.upper()}
     
     Patient Clinical Vitals:
     - Age: {record['age_years']} years
