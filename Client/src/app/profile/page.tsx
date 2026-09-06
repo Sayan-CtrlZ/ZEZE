@@ -405,29 +405,6 @@ function ProfileContent() {
                   </div>
                 </div>
               </div>
-
-              {/* Top-Right Action: Edit / Save toggle */}
-              <div className="shrink-0">
-                {isEditing ? (
-                  <button
-                    type="button"
-                    onClick={handleSaveProfile}
-                    className="neu-button-3d inline-flex items-center justify-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    <span>Save</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="neu-button-secondary inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-wider cursor-pointer active:scale-95"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit</span>
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* Form Fields */}
@@ -682,20 +659,55 @@ function ProfileContent() {
               </div>
             </div>
 
-            {/* Bottom Action Area: Delete Account */}
-            <div className="pt-6 border-t border-slate-200/80 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setDeleteConfirmText("");
-                  setDeleteError(null);
-                  setShowDeleteModal(true);
-                }}
-                className="neu-button-secondary text-rose-700 hover:text-rose-900 border-rose-200/80 text-xs font-black uppercase tracking-wider px-4 py-2.5 inline-flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
-              >
-                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                <span>Delete Account</span>
-              </button>
+            {/* Bottom Action Area: Save / Edit & (when unlocked) Delete Account */}
+            <div className="pt-6 border-t border-slate-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                {!isWorkspaceLocked ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmText("");
+                      setDeleteError(null);
+                      setShowDeleteModal(true);
+                    }}
+                    className="neu-button-secondary text-rose-700 hover:text-rose-900 border-rose-200/80 text-xs font-black uppercase tracking-wider px-4.5 py-3 inline-flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                    <span>Delete Account</span>
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                {isEditing && !isWorkspaceLocked && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="neu-button-secondary px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-600 cursor-pointer active:scale-95"
+                  >
+                    Cancel
+                  </button>
+                )}
+                {isEditing ? (
+                  <button
+                    type="button"
+                    onClick={handleSaveProfile}
+                    className="neu-button-3d w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider cursor-pointer active:scale-95 shadow-md text-white"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isWorkspaceLocked ? "Complete & Save Profile" : "Save Changes"}</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="neu-button-3d w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 text-xs sm:text-sm font-black uppercase tracking-wider cursor-pointer active:scale-95 shadow-md text-white"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    <span>Edit Profile</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
