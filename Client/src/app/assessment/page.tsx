@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import RiskForm, { FormData } from "@/components/RiskForm";
 import Link from "next/link";
@@ -11,12 +11,26 @@ function AssessmentContent() {
   const searchParams = useSearchParams();
   const initialMode = (searchParams.get("mode") as "upload" | "manual") || "upload";
   const roleParam = searchParams.get("role");
-  const initialRole = roleParam || (typeof window !== "undefined" ? sessionStorage.getItem("zeze_selected_role") : null) || "patient";
   
   const [currentMode, setCurrentMode] = useState<"upload" | "manual">(initialMode);
-  const [currentRole, setCurrentRole] = useState<string>(initialRole);
+  const [currentRole, setCurrentRole] = useState<string>("clinician");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("zeze_selected_role") || sessionStorage.getItem("zeze_selected_role");
+      if (roleParam && ["clinician", "trainee", "patient"].includes(roleParam)) {
+        setCurrentRole(roleParam);
+        localStorage.setItem("zeze_selected_role", roleParam);
+        sessionStorage.setItem("zeze_selected_role", roleParam);
+      } else if (stored && ["clinician", "trainee", "patient"].includes(stored)) {
+        setCurrentRole(stored);
+      } else {
+        router.replace("/select-role");
+      }
+    }
+  }, [roleParam, router]);
 
   const handleSubmit = async (data: FormData) => {
     setLoading(true);
@@ -47,6 +61,7 @@ function AssessmentContent() {
 
       const responseData = await response.json();
       if (typeof window !== "undefined") {
+        localStorage.setItem("zeze_selected_role", currentRole);
         sessionStorage.setItem("zeze_selected_role", currentRole);
         sessionStorage.setItem('zeze_result', JSON.stringify({ ...responseData, payload }));
       }
@@ -87,6 +102,7 @@ function AssessmentContent() {
 
       const responseData = await response.json();
       if (typeof window !== "undefined") {
+        localStorage.setItem("zeze_selected_role", currentRole);
         sessionStorage.setItem("zeze_selected_role", currentRole);
         sessionStorage.setItem('zeze_result', JSON.stringify({ 
           ...responseData, 
@@ -112,7 +128,6 @@ function AssessmentContent() {
       <AppNavbar
         currentRole={currentRole}
         currentMode={currentMode}
-        onRoleChange={(role) => setCurrentRole(role)}
         onModeChange={(mode) => setCurrentMode(mode)}
         pageType="assessment"
       />

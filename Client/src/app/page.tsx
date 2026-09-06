@@ -124,22 +124,14 @@ export default function Home() {
           </Link>
         </nav>
 
-        {/* Right Action Controls: Sign In & Sign Up / Start */}
+        {/* Right Action Controls: Direct Launch Workspace */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
-            href="/signin"
-            className="neu-button-secondary px-3 sm:px-4 py-2 text-xs font-black text-slate-800 transition-colors cursor-pointer hidden xs:inline-flex items-center gap-1.5 active:scale-95"
-          >
-            <Lock className="w-3.5 h-3.5 text-slate-500" />
-            <span>Sign In</span>
-          </Link>
-
-          <Link
-            href="/signup"
-            className="neu-button-3d px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            href="/select-role"
+            className="neu-button-3d px-4 sm:px-6 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Create Profile</span>
+            <span>Launch Workspace</span>
           </Link>
         </div>
       </header>
@@ -164,10 +156,10 @@ export default function Home() {
         {/* CTA BUTTONS */}
         <div className="flex flex-wrap items-center justify-center gap-3.5 sm:gap-4 mb-10 sm:mb-16">
           <Link
-            href="/signup"
+            href="/select-role"
             className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group cursor-pointer flex items-center gap-2 active:scale-95"
           >
-            <span>Create Profile &amp; Start</span>
+            <span>Launch Workspace</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </Link>
 
@@ -175,7 +167,7 @@ export default function Home() {
             href="#persona-selection"
             className="neu-button-secondary px-5 sm:px-7 py-3.5 sm:py-4 text-xs sm:text-sm font-black text-slate-800 tracking-wide transition-all"
           >
-            Explore Personas
+            Select Role
           </a>
         </div>
       </section>
@@ -242,10 +234,10 @@ export default function Home() {
               {/* Action Button for this Persona */}
               <div className="pt-2 border-t border-slate-200/60">
                 <Link
-                  href={`/signup?role=${role.id}&step=details`}
+                  href={`/select-role?role=${role.id}`}
                   className="neu-button-3d w-full py-3.5 text-xs sm:text-sm font-black tracking-wider cursor-pointer flex items-center justify-center gap-2 group hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
-                  <span>Select &amp; Create Profile</span>
+                  <span>Select &amp; Launch {role.title.split("/")[0].trim()}</span>
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </div>
@@ -274,8 +266,8 @@ export default function Home() {
           {[
             {
               step: "01",
-              title: "Create Profile",
-              desc: "Select Clinician, Trainee, or Patient persona to tailor the workspace and medical terminology.",
+              title: "Select Role",
+              desc: "Choose Clinician, Healthcare Trainee, or Patient persona to tailor the workspace and medical terminology.",
               icon: User,
               color: "text-blue-600",
             },
@@ -405,11 +397,14 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-6">
-          <Link href="/signin" className="hover:text-blue-700 transition-colors">
-            Sign In
+          <Link href="/select-role?role=clinician" className="hover:text-blue-700 transition-colors">
+            Clinician Mode
           </Link>
-          <Link href="/signup" className="hover:text-blue-700 transition-colors">
-            Sign Up
+          <Link href="/select-role?role=trainee" className="hover:text-blue-700 transition-colors">
+            Trainee Mode
+          </Link>
+          <Link href="/select-role?role=patient" className="hover:text-blue-700 transition-colors">
+            Patient Mode
           </Link>
           <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">
             Manual Form

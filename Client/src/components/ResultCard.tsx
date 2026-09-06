@@ -10,6 +10,7 @@ type ResultCardProps = {
   role?: string;
   feature_impacts?: Record<string, number>;
   payload?: Record<string, unknown>;
+  suggested_medications?: any[];
 };
 
 interface ParsedSection {
@@ -102,7 +103,136 @@ function parseExplanationSections(rawText: string): ParsedSection[] {
   ];
 }
 
-export default function ResultCard({ risk, probability, explanation, role = 'patient', feature_impacts, payload }: ResultCardProps) {
+function formatSectionContent(rawContent: string, sectionId: string): string {
+  if (!rawContent) return '';
+  const lines = rawContent.replace(/\r\n/g, '\n').split('\n');
+  const formatted: string[] = [];
+
+  const knownCategories = [
+    'Diagnostic Work-up',
+    'Diagnostic Workup',
+    'Pharmacologic Management',
+    'Pharmacological Management',
+    'Lifestyle Interventions',
+    'Lifestyle & Follow-up',
+    'Lifestyle & Prevention',
+    'Non-Pharmacologic Interventions',
+    'Monitoring & Follow-up',
+    'Clinical Recommendations',
+    'Immediate Action Plan',
+    'Long-term Management',
+    'Daily Heart-Healthy Habits',
+    'Nutrition & Diet',
+    'Physical Activity & Fitness',
+    'Questions for Your Doctor',
+    'Warning Signs to Watch For',
+    'Learning Pearls',
+    'Mechanistic Drivers',
+    'Mechanistic Driver Analysis',
+    'Hemodynamic Principle',
+    'Pharmacology Learning Pearl',
+    'Target Everyday Blood Pressure',
+    'Heart-Protective Nutrition',
+    'Consistent Physical Movement',
+    'Tobacco & Rest',
+    'Laboratory Workup',
+    'Diagnostic Baseline',
+    'Pharmacological Considerations',
+    'Follow-up Protocol'
+  ];
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const line = rawLine.trim();
+    if (!line) {
+      if (formatted.length > 0 && formatted[formatted.length - 1] !== '') {
+        formatted.push('');
+      }
+      continue;
+    }
+
+    // Check if line is already an explicit markdown header
+    if (/^#{1,4}\s+/.test(line)) {
+      const hText = line.replace(/^#{1,4}\s+/, '').trim();
+      formatted.push('');
+      formatted.push('### ' + hText);
+      formatted.push('');
+      continue;
+    }
+
+    // Check if line is a category subheader
+    const cleanCandidate = line.replace(/[:*#]+$/, '').replace(/^[:*#]+/, '').trim();
+    const isCategory = knownCategories.some(
+      (cat) => cat.toLowerCase() === cleanCandidate.toLowerCase()
+    ) || (
+      (sectionId === 'lifestyle' || sectionId === 'findings') &&
+      cleanCandidate.length > 3 &&
+      cleanCandidate.length < 45 &&
+      !line.startsWith('-') && !line.startsWith('*') && !/^\d+[\.\)]/.test(line) &&
+      (
+        line.endsWith(':') ||
+        knownCategories.some(cat => cleanCandidate.toLowerCase().includes(cat.toLowerCase())) ||
+        /^(Diagnostic|Pharmacologic|Pharmacological|Lifestyle|Clinical|Laboratory|Monitoring|Immediate|Follow-up|Nutrition|Physical|Questions|Warning|Mechanistic|Hemodynamic)/i.test(cleanCandidate)
+      ) &&
+      !line.includes(' - ') &&
+      !/^(Age|Blood Pressure|Body Mass Index|BMI|Cholesterol|Lipid|Fasting|Glucose|Smoking|Alcohol|Physical Activity|Model|Heart Health)/i.test(cleanCandidate)
+    );
+
+    if (isCategory) {
+      formatted.push('');
+      formatted.push('### ' + cleanCandidate);
+      formatted.push('');
+      continue;
+    }
+
+    // If line is already a markdown bullet
+    if (/^[-*•]\s+/.test(line)) {
+      const bulletContent = line.replace(/^[-*•]\s+/, '').trim();
+      const kvMatch = bulletContent.match(/^([A-Za-z0-9\s/()–—'-]+):\s*(.+)$/);
+      if (kvMatch && !bulletContent.startsWith('**') && !bulletContent.startsWith('*')) {
+        formatted.push('- **' + kvMatch[1].trim() + '**: ' + kvMatch[2].trim());
+      } else {
+        formatted.push('- ' + bulletContent);
+      }
+      continue;
+    }
+
+    // If numbered item like '1. ' or '1) '
+    if (/^\d+[\.\)]\s+/.test(line)) {
+      const itemContent = line.replace(/^\d+[\.\)]\s+/, '').trim();
+      const kvMatch = itemContent.match(/^([A-Za-z0-9\s/()–—'-]+):\s*(.+)$/);
+      if (kvMatch && !itemContent.startsWith('**') && !itemContent.startsWith('*')) {
+        formatted.push('- **' + kvMatch[1].trim() + '**: ' + kvMatch[2].trim());
+      } else {
+        formatted.push('- ' + itemContent);
+      }
+      continue;
+    }
+
+    // Check for raw Key: Value lines (e.g. Age: 58 years (male) or Primary driver: ...)
+    const kvMatch = line.match(/^([A-Za-z0-9\s/()–—'-]{2,55}):\s*(.+)$/);
+    if (kvMatch) {
+      const k = kvMatch[1].trim().replace(/^\*+|\*+$/g, '');
+      const v = kvMatch[2].trim();
+      formatted.push('- **' + k + '**: ' + v);
+      continue;
+    }
+
+    // In findings or lifestyle/pathways, any remaining standalone line should be bulleted
+    if (sectionId === 'findings' || sectionId === 'lifestyle') {
+      formatted.push('- ' + line);
+      continue;
+    }
+
+    // For meaning (differential assessment), output paragraph with clean line separation
+    formatted.push(line);
+    formatted.push('');
+  }
+
+  return formatted.join('\n').trim();
+}
+
+export default function ResultCard({ risk, probability, explanation, role = 'patient', feature_impacts, payload, suggested_medications }: ResultCardProps) {
   const [howCalculatedOpen, setHowCalculatedOpen] = useState(false);
 
   // Active Role Persona: derived strictly from the evaluated assessment role
@@ -577,7 +707,14 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         </div>
       </div>
 
-      {/* 2. WHAT CONTRIBUTED MOST? (FEATURE ATTRIBUTION DRIVERS) */}
+      {/* 2. CLINICAL PHARMACOPEIA & DRUG REFERENCE */}
+      <MedicationReference 
+        role={activeRole} 
+        patientVitals={payload} 
+        dynamicMedications={suggested_medications} 
+      />
+
+      {/* 3. WHAT CONTRIBUTED MOST? (FEATURE ATTRIBUTION DRIVERS) */}
       <div className="p-4 sm:p-6 md:p-8 neu-flat rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white/95 to-[#eef3f8]/90 shadow-[6px_6px_20px_rgba(163,177,198,0.35),-6px_-6px_20px_rgba(255,255,255,0.9)] space-y-4 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-200/60">
           <div>
@@ -1140,11 +1277,6 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
         </div>
       )}
 
-      {/* 6. CLINICAL PHARMACOPEIA & MEDICATION SEARCH (FOR CLINICIANS & TRAINEES) */}
-      {(isClinician || isTrainee) && (
-        <MedicationReference role={activeRole} patientVitals={payload} />
-      )}
-
       {/* 7. CLINICAL GOVERNANCE DISCLAIMER & EXPANDABLE "HOW WAS THIS CALCULATED?" */}
       {(isClinician || isTrainee) ? (
         <div className="space-y-4">
@@ -1302,7 +1434,7 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                       </div>
                       <div>
                         <h4 className="text-base sm:text-xl font-black tracking-tight text-slate-900">
-                          {section.title}:
+                          {section.title.replace(/:+$/, '')}:
                         </h4>
                         <p className="text-[11px] sm:text-xs font-bold text-slate-500">
                           {section.subtitle}
@@ -1315,13 +1447,69 @@ export default function ResultCard({ risk, probability, explanation, role = 'pat
                   </div>
 
                   {/* Card Content Area */}
-                  <div className="prose prose-slate max-w-none text-slate-800 text-xs sm:text-sm sm:text-base leading-relaxed 
-                    prose-p:font-medium prose-p:my-2 prose-p:text-slate-800 
-                    prose-strong:font-black prose-strong:text-slate-950 
-                    prose-headings:text-slate-950 prose-headings:font-black
-                    prose-ul:my-2 prose-ul:space-y-1.5
-                    prose-li:font-medium prose-li:text-slate-800 prose-li:my-0.5">
-                    <ReactMarkdown>{section.content}</ReactMarkdown>
+                  <div className="w-full text-slate-800 text-xs sm:text-sm leading-relaxed">
+                    <ReactMarkdown
+                      components={{
+                        ul: ({ children }) => (
+                          <ul className="grid grid-cols-1 gap-2.5 sm:gap-3 my-2.5 list-none p-0">
+                            {children}
+                          </ul>
+                        ),
+                        li: ({ children }) => {
+                          const dotColor =
+                            section.id === 'findings' ? 'bg-blue-600 ring-4 ring-blue-100/90' :
+                            section.id === 'meaning' ? 'bg-purple-600 ring-4 ring-purple-100/90' :
+                            'bg-emerald-600 ring-4 ring-emerald-100/90';
+                          const hoverStyle =
+                            section.id === 'findings' ? 'hover:border-blue-300/80 hover:bg-blue-50/20' :
+                            section.id === 'meaning' ? 'hover:border-purple-300/80 hover:bg-purple-50/20' :
+                            'hover:border-emerald-300/80 hover:bg-emerald-50/20';
+
+                          return (
+                            <li className={`group bg-white/85 backdrop-blur-sm border border-slate-200/85 rounded-xl p-2.5 sm:p-3.5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] ${hoverStyle} transition-all duration-200 flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm text-slate-800 leading-relaxed`}>
+                              <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${dotColor}`} />
+                              <div className="flex-1 min-w-0 font-normal">
+                                {children}
+                              </div>
+                            </li>
+                          );
+                        },
+                        h3: ({ children }) => {
+                          const barColor =
+                            section.id === 'findings' ? 'bg-blue-600' :
+                            section.id === 'meaning' ? 'bg-purple-600' :
+                            'bg-[#17805d]';
+                          const textColor =
+                            section.id === 'findings' ? 'text-blue-950' :
+                            section.id === 'meaning' ? 'text-purple-950' :
+                            'text-emerald-950';
+
+                          return (
+                            <h3 className={`text-[11px] sm:text-xs font-black uppercase tracking-wider ${textColor} flex items-center gap-2 mt-5 mb-2.5 pt-2.5 border-t border-slate-200/70 first:mt-1 first:pt-0 first:border-0`}>
+                              <span className={`w-1.5 h-3.5 rounded-full ${barColor}`} />
+                              <span>{children}</span>
+                            </h3>
+                          );
+                        },
+                        h4: ({ children }) => (
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 mt-3 mb-1">
+                            {children}
+                          </h4>
+                        ),
+                        p: ({ children }) => (
+                          <p className="text-xs sm:text-sm leading-relaxed text-slate-700 font-normal mb-3 last:mb-0">
+                            {children}
+                          </p>
+                        ),
+                        strong: ({ children }) => (
+                          <strong className="font-bold text-slate-950">
+                            {children}
+                          </strong>
+                        ),
+                      }}
+                    >
+                      {formatSectionContent(section.content, section.id)}
+                    </ReactMarkdown>
                   </div>
                 </div>
               );

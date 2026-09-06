@@ -10,7 +10,6 @@ from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
-from auth import auth_router
 
 app = FastAPI(title="ZEZE Cardiovascular Risk Prediction API")
 
@@ -22,15 +21,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth_router)
-
 @app.exception_handler(Exception)
 async def generic_exception_handler(request, exc):
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
     logger.error(f"Server exception intercepted: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={"detail": "Something went wrong. Please try again."}
     )
+
+# Mount Drug Search & Intelligence Router
+from api.drug_search import router as drug_search_router
+app.include_router(drug_search_router, prefix="/api/drugs", tags=["Drug Intelligence"])
 
 @app.get("/")
 def health_check():
@@ -44,25 +50,81 @@ def health_check():
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("zeze-backend")
 
-# Configure environment and Gemini
+# Configure environment and AI Clients (Groq as Primary, Gemini as Fallback)
 from dotenv import load_dotenv
-from google import genai
-from google.genai import types
 
 load_dotenv()
-client_env_path = os.path.join(os.path.dirname(__file__), '..', 'Client', '.env')
+client_env_path = os.path.join(os.path.dirname(__file__), '..', 'Client', '.env.local')
+if not os.path.exists(client_env_path):
+    client_env_path = os.path.join(os.path.dirname(__file__), '..', 'Client', '.env')
 if os.path.exists(client_env_path):
     load_dotenv(client_env_path)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL")
-GEMINI_TEMPERATURE = os.getenv("GEMINI_TEMPERATURE")
 
-if GEMINI_API_KEY and GEMINI_MODEL and GEMINI_TEMPERATURE:
-    gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-    logger.info(f"Gemini client initialized with model: {GEMINI_MODEL}")
-else:
-    logger.warning("One or more Gemini environment variables missing. AI summaries will use rule-based fallback.")
-    gemini_client = None
+# Groq Configuration (Primary AI - dynamically loaded so editing .env immediately updates active model)
+_cached_groq_key = None
+_groq_client_instance = None
+_last_logged_model = None
+
+def get_groq_config():
+    """Dynamically read and return the latest Groq config from .env so any changes take effect immediately."""
+    load_dotenv(override=True)
+    api_key = os.getenv("GROQ_API_KEY", "").strip().strip('"').strip("'")
+    model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile").strip().strip('"').strip("'")
+    try:
+        temp = float(os.getenv("GROQ_TEMPERATURE", "0.5"))
+    except (ValueError, TypeError):
+        temp = 0.5
+    return api_key, model, temp
+
+def get_groq_client():
+    global _cached_groq_key, _groq_client_instance, _last_logged_model
+    api_key, model, _ = get_groq_config()
+    if not api_key:
+        return None
+    if _groq_client_instance is None or _cached_groq_key != api_key:
+        try:
+            from groq import Groq
+            _groq_client_instance = Groq(api_key=api_key)
+            _cached_groq_key = api_key
+            logger.info(f"Groq AI client initialized with key ...{api_key[-6:]} using model: {model}")
+            _last_logged_model = model
+        except Exception as e:
+            logger.error(f"Failed to initialize Groq client: {e}")
+            return None
+    elif _last_logged_model != model:
+        logger.info(f"Groq active model switched to: {model}")
+        _last_logged_model = model
+    return _groq_client_instance
+
+def get_groq_model() -> str:
+    _, model, _ = get_groq_config()
+    return model
+
+def get_groq_temperature() -> float:
+    _, _, temp = get_groq_config()
+    return temp
+
+# Initialize on startup
+GROQ_API_KEY, GROQ_MODEL, GROQ_TEMPERATURE = get_groq_config()
+groq_client = get_groq_client()
+
+# Gemini Configuration (Fallback)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.7"))
+
+gemini_client = None
+if GEMINI_API_KEY:
+    try:
+        from google import genai
+        from google.genai import types
+        gemini_client = genai.Client(api_key=GEMINI_API_KEY)
+        logger.info(f"Gemini client initialized as fallback with model: {GEMINI_MODEL}")
+    except Exception as e:
+        logger.warning(f"Failed to initialize Gemini fallback: {e}")
+
+if not groq_client and not gemini_client:
+    logger.warning("No Groq or Gemini API key found. AI features will use rule-based fallback.")
 
 # Load Models
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -261,7 +323,7 @@ def compute_feature_impacts(record: dict, meta: dict) -> dict:
     return impacts
 
 def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
-    if not gemini_client:
+    if not groq_client and not gemini_client:
         return {}
     
     prompt = f"""
@@ -272,24 +334,60 @@ def parse_symptoms(symptoms: str, current_data: PatientData) -> dict:
     Identify any overriding clinical parameters (e.g. mentions 'smokes a pack a day' -> smoke: 1, 'sedentary desk job' -> active: 0, 'blood pressure 145/95' -> ap_hi: 145, ap_lo: 95).
     Return ONLY a JSON object: {{"smoke": 1}} or {{}}.
     """
-    try:
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=float(GEMINI_TEMPERATURE),
-                response_mime_type="application/json"
+    # 1. Primary: Groq
+    active_groq = get_groq_client()
+    if active_groq:
+        current_model = get_groq_model()
+        try:
+            response = active_groq.chat.completions.create(
+                model=current_model,
+                messages=[
+                    {"role": "system", "content": "You are a clinical parser. Output strictly valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                response_format={"type": "json_object"}
             )
-        )
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text[7:-3].strip()
-        elif text.startswith("```"):
-            text = text[3:-3].strip()
-        return json.loads(text)
-    except Exception as e:
-        logger.error(f"Failed to parse symptoms using Gemini: {e}")
-        return {}
+            text = response.choices[0].message.content.strip()
+            return json.loads(text)
+        except Exception as e:
+            try:
+                response = active_groq.chat.completions.create(
+                    model=current_model,
+                    messages=[
+                        {"role": "system", "content": "You are a clinical parser. Output strictly a JSON object: {\"smoke\": 1} or {} with no other text."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.1
+                )
+                text = response.choices[0].message.content.strip()
+                if text.startswith("```json"): text = text[7:-3].strip()
+                elif text.startswith("```"): text = text[3:-3].strip()
+                return json.loads(text)
+            except Exception as e2:
+                logger.error(f"Failed to parse symptoms using Groq ({current_model}): {e2}")
+
+    # 2. Fallback: Gemini
+    if gemini_client:
+        try:
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=float(GEMINI_TEMPERATURE),
+                    response_mime_type="application/json"
+                )
+            )
+            text = response.text.strip()
+            if text.startswith("```json"):
+                text = text[7:-3].strip()
+            elif text.startswith("```"):
+                text = text[3:-3].strip()
+            return json.loads(text)
+        except Exception as e:
+            logger.error(f"Failed to parse symptoms using Gemini fallback: {e}")
+
+    return {}
 
 def generate_offline_clinical_report(data: PatientData, probability: float, risk: str, role: str, record: dict) -> str:
     prob_str = f"{probability*100:.1f}%" if probability <= 1.0 else f"{probability:.1f}%"
@@ -364,7 +462,7 @@ Patient presents with **{risk} Risk** ({prob_str} calibrated likelihood). From a
 
 def generate_explanation(data: PatientData, probability: float, risk: str, role: str, record: dict) -> str:
     role_clean = (role or "patient").lower()
-    if not gemini_client:
+    if not groq_client and not gemini_client:
         return generate_offline_clinical_report(data, probability, risk, role_clean, record)
 
     if role_clean in ["clinician", "practitioner", "doctor"]:
@@ -375,13 +473,30 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
         """
         structure_instruction = """
     **Clinical Findings**:
-    - (bulleted objective findings with exact numbers, staging, and metrics)
+    - **Age & Sex**: [Age] years ([Sex])
+    - **Blood Pressure**: [Systolic]/[Diastolic] mmHg ([ACC/AHA Staging]; Pulse Pressure = [PP] mmHg)
+    - **Body Mass Index**: [BMI] kg/m² ([Weight Category])
+    - **Lipid Profile**: Cholesterol Tier [Tier]/3 ([Clinical Interpretation])
+    - **Fasting Glucose**: Tier [Tier]/3 ([Clinical Interpretation])
+    - **Lifestyle Profile**: [Smoking, Alcohol, Exercise Status]
+    - **Model-derived ASCVD Risk**: [Risk]% ([Risk Tier])
     
     **Differential Assessment**:
-    (concise clinical assessment, hemodynamic afterload, and cardiovascular risk drivers)
+    [Write 2 distinct, readable paragraphs separated by an empty line detailing hemodynamic afterload, arterial stiffness, and primary ASCVD risk drivers.]
     
     **Recommended Clinical Pathways**:
-    - (actionable diagnostic next steps, monitoring protocols, and pharmacological considerations)
+    ### Diagnostic Work-up
+    - **12-lead ECG**: [Baseline rhythm, LVH, ischemia assessment]
+    - **Ambulatory BP Monitoring (24-h)**: [Protocol to rule out nocturnal non-dipping]
+    - **Cardiometabolic Labs**: [Lipid panel, HbA1c, renal function / eGFR]
+    
+    ### Pharmacologic Management
+    - **Antihypertensive Regimen**: [First-line combination therapy considerations per ACC/AHA]
+    - **Lipid-Lowering Therapy**: [Statin intensity recommendation based on risk]
+    
+    ### Lifestyle & Monitoring
+    - **Non-Pharmacologic Targets**: [Sodium restriction, DASH dietary approach, physical activity]
+    - **Clinical Follow-up**: [Recommended interval for blood pressure and lab recheck]
         """
     elif role_clean in ["trainee", "student", "researcher"]:
         tone_instruction = """
@@ -391,13 +506,23 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
         """
         structure_instruction = """
     **Clinical Findings**:
-    - (bulleted objective findings with stage classifications)
+    - **Age & Sex**: [Age] years ([Sex])
+    - **Hemodynamic Profile**: [Systolic]/[Diastolic] mmHg ([ACC/AHA Staging]; Pulse Pressure = [PP] mmHg)
+    - **Anthropometric Data**: BMI [BMI] kg/m²
+    - **Metabolic Parameters**: Cholesterol Tier [Tier]/3, Fasting Glucose Tier [Tier]/3
+    - **Behavioral Variables**: Smoking, alcohol, physical activity profile
     
     **Differential Assessment**:
-    (clinical assessment detailing underlying pathophysiological and hemodynamic mechanisms)
+    [Write 2 distinct, readable paragraphs separated by an empty line detailing pathophysiological and hemodynamic mechanisms.]
     
     **Educational & Learning Context**:
-    - (mechanistic driver analysis, feature interaction weighting rationale, and pharmacology teaching points)
+    ### Mechanistic Driver Analysis
+    - **Synergistic Risk Interaction**: [Explain why high BP combined with dyslipidemia multiplies risk non-linearly]
+    - **Hemodynamic Principles**: [Explain pulse pressure as surrogate for arterial compliance loss and wall tension]
+    
+    ### Pharmacology Teaching Pearls
+    - **RAAS Blockade Rationale**: [Explain end-organ protection beyond BP reduction]
+    - **Plaque Stabilization**: [Explain statin pleiotropic effects]
         """
     else:
         # Patient / General User
@@ -409,13 +534,27 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
         """
         structure_instruction = """
     **Key Findings**:
-    - (plain-language bullet points of their vitals and what they mean)
+    - **Overall Heart Health**: [Risk Tier] ([Probability]% estimated risk score)
+    - **Blood Pressure**: [Systolic]/[Diastolic] mmHg ([Clear plain explanation of reading])
+    - **Body Mass Index (BMI)**: [BMI] kg/m² ([Clear weight category explanation])
+    - **Cholesterol Level**: [Tier explanation in simple terms]
+    - **Blood Sugar Level**: [Tier explanation in simple terms]
+    - **Daily Habits**: [Smoking, alcohol, and activity summary]
     
     **What This Means**:
-    (supportive explanation of heart and vessel health in everyday terms)
+    [Write 2 warm, encouraging, and clear paragraphs separated by an empty line explaining heart and vessel health in everyday terms.]
     
     **Lifestyle & Prevention**:
-    - (practical, encouraging daily steps for nutrition, physical activity, rest, and questions for their doctor)
+    ### Heart-Healthy Nutrition
+    - **Nutritional Focus**: [Whole foods, low sodium, dark leafy vegetables, DASH diet principles]
+    - **Hydration & Portion Balance**: [Everyday practical dietary tips]
+    
+    ### Daily Physical Activity & Rest
+    - **Cardiovascular Movement**: [30 minutes of moderate activity like brisk walking on most days]
+    - **Restorative Sleep**: [7-8 hours of sleep and stress management]
+    
+    ### Talking with Your Doctor
+    - **Appointment Preparation**: [Specific questions to ask at the next visit regarding BP and routine labs]
         """
 
     prompt = f"""
@@ -439,19 +578,249 @@ def generate_explanation(data: PatientData, probability: float, risk: str, role:
 
     {tone_instruction}
 
-    CRITICAL REQUIREMENT: Format your response STRICTLY with these markdown headers:
+    CRITICAL FORMATTING RULES:
+    1. Every line in the first section MUST begin with a markdown bullet: `- **Parameter**: Value (Context)`. Never output flat unbulleted lines.
+    2. In the second section, separate distinct thoughts into well-spaced paragraphs separated by a blank line.
+    3. In the third section, categorize recommendations under explicit `### Subheading` titles, with each action item formatted as a markdown bullet: `- **Item**: Details`.
+
+    Format your response STRICTLY with these markdown headers:
     {structure_instruction}
     """
-    try:
-        response = gemini_client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
-        )
-        return response.text.strip()
-    except Exception as e:
-        logger.error(f"Gemini API failure: {e}")
-        return f"Patient assessed at {risk.upper()} risk ({probability*100:.1f}%). (AI summary generation temporarily unavailable)."
+
+    # 1. Primary: Groq
+    active_groq = get_groq_client()
+    if active_groq:
+        current_model = get_groq_model()
+        current_temp = get_groq_temperature()
+        try:
+            response = active_groq.chat.completions.create(
+                model=current_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are ZEZE (Zero Error Zonal Evaluation Model), an intelligent clinical cardiovascular risk assessment assistant. "
+                            "Follow all tone, formatting, and markdown header instructions precisely."
+                        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=current_temp
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"Groq API failure ({current_model}) during explanation generation: {e}")
+            if not gemini_client:
+                return generate_offline_clinical_report(data, probability, risk, role_clean, record)
+
+    # 2. Fallback: Gemini
+    if gemini_client:
+        try:
+            response = gemini_client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(temperature=float(GEMINI_TEMPERATURE))
+            )
+            return response.text.strip()
+        except Exception as e:
+            logger.error(f"Gemini API failure: {e}")
+            return generate_offline_clinical_report(data, probability, risk, role_clean, record)
+
+    return generate_offline_clinical_report(data, probability, risk, role_clean, record)
+
+def generate_dynamic_medications(data: PatientData, probability: float, risk: str, role: str, record: dict) -> list[dict]:
+    """
+    Synthesizes a dynamic, patient-tailored pharmacopeia based on ACC/AHA, ADA, and USPSTF clinical guidelines.
+    Generates exact medications, dosing, timings, indications, and monitoring tailored to the patient's individual biomarkers.
+    """
+    ap_hi = float(record.get('ap_hi') or data.ap_hi or data.trestbps or 120)
+    ap_lo = float(record.get('ap_lo') or data.ap_lo or 80)
+    chol_tier = int(record.get('cholesterol') or data.cholesterol or 1)
+    gluc_tier = int(record.get('gluc') or data.gluc or 1)
+    smoke = int(record.get('smoke') or data.smoke or 0)
+    pulse_pressure = int(record.get('pulse_pressure') or (ap_hi - ap_lo))
+
+    meds = []
+
+    # 1. Antihypertensive Strategy
+    if ap_hi >= 140 or ap_lo >= 90:
+        # ACC/AHA Stage 2 Hypertension: Dual first-line combination therapy
+        meds.append({
+            "id": "amlodipine",
+            "name": "Amlodipine",
+            "brandNames": "Norvasc",
+            "category": "antihypertensive",
+            "drugClass": "Dihydropyridine Calcium Channel Blocker (CCB)",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily in the morning with or without food. Maintain consistent daily timing.",
+            "typicalDose": "5 mg PO once daily (titrate to 10 mg at 2–4 weeks if BP > 130/80 mmHg).",
+            "patientIndication": f"Targeted for Stage 2 Hypertension ({int(ap_hi)}/{int(ap_lo)} mmHg) and elevated pulse pressure ({pulse_pressure} mmHg) to reduce peripheral vascular resistance.",
+            "urgencyOrPriority": "Primary Blood Pressure Target",
+            "indications": ["Stage 2 Essential Hypertension", "Elevated Pulse Pressure & Arterial Stiffness"],
+            "commonSideEffects": ["Dose-dependent peripheral ankle edema", "Flushing", "Mild lightheadedness upon standing"],
+            "seriousAdverseEffects": ["Severe symptomatic hypotension", "Reflex tachycardia"],
+            "contraindications": ["Severe hypotension (systolic <90 mmHg)", "Clinically significant aortic stenosis"],
+            "monitoring": ["Resting seated blood pressure at 2 and 4 weeks", "Assess bilateral lower extremities for dependent edema"],
+            "guidelineSources": [
+                {"org": "ACC/AHA", "badge": "Class I Guideline", "recommendation": "Recommended initial dual therapy for Stage 2 hypertension with average BP >20/10 mmHg over target."},
+                {"org": "FDA", "badge": "FDA Approved", "recommendation": "Approved for blood pressure control and cardiovascular event reduction."}
+            ],
+            "mechanismOfAction": "Inhibits transmembrane influx of extracellular calcium into vascular smooth muscle, reducing systemic vascular resistance and cardiac afterload without negative inotropy.",
+            "traineePearls": "Pedal edema is due to precapillary arteriolar vasodilation rather than volume overload—never attempt to treat with loop diuretics."
+        })
+        meds.append({
+            "id": "lisinopril",
+            "name": "Lisinopril",
+            "brandNames": "Zestril, Prinivil",
+            "category": "antihypertensive",
+            "drugClass": "Angiotensin-Converting Enzyme (ACE) Inhibitor",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily in the morning with a full glass of water. Maintain adequate hydration.",
+            "typicalDose": "10 mg PO once daily (titrate to 20 mg if clinic BP remains above 130/80 mmHg).",
+            "patientIndication": f"Synergistic RAAS inhibition alongside CCB to suppress systolic load ({int(ap_hi)} mmHg) and preserve renal microvascular perfusion.",
+            "urgencyOrPriority": "Primary Blood Pressure Target",
+            "indications": ["Hypertension Combination Regimen", "Left Ventricular Afterload Reduction"],
+            "commonSideEffects": ["Dry non-productive cough (bradykinin-mediated, 5-15%)", "Dizziness", "Mild potassium retention"],
+            "seriousAdverseEffects": ["Angioedema of face/airway (medical emergency)", "Acute kidney injury in bilateral renal artery stenosis", "Severe hyperkalemia (K >5.5 mEq/L)"],
+            "contraindications": ["History of ACEi-induced or hereditary angioedema", "Pregnancy (Black Box: Teratogenic in 2nd/3rd trimester)", "Concurrent Sacubitril"],
+            "monitoring": ["Serum creatinine and potassium (K+) at 2–3 weeks post-initiation", "Home blood pressure log"],
+            "guidelineSources": [
+                {"org": "ACC/AHA", "badge": "Class I Guideline", "recommendation": "First-line cornerstone for hypertension with renal and cardiac microvascular protection."},
+                {"org": "WHO", "badge": "Essential Medicine", "recommendation": "Essential medicine for global primary prevention of ischemic cardiovascular events."}
+            ],
+            "mechanismOfAction": "Competitively inhibits ACE, preventing Angiotensin I conversion to the potent vasoconstrictor Angiotensin II and suppressing aldosterone-mediated sodium retention.",
+            "traineePearls": "A transient rise in serum creatinine of up to 30% is physiologically expected due to efferent arteriolar vasodilation; do not discontinue unless it exceeds 30%."
+        })
+    elif ap_hi >= 130 or ap_lo >= 80:
+        # ACC/AHA Stage 1 Hypertension: Monotherapy
+        meds.append({
+            "id": "amlodipine",
+            "name": "Amlodipine",
+            "brandNames": "Norvasc",
+            "category": "antihypertensive",
+            "drugClass": "Dihydropyridine Calcium Channel Blocker (CCB)",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily in the morning with or without meals.",
+            "typicalDose": "5 mg PO once daily.",
+            "patientIndication": f"Targeted first-line monotherapy for Stage 1 Hypertension ({int(ap_hi)}/{int(ap_lo)} mmHg).",
+            "urgencyOrPriority": "Blood Pressure Control",
+            "indications": ["Stage 1 Hypertension"],
+            "commonSideEffects": ["Mild ankle swelling", "Headache", "Fatigue"],
+            "seriousAdverseEffects": ["Marked hypotension"],
+            "contraindications": ["Severe hypotension", "Cardiogenic shock"],
+            "monitoring": ["Blood pressure re-evaluation in 4 weeks"],
+            "guidelineSources": [
+                {"org": "ACC/AHA", "badge": "Class I Guideline", "recommendation": "First-line monotherapy recommendation for Stage 1 HTN with elevated cardiovascular risk."}
+            ],
+            "mechanismOfAction": "Blocks vascular smooth muscle L-type calcium channels to promote smooth arterial vasodilation.",
+            "traineePearls": "Extremely long half-life (35–50 hours) ensures 24-hour hemodynamic stability even if a dose is delayed by several hours."
+        })
+
+    # 2. Lipid-Lowering & Plaque Stabilization
+    if chol_tier >= 2 or probability >= 0.20 or risk == "High":
+        statin_dose = "40 mg PO once daily at bedtime" if (probability >= 0.50 or risk == "High") else "20 mg PO once daily at bedtime"
+        meds.append({
+            "id": "atorvastatin",
+            "name": "Atorvastatin",
+            "brandNames": "Lipitor",
+            "category": "lipid",
+            "drugClass": "HMG-CoA Reductase Inhibitor (High-Intensity Statin)",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily in the evening or at bedtime with or without food.",
+            "typicalDose": f"{statin_dose} (target ≥50% LDL-C reduction).",
+            "patientIndication": f"Targeted for high 10-year ASCVD risk ({round(probability * 100, 1)}%) and lipid modification (Cholesterol Tier {chol_tier}/3).",
+            "urgencyOrPriority": "Atherosclerotic Plaque Stabilization",
+            "indications": ["Primary ASCVD Prevention in High-Risk Cohort", "Atherogenic Dyslipidemia"],
+            "commonSideEffects": ["Mild myalgia (muscle stiffness)", "Dyspepsia", "Mild fatigue"],
+            "seriousAdverseEffects": ["Rhabdomyolysis (<0.1%)", "Immune-mediated necrotizing myopathy", "Clinically significant hepatotoxicity"],
+            "contraindications": ["Active hepatic disease or unexplained transaminase elevations", "Pregnancy and lactation", "Concurrent strong CYP3A4 inhibitors at high dose"],
+            "monitoring": ["Fasting lipid profile at 8–12 weeks to confirm target LDL reduction", "Baseline liver enzymes (ALT/AST)", "Creatine kinase if severe muscle pain occurs"],
+            "guidelineSources": [
+                {"org": "ACC/AHA", "badge": "Class I High-Intensity", "recommendation": "Cornerstone high-intensity statin therapy for individuals with 10-year ASCVD risk ≥20% or dyslipidemia."},
+                {"org": "NICE", "badge": "NICE CG181", "recommendation": "Recommended primary prevention for high cardiovascular risk."}
+            ],
+            "mechanismOfAction": "Inhibits HMG-CoA reductase (rate-limiting step in cholesterol biosynthesis), upregulating hepatic LDL receptors and accelerating ApoB atherogenic clearance.",
+            "traineePearls": "Possesses pleiotropic benefits: enhances endothelial nitric oxide synthase, reduces vascular inflammation (hs-CRP), and stabilizes vulnerable plaque caps."
+        })
+
+    # 3. Glycemic / Cardiometabolic Protection
+    if gluc_tier >= 2:
+        meds.append({
+            "id": "empagliflozin",
+            "name": "Empagliflozin",
+            "brandNames": "Jardiance",
+            "category": "metabolic",
+            "drugClass": "SGLT2 Inhibitor (Sodium-Glucose Cotransporter 2)",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily in the morning with or without breakfast with a glass of water.",
+            "typicalDose": "10 mg PO once daily (may titrate to 25 mg if additional glycemic control required).",
+            "patientIndication": f"Targeted for elevated blood sugar (Tier {gluc_tier}/3) with landmark EMPA-REG proven cardiovascular death and heart failure reduction.",
+            "urgencyOrPriority": "Cardiometabolic & Renal Protection",
+            "indications": ["Type 2 Diabetes / Prediabetes with ASCVD Risk", "Cardiovascular Event & HF Reduction"],
+            "commonSideEffects": ["Urinary frequency / mild osmotic diuresis", "Mycotic genital infections (counsel on perineal hygiene)", "Thirst"],
+            "seriousAdverseEffects": ["Euglycemic diabetic ketoacidosis (rare)", "Symptomatic volume depletion/hypotension"],
+            "contraindications": ["Severe renal impairment (eGFR <20 mL/min/1.73m²)", "History of ketoacidosis"],
+            "monitoring": ["Renal function (eGFR) and HbA1c at 3-month intervals", "Assess hydration status and volume tolerance"],
+            "guidelineSources": [
+                {"org": "ADA/EASD", "badge": "Class I Guideline", "recommendation": "First-line add-on agent in patients with diabetes and high cardiovascular risk independently of baseline HbA1c."},
+                {"org": "FDA", "badge": "FDA Approved", "recommendation": "Approved to reduce cardiovascular death in patients with type 2 diabetes."}
+            ],
+            "mechanismOfAction": "Inhibits proximal tubular SGLT2 transporters, inducing glycosuria, natriuresis, and hemoconcentration with reduced myocardial oxygen demand.",
+            "traineePearls": "Cardiovascular risk reduction is rapid (evident within weeks), mediated by preload/afterload hemodynamic unloading and shifting cardiac energetics toward ketones."
+        })
+
+    # 4. Tobacco Smoking Cessation Pharmacotherapy
+    if smoke == 1:
+        meds.append({
+            "id": "nicotine-patch",
+            "name": "Nicotine Transdermal System (NRT)",
+            "brandNames": "Nicoderm CQ, Habitrol",
+            "category": "lifestyle",
+            "drugClass": "Smoking Cessation Aid / Nicotinic Receptor Agonist",
+            "frequency": "Once Daily (OD)",
+            "timing": "Apply one new transdermal patch every 24 hours to clean, dry, hairless skin on upper body/arm.",
+            "typicalDose": "Step 1: 21 mg/24 hours transdermal patch for 4–6 weeks; step down to 14 mg for 2 weeks, then 7 mg for 2 weeks.",
+            "patientIndication": "Active smoking is an immediate cause of endothelial oxidative damage and coronary vasoconstriction. Quitting halves excess risk within 1 year.",
+            "urgencyOrPriority": "Smoking Cessation & Vascular Recovery",
+            "indications": ["Tobacco Dependence", "Cardiovascular Endothelial Recovery"],
+            "commonSideEffects": ["Local skin redness/itching", "Vivid dreams or insomnia (remove patch at bedtime if disruptive)", "Mild nausea"],
+            "seriousAdverseEffects": ["Tachycardia or palpitations if smoking combustible cigarettes concurrently"],
+            "contraindications": ["Immediate post-MI period (<2 weeks) without cardiologist oversight", "Severe active cardiac arrhythmias"],
+            "monitoring": ["Cessation check-in at 2, 4, and 8 weeks", "Monitor resting heart rate and skin tolerability"],
+            "guidelineSources": [
+                {"org": "USPSTF", "badge": "Grade A Recommendation", "recommendation": "Combine behavioral support with approved pharmacotherapy for all adults who use tobacco."},
+                {"org": "ACC/AHA", "badge": "Class I Guideline", "recommendation": "Smoking cessation is the most cost-effective cardiovascular risk intervention."}
+            ],
+            "mechanismOfAction": "Provides continuous, clean low-level systemic nicotine to mitigate receptor withdrawal symptoms without exposure to carbon monoxide and carcinogenic tar.",
+            "traineePearls": "Nicotine itself contributes mildly to transient heart rate spikes, but coronary plaque rupture is driven by particulate oxidants in tobacco smoke—NRT is vastly safer than continuing to smoke."
+        })
+
+    # 5. Low Risk / Normotensive Wellness & Primary Prevention
+    if len(meds) == 0:
+        meds.append({
+            "id": "omega3-epa",
+            "name": "Purified Omega-3 EPA/DHA",
+            "brandNames": "Vascepa, Lovaza",
+            "category": "lipid",
+            "drugClass": "Cardioprotective Marine Fatty Acids",
+            "frequency": "Once Daily (OD)",
+            "timing": "Take once daily with a meal containing dietary healthy fats.",
+            "typicalDose": "1000–2000 mg PO daily with food.",
+            "patientIndication": f"Cardioprotective maintenance and endothelial support for low-risk profile ({round(probability * 100, 1)}%).",
+            "urgencyOrPriority": "Preventative Wellness",
+            "indications": ["Vascular Maintenance", "Optimal Lipid Health"],
+            "commonSideEffects": ["Mild fishy burps (eructation)", "Mild indigestion"],
+            "seriousAdverseEffects": ["Atrial fibrillation at high prescription doses (rare)"],
+            "contraindications": ["Severe fish or shellfish hypersensitivity"],
+            "monitoring": ["Periodic routine annual lipid evaluation"],
+            "guidelineSources": [
+                {"org": "AHA", "badge": "Dietary Guidance", "recommendation": "Recommended as part of an overall heart-healthy dietary pattern."}
+            ],
+            "mechanismOfAction": "Enriches vascular endothelial cell membranes, promotes anti-inflammatory eicosanoid balance, and suppresses hepatic triglyceride synthesis.",
+            "traineePearls": "Icosapent ethyl (pure EPA) demonstrated a 25% relative risk reduction in ischemic events in REDUCE-IT, primarily via membrane stabilization."
+        })
+
+    return meds
 
 @app.post("/predict")
 def predict_risk(data: PatientData):
@@ -493,12 +862,14 @@ def predict_risk(data: PatientData):
             record = {"age_years": data.age, "gender": data.sex, "ap_hi": 120, "ap_lo": 80, "bmi": 24.0, "cholesterol": 1, "gluc": 1, "smoke": 0, "alco": 0, "active": 1, "bp_stage": 0}
 
         explanation = generate_explanation(data, prob, risk, data.role, record)
+        suggested_medications = generate_dynamic_medications(data, prob, risk, data.role, record)
 
         return {
             "risk": risk,
             "probability": round(prob * 100, 1),
             "explanation": explanation,
             "feature_impacts": feature_impacts,
+            "suggested_medications": suggested_medications,
             "vitals": {
                 "bmi": record.get("bmi"),
                 "bp": f"{int(record.get('ap_hi', 120))}/{int(record.get('ap_lo', 80))}",
@@ -587,38 +958,66 @@ def generate_offline_chat_response(query: str, context: str) -> str:
 
 @app.post("/chat")
 def chat_follow_up(req: ChatRequest):
-    if not gemini_client:
+    if not groq_client and not gemini_client:
         return {"response": generate_offline_chat_response(req.message, req.context)}
         
-    try:
-        system_instruction = (
-            "You are the ZEZE AI Clinical Assistant. The user has just completed a cardiovascular health assessment.\n"
-            f"Here is their exact clinical context: {req.context}\n\n"
-            "Act as an intelligent, conversational agent and assistant. Answer their follow-up questions clearly and supportively.\n"
-            "CRITICAL RULES:\n"
-            "1. Be concise. Give exactly the required amount of information—no more, no less.\n"
-            "2. Be helpful. Provide clear health, medication, diet, exercise, and clinical guidance citing ACC/AHA and FDA standards.\n"
-            "3. Keep responses conversational, balanced, and easy to read."
-        )
-        
-        formatted_history = []
-        for msg in req.history:
-            r = "user" if msg.role == "user" else "model"
-            formatted_history.append(types.Content(role=r, parts=[types.Part.from_text(text=msg.parts)]))
-            
-        chat = gemini_client.chats.create(
-            model=GEMINI_MODEL,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=float(GEMINI_TEMPERATURE)
-            ),
-            history=formatted_history
-        )
-        response = chat.send_message(req.message)
-        return {"response": response.text}
-    except Exception as e:
-        logger.warning(f"Gemini API chat fallback triggered: {str(e)}")
-        return {"response": generate_offline_chat_response(req.message, req.context)}
+    system_instruction = (
+        "You are the ZEZE AI Clinical & Drug Assistant. The user is reviewing clinical assessment results or authoritative medication intelligence.\n"
+        f"Here is their exact clinical and drug context:\n{req.context}\n\n"
+        "Act as an intelligent, conversational, and highly reliable assistant. Answer their follow-up questions clearly, accurately, and supportively.\n"
+        "CRITICAL RULES:\n"
+        "1. Be concise, clear, and direct. Avoid heavy medical jargon where plain language suffices, and explain necessary technical concepts simply.\n"
+        "2. Ground your answers in the provided context, official FDA labeling, and clinical guidelines (ACC/AHA, ADA, etc.).\n"
+        "3. Accurately answer questions regarding drug indications, common vs serious side effects, interactions, timing/food, and clinical monitoring.\n"
+        "4. Keep responses conversational, balanced, and beautifully formatted with markdown."
+    )
+
+    # 1. Primary: Groq
+    active_groq = get_groq_client()
+    if active_groq:
+        current_model = get_groq_model()
+        current_temp = get_groq_temperature()
+        try:
+            messages = [{"role": "system", "content": system_instruction}]
+            for msg in req.history:
+                r = "user" if msg.role == "user" else "assistant"
+                messages.append({"role": r, "content": msg.parts})
+            messages.append({"role": "user", "content": req.message})
+
+            response = active_groq.chat.completions.create(
+                model=current_model,
+                messages=messages,
+                temperature=current_temp
+            )
+            return {"response": response.choices[0].message.content}
+        except Exception as e:
+            logger.warning(f"Groq API chat fallback triggered ({current_model}): {str(e)}")
+            if not gemini_client:
+                return {"response": generate_offline_chat_response(req.message, req.context)}
+
+    # 2. Fallback: Gemini
+    if gemini_client:
+        try:
+            formatted_history = []
+            for msg in req.history:
+                r = "user" if msg.role == "user" else "model"
+                formatted_history.append(types.Content(role=r, parts=[types.Part.from_text(text=msg.parts)]))
+                
+            chat = gemini_client.chats.create(
+                model=GEMINI_MODEL,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=float(GEMINI_TEMPERATURE)
+                ),
+                history=formatted_history
+            )
+            response = chat.send_message(req.message)
+            return {"response": response.text}
+        except Exception as e:
+            logger.warning(f"Gemini API chat fallback triggered: {str(e)}")
+            return {"response": generate_offline_chat_response(req.message, req.context)}
+
+    return {"response": generate_offline_chat_response(req.message, req.context)}
 
 from ml.ocr_extractor import process_document_pipeline
 
@@ -664,7 +1063,12 @@ async def extract_vitals(
                     elif ext == 'txt': mime_type = "text/plain"
 
             files_data.append((file.filename or "uploaded_file", contents, mime_type))
-            parts_for_gemini.append(types.Part.from_bytes(data=contents, mime_type=mime_type))
+            if gemini_client:
+                try:
+                    from google.genai import types
+                    parts_for_gemini.append(types.Part.from_bytes(data=contents, mime_type=mime_type))
+                except Exception:
+                    pass
 
         # 1. Run local multi-engine OCR & Clinical Regex
         pipeline_res = process_document_pipeline(files_data, user_symptoms=symptoms)
@@ -673,53 +1077,99 @@ async def extract_vitals(
         confidence = pipeline_res.get("confidence", {})
         raw_ocr_text = pipeline_res.get("raw_text", "")
 
-        # 2. If Gemini is available, run semantic enrichment to catch anything missed
-        if gemini_client and (len(vitals) < 4 or "ap_hi" not in vitals or "cholesterol" not in vitals):
-            try:
-                gemini_prompt = f"""
-                You are an expert clinical data extraction assistant.
-                We have already performed Optical Character Recognition (OCR) on the attached document with this extracted text:
-                ---
-                {raw_ocr_text[:4000]}
-                ---
-                User reported symptoms: "{symptoms or ''}"
+        # 2. If Groq or Gemini is available, run semantic enrichment to catch anything missed
+        if (groq_client or gemini_client) and (len(vitals) < 4 or "ap_hi" not in vitals or "cholesterol" not in vitals):
+            extraction_prompt = f"""
+            You are an expert clinical data extraction assistant.
+            We have already performed Optical Character Recognition (OCR) on the medical document with this extracted text:
+            ---
+            {raw_ocr_text[:4000]}
+            ---
+            User reported symptoms: "{symptoms or ''}"
 
-                Carefully inspect the OCR text and original document. Extract any of the following clinical vitals that were detected:
-                - age (years)
-                - sex (1 for male, 0 for female)
-                - height (cm)
-                - weight (kg)
-                - ap_hi (systolic BP in mmHg, e.g. 130)
-                - ap_lo (diastolic BP in mmHg, e.g. 85)
-                - cholesterol (1 for Normal <200, 2 for Borderline 200-239, 3 for High >=240)
-                - gluc (1 for Normal <100, 2 for Borderline 100-125, 3 for High >=126)
-                - smoke (1 for Yes, 0 for No)
-                - alco (1 for Yes, 0 for No)
-                - active (1 for Yes, 0 for No)
-                - symptoms (summary of any noted symptoms, complaints, or diagnoses)
+            Carefully inspect the OCR text and symptoms. Extract any of the following clinical vitals:
+            - age (years)
+            - sex (1 for male, 0 for female)
+            - height (cm)
+            - weight (kg)
+            - ap_hi (systolic BP in mmHg, e.g. 130)
+            - ap_lo (diastolic BP in mmHg, e.g. 85)
+            - cholesterol (1 for Normal <200, 2 for Borderline 200-239, 3 for High >=240)
+            - gluc (1 for Normal <100, 2 for Borderline 100-125, 3 for High >=126)
+            - smoke (1 for Yes, 0 for No)
+            - alco (1 for Yes, 0 for No)
+            - active (1 for Yes, 0 for No)
+            - symptoms (summary of any noted symptoms, complaints, or diagnoses)
 
-                Return ONLY a JSON object adhering to this schema. If a value cannot be found, omit it or set to null.
-                """
-                gemini_parts = list(parts_for_gemini)
-                gemini_parts.append(gemini_prompt)
+            Return ONLY a valid JSON object adhering to these keys. If a value cannot be found, omit it or set to null.
+            """
 
-                response = gemini_client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=gemini_parts,
-                    config=types.GenerateContentConfig(
+            # 1. Primary: Groq
+            active_groq = get_groq_client()
+            if active_groq:
+                current_model = get_groq_model()
+                try:
+                    response = active_groq.chat.completions.create(
+                        model=current_model,
+                        messages=[
+                            {"role": "system", "content": "You are a clinical document data extractor. Output strictly valid JSON."},
+                            {"role": "user", "content": extraction_prompt}
+                        ],
                         temperature=0.1,
-                        response_mime_type="application/json",
-                        response_schema=DocumentExtractionSchema
+                        response_format={"type": "json_object"}
                     )
-                )
-                ai_extracted = json.loads(response.text.strip())
-                for k, v in ai_extracted.items():
-                    if v is not None and k not in vitals:
-                        vitals[k] = v
-                        confidence[k] = "ai_inferred"
-                        snippets[k] = f"Extracted via AI visual parsing"
-            except Exception as ge:
-                logger.warning(f"Gemini enrichment skipped or failed: {ge}")
+                    ai_extracted = json.loads(response.choices[0].message.content.strip())
+                    for k, v in ai_extracted.items():
+                        if v is not None and k not in vitals:
+                            vitals[k] = v
+                            confidence[k] = "ai_inferred"
+                            snippets[k] = f"Extracted via Groq ({current_model}) AI parsing"
+                except Exception as ge:
+                    try:
+                        response = active_groq.chat.completions.create(
+                            model=current_model,
+                            messages=[
+                                {"role": "system", "content": "You are a clinical document data extractor. Output strictly a raw JSON object with no markdown formatting."},
+                                {"role": "user", "content": extraction_prompt}
+                            ],
+                            temperature=0.1
+                        )
+                        text = response.choices[0].message.content.strip()
+                        if text.startswith("```json"): text = text[7:-3].strip()
+                        elif text.startswith("```"): text = text[3:-3].strip()
+                        ai_extracted = json.loads(text)
+                        for k, v in ai_extracted.items():
+                            if v is not None and k not in vitals:
+                                vitals[k] = v
+                                confidence[k] = "ai_inferred"
+                                snippets[k] = f"Extracted via Groq ({current_model}) AI parsing"
+                    except Exception as ge2:
+                        logger.warning(f"Groq OCR enrichment skipped or failed ({current_model}): {ge2}")
+
+            # 2. Fallback: Gemini
+            elif gemini_client:
+                try:
+                    from google.genai import types
+                    gemini_parts = list(parts_for_gemini)
+                    gemini_parts.append(extraction_prompt)
+
+                    response = gemini_client.models.generate_content(
+                        model=GEMINI_MODEL,
+                        contents=gemini_parts,
+                        config=types.GenerateContentConfig(
+                            temperature=0.1,
+                            response_mime_type="application/json",
+                            response_schema=DocumentExtractionSchema
+                        )
+                    )
+                    ai_extracted = json.loads(response.text.strip())
+                    for k, v in ai_extracted.items():
+                        if v is not None and k not in vitals:
+                            vitals[k] = v
+                            confidence[k] = "ai_inferred"
+                            snippets[k] = "Extracted via Gemini visual parsing"
+                except Exception as ge:
+                    logger.warning(f"Gemini enrichment skipped or failed: {ge}")
 
         # Ensure all numerical vitals are strictly rounded up to integer values
         for vk in ["age", "height", "weight", "ap_hi", "ap_lo", "cholesterol", "gluc", "smoke", "alco", "active"]:

@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Pill, RotateCw, X } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Pill, RotateCw, X, Sparkles, ShieldAlert, CheckCircle2, Clock, Info, BookOpen, Stethoscope, ArrowRight } from 'lucide-react';
 
 export interface Medication {
   id: string;
   name: string;
   brandNames: string;
-  category: 'antihypertensive' | 'lipid' | 'metabolic' | 'antiplatelet';
+  category: 'antihypertensive' | 'lipid' | 'metabolic' | 'antiplatelet' | 'lifestyle' | string;
   drugClass: string;
-  frequency: 'Once Daily (OD)' | 'Twice Daily (BD)' | 'Once Weekly (OW)' | 'As Needed (PRN)';
+  frequency: 'Once Daily (OD)' | 'Twice Daily (BD)' | 'Once Weekly (OW)' | 'As Needed (PRN)' | string;
   timing: string;
   typicalDose: string;
   indications: string[];
@@ -18,12 +19,14 @@ export interface Medication {
   contraindications: string[];
   monitoring: string[];
   guidelineSources: {
-    org: 'FDA' | 'ACC/AHA' | 'WHO' | 'NICE' | 'ADA/EASD' | string;
+    org: 'FDA' | 'ACC/AHA' | 'WHO' | 'NICE' | 'ADA/EASD' | 'USPSTF' | 'AHA' | string;
     badge: string;
     recommendation: string;
   }[];
   mechanismOfAction: string;
   traineePearls: string;
+  patientIndication?: string;
+  urgencyOrPriority?: string;
 }
 
 const MEDICATION_DATABASE: Medication[] = [
@@ -251,9 +254,12 @@ const MEDICATION_DATABASE: Medication[] = [
 interface MedicationReferenceProps {
   role?: string;
   patientVitals?: Record<string, unknown>;
+  dynamicMedications?: Medication[];
 }
 
-export default function MedicationReference({ role = 'clinician', patientVitals }: MedicationReferenceProps) {
+export default function MedicationReference({ role = 'clinician', patientVitals, dynamicMedications }: MedicationReferenceProps) {
+  const hasDynamicMeds = Boolean(dynamicMedications && dynamicMedications.length > 0);
+  const [activeTab, setActiveTab] = useState<'suggested' | 'formulary'>(hasDynamicMeds ? 'suggested' : 'formulary');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
@@ -342,8 +348,13 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0 pl-11 sm:pl-0">
-          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 sm:px-3 py-1 rounded-full bg-blue-100 text-blue-900 border border-blue-200">
-            {isClinician ? 'Clinician Reference' : isTrainee ? 'Trainee Reference' : 'Formulary'}
+          <span className={`text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 ${
+            hasDynamicMeds 
+              ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-sm'
+              : 'bg-blue-100 text-blue-900 border border-blue-200'
+          }`}>
+            {hasDynamicMeds && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />}
+            {hasDynamicMeds ? `${dynamicMedications?.length} Targeted Prescriptions` : (isClinician ? 'Clinician Reference' : isTrainee ? 'Trainee Reference' : 'Formulary')}
           </span>
           <span className="text-xs font-black text-indigo-700 hidden sm:inline">
             {isOpen ? 'Hide Drug Reference' : 'Explore Drug Reference'}
@@ -354,6 +365,188 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
 
       {isOpen && (
         <div className="p-4 sm:p-6 md:p-8 pt-2 border-t border-slate-200/70 space-y-4 sm:space-y-6">
+
+        {/* Dynamic vs Full Formulary Tab Navigation */}
+        {hasDynamicMeds && (
+          <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => setActiveTab('suggested')}
+              className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'suggested'
+                  ? 'bg-white text-slate-900 shadow-md shadow-slate-200/60 border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Suggested for Patient</span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
+                {dynamicMedications?.length || 0}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('formulary')}
+              className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'formulary'
+                  ? 'bg-white text-slate-900 shadow-md shadow-slate-200/60 border border-slate-200/60'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <BookOpen className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Master Drug Formulary</span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                {MEDICATION_DATABASE.length}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {/* TAB 1: DYNAMIC SUGGESTED MEDICATIONS */}
+        {activeTab === 'suggested' && hasDynamicMeds && (
+          <div className="space-y-4 sm:space-y-6">
+            {/* Clinical Rationale Banner */}
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0 mt-0.5 sm:mt-0">
+                  <Stethoscope className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
+                    Personalized Cardiovascular Pharmacotherapy
+                  </h4>
+                  <p className="text-xs text-slate-600 font-medium mt-0.5">
+                    Prescriptions synthesized according to 2017 ACC/AHA and USPSTF guidelines based on resting BP ({ap_hi}/{Number(patientVitals?.ap_lo || 80)} mmHg) and metabolic biomarkers.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200 shrink-0 self-start sm:self-auto">
+                ACC/AHA Class I Evidence
+              </span>
+            </div>
+
+            {/* Dynamic Cards Grid with clean airy layout and dark high-contrast text */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+              {dynamicMedications?.map((med) => {
+                return (
+                  <div 
+                    key={med.id}
+                    className="neu-flat rounded-3xl border border-slate-200/90 bg-white/95 p-5 sm:p-6 shadow-[5px_5px_18px_rgba(163,177,198,0.25),-5px_-5px_18px_rgba(255,255,255,0.9)] hover:border-blue-300 transition-all flex flex-col justify-between gap-5"
+                  >
+                    <div className="space-y-4">
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200/70">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="text-lg font-black text-slate-900 tracking-tight">
+                              {med.name}
+                            </h4>
+                            <span className="text-xs font-semibold text-slate-500">
+                              ({med.brandNames})
+                            </span>
+                          </div>
+                          <p className="text-xs font-bold text-blue-900 mt-1">
+                            {med.drugClass}
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200 shrink-0">
+                          {med.frequency}
+                        </span>
+                      </div>
+
+                      {/* Clinical Indication / Reason with generous spacing */}
+                      {med.patientIndication && (
+                        <div className="p-4 rounded-2xl bg-[#fdfbf7] border border-amber-200/80 text-xs my-1">
+                          <span className="font-black text-[10px] uppercase tracking-wider text-amber-900 block mb-1.5">
+                            Targeted Purpose
+                          </span>
+                          <p className="text-slate-800 leading-relaxed font-medium">
+                            {med.patientIndication}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Dosing & Administration Instructions */}
+                      <div className="p-4 rounded-2xl neu-inset bg-slate-50/70 border border-slate-200/70 space-y-3 text-xs">
+                        <div>
+                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">
+                            Recommended Dosage
+                          </span>
+                          <span className="font-semibold text-slate-800 leading-relaxed block">
+                            {med.typicalDose}
+                          </span>
+                        </div>
+                        <div className="pt-2.5 border-t border-slate-200/60">
+                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">
+                            Administration Advice
+                          </span>
+                          <span className="font-medium text-slate-700 leading-relaxed block">
+                            {med.timing}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Precautions & Side Effects */}
+                      <div className="space-y-1.5 text-xs pt-1">
+                        <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block">
+                          Precautions &amp; Side Effects
+                        </span>
+                        <p className="text-slate-700 leading-relaxed font-medium">
+                          {med.commonSideEffects?.slice(0, 3).join(' • ')}
+                        </p>
+                      </div>
+
+                      {/* Monitoring Plan */}
+                      {med.monitoring && med.monitoring.length > 0 && (
+                        <div className="space-y-1 text-xs pt-2.5 border-t border-slate-100">
+                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block">
+                            Monitoring Routine
+                          </span>
+                          <p className="text-slate-700 leading-relaxed font-medium">
+                            {med.monitoring.slice(0, 2).join(' • ')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions: Clinical Profile & Drug AI Deep Dive Link */}
+                    <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-1.5">
+                        {med.guidelineSources?.slice(0, 1).map((src, idx) => (
+                          <span key={idx} className="text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-200">
+                            {src.org}: {src.badge}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMed(med)}
+                          className="px-3 py-1.5 rounded-xl neu-button-secondary text-xs font-bold text-slate-700 hover:text-blue-800 transition-all cursor-pointer"
+                        >
+                          Details
+                        </button>
+
+                        <Link
+                          href={`/drugs?q=${encodeURIComponent(med.name)}&role=${role}`}
+                          className="px-3.5 py-1.5 rounded-xl neu-button-3d text-xs font-black text-white hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+                        >
+                          <span>Explore with AI</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: MASTER FORMULARY SEARCH (Shown when activeTab === 'formulary' or no dynamic meds) */}
+        {(activeTab === 'formulary' || !hasDynamicMeds) && (
+          <div className="space-y-4 sm:space-y-6">
 
       {/* Patient Contextual Recommendation Banner */}
       {(hasHypertension || hasHighCholesterol) && (
@@ -556,14 +749,23 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
 
                         {/* Action */}
                         <td className="py-3.5 px-3 text-right whitespace-nowrap">
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); setSelectedMed(med); }}
-                            className="text-xs font-bold text-blue-600 hover:text-blue-800 group-hover:underline inline-flex items-center gap-1"
-                          >
-                            Details
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setSelectedMed(med); }}
+                              className="text-xs font-bold text-slate-600 hover:text-blue-800 transition-colors"
+                            >
+                              Details
+                            </button>
+                            <Link
+                              href={`/drugs?q=${encodeURIComponent(med.name)}&role=${role}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-xs font-black text-blue-700 hover:text-blue-900 inline-flex items-center gap-0.5"
+                            >
+                              <span>AI Deep Dive</span>
+                              <ChevronRight className="w-3 h-3" />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -710,6 +912,8 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
           </div>
         )}
       </div>
+      </div>
+      )}
 
       {/* COMPREHENSIVE MODAL FOR EXPANDED CLINICAL DETAIL */}
       {selectedMed && (
@@ -825,7 +1029,15 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
               </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <Link
+                href={`/drugs?q=${encodeURIComponent(selectedMed.name)}&role=${role}`}
+                className="neu-button-secondary text-xs font-black px-4 py-2.5 text-blue-900 hover:text-blue-800 inline-flex items-center justify-center gap-2"
+              >
+                <span>Full FDA Monograph &amp; Studies in Drug Intelligence</span>
+                <ArrowRight className="w-3.5 h-3.5 text-blue-700" />
+              </Link>
+
               <button
                 type="button"
                 onClick={() => setSelectedMed(null)}

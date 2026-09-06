@@ -6,14 +6,18 @@
 # Node.js & Next.js Frontend
 # ------------------------------------------------------------------------------
 node_modules/
+**/node_modules/
 .pnp
 .pnp.js
 .next/
+**/.next/
 out/
 build/
 dist/
 .turbo/
+**/.turbo/
 *.tsbuildinfo
+next-env.d.ts.bak
 
 # Logs & Package Managers
 npm-debug.log*
@@ -27,18 +31,14 @@ lerna-debug.log*
 # Python Backend & Virtual Environments
 # ------------------------------------------------------------------------------
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
-# Python distribution / packaging
-!Client/src/lib/
-!Client/src/lib/**
 parts/
 sdist/
 var/
@@ -47,40 +47,61 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environments
+# Virtual Environments (Any Location)
 venv/
+**/venv/
 .venv/
+**/.venv/
 env/
+**/env/
 ENV/
 env.bak/
 venv.bak/
 
-# Testing & Coverage
+# Testing, Linting & Coverage
 .pytest_cache/
+**/.pytest_cache/
+.mypy_cache/
+**/.mypy_cache/
+.ruff_cache/
+**/.ruff_cache/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .tox/
 .nox/
 .hypothesis/
+test-results/
+playwright-report/
 
 # ------------------------------------------------------------------------------
-# Environment Variables & Secrets (CRITICAL FOR DEPLOYMENT)
+# Environment Variables & Secrets (CRITICAL FOR SECURITY)
 # ------------------------------------------------------------------------------
 .env
-.env*.local
-.env.development
-.env.test
-.env.production
-Client/.env
-Client/.env.local
-Backend/.env
+.env*
+**/.env
+**/.env*
+*.env
+*.env.*
 
-# Allow public example environment files
+# Explicitly whitelist documentation and example env files
 !.env.example
+!**/.env.example
 !.env.local.example
+!**/.env.local.example
 !Client/.env.example
 !Backend/.env.example
+
+# SSL Keys, Certificates & Credentials
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+secrets/
+**/*serviceAccountKey*.json
 
 # ------------------------------------------------------------------------------
 # IDE, Editors & Operating Systems
@@ -98,6 +119,7 @@ Backend/.env
 *.swp
 *.swo
 *~
+*.bak
 .DS_Store
 .DS_Store?
 ._*
@@ -105,10 +127,11 @@ Backend/.env
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
-# ------------------------------------------------------------------------------
-# Temporary Files, Scratch & Upload Dumps
-# ------------------------------------------------------------------------------
+# AI Agent, Editor & Scratch Dirs
+.gemini/
+.antigravity/
 uploads/
 temp_uploads/
 scratch/

@@ -17,6 +17,7 @@ type ResultPayload = {
   explanation: string;
   payload?: Record<string, unknown>;
   feature_impacts?: Record<string, number>;
+  suggested_medications?: any[];
   vitals?: Record<string, unknown>;
   extracted_parameters?: Record<string, unknown>;
   ocr_snippets?: Record<string, string>;
@@ -73,7 +74,49 @@ Your heart and arteries are currently experiencing elevated stress due to higher
           height: 175,
           weight: 82,
           role: "clinician"
-        }
+        },
+        suggested_medications: [
+          {
+            id: 'amlodipine',
+            name: 'Amlodipine',
+            brandNames: 'Norvasc',
+            category: 'antihypertensive',
+            drugClass: 'Dihydropyridine Calcium Channel Blocker (CCB)',
+            frequency: 'Once Daily (OD)',
+            timing: 'Take once daily in the morning with or without food. Maintain consistent daily timing.',
+            typicalDose: '5 mg PO once daily (titrate to 10 mg at 2–4 weeks if BP > 130/80 mmHg).',
+            patientIndication: 'Targeted for Stage 2 Hypertension (140/90 mmHg) and elevated arterial afterload to promote smooth peripheral vasodilation.',
+            urgencyOrPriority: 'Primary Blood Pressure Target',
+            indications: ['Stage 2 Essential Hypertension'],
+            commonSideEffects: ['Dose-dependent peripheral ankle edema', 'Flushing', 'Mild dizziness'],
+            seriousAdverseEffects: ['Severe symptomatic hypotension'],
+            contraindications: ['Severe hypotension', 'Significant aortic stenosis'],
+            monitoring: ['Resting seated blood pressure at 2 and 4 weeks', 'Assess lower extremities for ankle swelling'],
+            guidelineSources: [{ org: 'ACC/AHA', badge: 'Class I Guideline', recommendation: 'Recommended first-line dual therapy for Stage 2 hypertension.' }],
+            mechanismOfAction: 'Inhibits transmembrane calcium influx into vascular smooth muscle, reducing systemic vascular resistance.',
+            traineePearls: 'Pedal edema is due to precapillary arteriolar vasodilation rather than fluid overload.'
+          },
+          {
+            id: 'atorvastatin',
+            name: 'Atorvastatin',
+            brandNames: 'Lipitor',
+            category: 'lipid',
+            drugClass: 'HMG-CoA Reductase Inhibitor (High-Intensity Statin)',
+            frequency: 'Once Daily (OD)',
+            timing: 'Take once daily in the evening or at bedtime with or without food.',
+            typicalDose: '20–40 mg PO once daily at bedtime (target ≥50% LDL-C reduction).',
+            patientIndication: 'Targeted for high 10-year ASCVD risk (84.8%) and lipid modification (Cholesterol Tier 2/3).',
+            urgencyOrPriority: 'Atherosclerotic Plaque Stabilization',
+            indications: ['Primary ASCVD Prevention in High-Risk Cohort'],
+            commonSideEffects: ['Mild myalgia', 'Dyspepsia'],
+            seriousAdverseEffects: ['Rhabdomyolysis (<0.1%)'],
+            contraindications: ['Active hepatic disease', 'Pregnancy & lactation'],
+            monitoring: ['Fasting lipid profile at 8–12 weeks to confirm target LDL reduction'],
+            guidelineSources: [{ org: 'ACC/AHA', badge: 'Class I High-Intensity', recommendation: 'Cornerstone therapy for high-risk ASCVD cohorts.' }],
+            mechanismOfAction: 'Inhibits HMG-CoA reductase, upregulating hepatic LDL receptors and clearing atherogenic particles.',
+            traineePearls: 'Pleiotropic effects stabilize vulnerable plaque caps independently of LDL lowering.'
+          }
+        ]
       };
       setResultData(demoData);
       setLoading(false);
@@ -357,6 +400,7 @@ Your heart and arteries are currently experiencing elevated stress due to higher
             role={(resultData.payload?.role as string) || 'patient'}
             feature_impacts={resultData.feature_impacts}
             payload={resultData.payload}
+            suggested_medications={resultData.suggested_medications}
           />
 
           {/* Bottom Action Section: Download PDF Report Button (Bottom of screen for desktop & mobile) */}

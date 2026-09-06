@@ -98,7 +98,7 @@ ZEZE provides **three tailored operational modes**:
 | **Backend Service** | [FastAPI](https://fastapi.tiangolo.com/), Uvicorn ASGI, Pydantic v2 |
 | **Machine Learning** | [scikit-learn](https://scikit-learn.org/), Joblib, NumPy, Pandas, SciPy |
 | **Document Processing** | RapidOCR ONNX, PyPDF, OpenCV Headless, Pillow |
-| **Generative AI & Chat** | Google GenAI SDK (`gemini-2.5-flash`) for clinical conversational context |
+| **Generative AI & Chat** | Groq SDK (`llama-3.3-70b-versatile`) with optional Gemini fallback for clinical conversational context |
 | **Containerization** | Docker, Docker Compose, Multi-stage Builds |
 
 ---
@@ -222,10 +222,11 @@ ZEZE is architected for zero-friction deployment on modern cloud platforms.
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
 4. Add Environment Variables:
-   - `GEMINI_API_KEY`: Your Google Gemini API Key.
-   - `GEMINI_MODEL`: `gemini-2.5-flash`
-   - `GEMINI_TEMPERATURE`: `0.7`
+   - `GROQ_API_KEY`: Your Groq API Key (from https://console.groq.com/keys).
+   - `GROQ_MODEL`: `llama-3.3-70b-versatile`
+   - `GROQ_TEMPERATURE`: `0.5`
    - `CORS_ORIGINS`: `*` (or your frontend Vercel domain).
+   - *(Optional)* `GEMINI_API_KEY`: Fallback Google Gemini API key.
 5. Deploy the service and copy the public URL (e.g., `https://zeze-backend.onrender.com`).
 
 ---
@@ -250,7 +251,10 @@ ZEZE is architected for zero-friction deployment on modern cloud platforms.
 |---|---|---|---|
 | `PORT` | Port for the ASGI server to bind to | `8000` | No |
 | `HOST` | Host address for the server | `0.0.0.0` | No |
-| `GEMINI_API_KEY` | Google AI Studio Gemini API key for clinical chat | `AIzaSy...` | Optional |
+| `GROQ_API_KEY` | Groq API key for clinical chat & extraction | `gsk_...` | Recommended |
+| `GROQ_MODEL` | Groq LLM model identifier | `llama-3.3-70b-versatile` | No |
+| `GROQ_TEMPERATURE` | Sampling temperature | `0.5` | No |
+| `GEMINI_API_KEY` | Optional fallback Gemini key | `AIzaSy...` | Optional |
 | `GEMINI_MODEL` | Gemini LLM version identifier | `gemini-2.5-flash` | No |
 | `GEMINI_TEMPERATURE` | Temperature for response generation | `0.7` | No |
 | `CORS_ORIGINS` | Comma-delimited list of allowed CORS origins | `*` | No |

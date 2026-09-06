@@ -6,6 +6,7 @@ pandas
 numpy
 joblib
 google-genai
+groq
 python-dotenv
 python-multipart
 scipy
@@ -14,3 +15,9 @@ rapidocr-onnxruntime
 Pillow
 opencv-python
 onnxruntime
+langgraph
+langchain
+langchain-core
+langchain-groq
+httpx
+cachetools

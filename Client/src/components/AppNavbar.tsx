@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Stethoscope,
   GraduationCap,
   User,
-  LogOut,
-  Sparkles,
 } from "lucide-react";
-import { signOutFirebaseUser } from "@/lib/firebase";
 
 export interface RoleConfig {
   id: "clinician" | "trainee" | "patient";
@@ -57,13 +54,14 @@ interface AppNavbarProps {
   currentMode?: "upload" | "manual";
   onRoleChange?: (role: string) => void;
   onModeChange?: (mode: "upload" | "manual") => void;
-  pageType?: "assessment" | "result" | "profile";
+  pageType?: "assessment" | "result" | "profile" | "drugs";
   pageTitle?: string;
   isLocked?: boolean;
 }
 
 export default function AppNavbar({
   currentRole = "clinician",
+  onRoleChange,
   pageType,
   pageTitle,
   isLocked = false,
@@ -80,56 +78,12 @@ export default function AppNavbar({
     ROLES.find((r) => r.id === normalizedRole) || ROLES[0];
   const ActiveIcon = activeRoleConfig.icon;
 
-  const [profileName, setProfileName] = useState<string>("");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const rawUser = sessionStorage.getItem("zeze_user");
-        if (rawUser) {
-          const parsed = JSON.parse(rawUser);
-          if (parsed?.name) {
-            setProfileName(parsed.name);
-            return;
-          }
-        }
-        const rawProfile = sessionStorage.getItem("zeze_profile");
-        if (rawProfile) {
-          const parsed = JSON.parse(rawProfile);
-          if (parsed?.name) {
-            setProfileName(parsed.name);
-            return;
-          }
-        }
-      } catch {
-        // ignore
-      }
-
-      // Default fallback by role if no stored session name
-      if (normalizedRole === "clinician") {
-        setProfileName("Dr. Aarav Sharma, MD");
-      } else if (normalizedRole === "trainee") {
-        setProfileName("Rohan Verma");
-      } else {
-        setProfileName("Rahul Kumar");
-      }
-    }
-  }, [normalizedRole]);
-
-  const handleSignOut = () => {
-    signOutFirebaseUser().catch((err) => console.warn("[Auth] Firebase signOut error:", err));
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("zeze_user");
-      sessionStorage.removeItem("zeze_profile");
-      sessionStorage.removeItem("zeze_selected_role");
-      sessionStorage.removeItem("zeze_form_data");
-    }
-    router.push("/");
-  };
-
   // Determine dynamic page-aware title & subtitle
   const getPageTitle = () => {
     if (pageTitle) return pageTitle;
+    if (pageType === "drugs") {
+      return "Authoritative Drug Intelligence";
+    }
     if (pageType === "result") {
       if (normalizedRole === "clinician") return "Clinical Results Dashboard";
       if (normalizedRole === "trainee") return "Supervised Learning Dashboard";
@@ -185,43 +139,34 @@ export default function AppNavbar({
           </Link>
         )}
 
-        {/* RIGHT: Profile Icon (links to /profile) + Log Out */}
-        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">
-          {/* Profile Icon Button -> links to /profile */}
-          <Link
-            href="/profile"
-            title={`View Profile: ${profileName || activeRoleConfig.title}`}
-            className="neu-button-secondary inline-flex items-center gap-2.5 px-3 sm:px-4 py-2 text-slate-800 transition-all active:scale-95 group"
-          >
-            {/* Avatar Icon Well with role accent */}
+
+
+        {/* RIGHT: Current Active Role Badge & Change Role Action */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl neu-inset bg-white/70 shadow-inner">
             <div
-              className="w-7 h-7 rounded-xl flex items-center justify-center text-white shadow-xs group-hover:scale-105 transition-transform shrink-0"
+              className="w-6 h-6 rounded-xl flex items-center justify-center text-white shadow-xs shrink-0"
               style={{ backgroundColor: activeRoleConfig.accentBg }}
             >
               <ActiveIcon className="w-3.5 h-3.5 text-white" strokeWidth={2.4} />
             </div>
-
-            {/* Profile Name & Badge */}
-            <div className="hidden sm:flex flex-col text-left min-w-0 pr-0.5">
-              <span className="text-xs font-black text-[#0a192f] truncate max-w-[140px] leading-tight">
-                {profileName || "My Profile"}
+            <div className="flex flex-col text-left">
+              <span className="text-[11px] sm:text-xs font-black text-[#0a192f] leading-tight">
+                {activeRoleConfig.title.split("/")[0].trim()}
               </span>
-              <span className="text-[9px] font-extrabold text-blue-800 uppercase tracking-wider leading-tight mt-0.5">
+              <span className="text-[9px] font-extrabold text-blue-800 uppercase tracking-wider leading-none">
                 {activeRoleConfig.badge}
               </span>
             </div>
-          </Link>
+          </div>
 
-          {/* Log Out Button */}
-          <button
-            type="button"
-            onClick={handleSignOut}
-            title="Log Out"
-            className="neu-button-secondary inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-slate-700 hover:text-rose-700 text-xs sm:text-sm font-black transition-all active:scale-95 cursor-pointer"
+          <Link
+            href="/select-role"
+            title="Switch Workspace Role"
+            className="neu-button-secondary px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black text-slate-700 hover:text-blue-700 transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5"
           >
-            <LogOut className="w-3.5 h-3.5 text-slate-600 hover:text-rose-600 shrink-0" />
-            <span className="hidden sm:inline">Log Out</span>
-          </button>
+            <span>Change Role</span>
+          </Link>
         </div>
       </div>
     </nav>
