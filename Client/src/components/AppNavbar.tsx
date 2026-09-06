@@ -107,11 +107,11 @@ export default function AppNavbar({
 
       // Default fallback by role if no stored session name
       if (normalizedRole === "clinician") {
-        setProfileName("Dr. Sarah Jenkins, MD");
+        setProfileName("Dr. Aarav Sharma, MD");
       } else if (normalizedRole === "trainee") {
-        setProfileName("Alex Rivera");
+        setProfileName("Rohan Verma");
       } else {
-        setProfileName("John Doe");
+        setProfileName("Rahul Kumar");
       }
     }
   }, [normalizedRole]);

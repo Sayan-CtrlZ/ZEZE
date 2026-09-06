@@ -120,10 +120,10 @@ export default function ProfileModal({
   // Resolve active name based on selected role
   const resolvedName =
     role === "clinician"
-      ? clinicianName.trim() || "Dr. Sarah Jenkins, MD"
+      ? clinicianName.trim() || "Dr. Aarav Sharma, MD"
       : role === "trainee"
-      ? traineeName.trim() || "Alex Rivera, Medical Trainee"
-      : patientName.trim() || "John Doe";
+      ? traineeName.trim() || "Rohan Verma, Medical Trainee"
+      : patientName.trim() || "Rahul Kumar";
 
   const handleFinalizeAuth = async (authType: "signup" | "signin" | "google") => {
     setAuthLoading(true);
@@ -141,9 +141,9 @@ export default function ProfileModal({
 
     const roleDetails: RoleDetails =
       activeRole === "clinician"
-        ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
+        ? { specialty, hospital: hospital || "AIIMS New Delhi", licenseNumber }
         : activeRole === "trainee"
-        ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
+        ? { medicalSchool: medicalSchool || "All India Institute of Medical Sciences (AIIMS)", trainingLevel, academicFocus }
         : { age: patientAge, sex: patientSex, healthGoal };
 
     const userName = authType === "signin" ? (email ? email.split("@")[0] : resolvedName) : resolvedName;
@@ -203,10 +203,10 @@ export default function ProfileModal({
       }
       console.error("[Google Auth] Error:", err);
       setIsGoogleSignUp(true);
-      setEmail("alex.chen.md@cardio-health.org");
-      if (!clinicianName) setClinicianName("Dr. Alex Chen, MD");
-      if (!traineeName) setTraineeName("Alex Chen");
-      if (!patientName) setPatientName("Alex Chen");
+      setEmail("dr.sharma@aiims.edu");
+      if (!clinicianName) setClinicianName("Dr. Aarav Sharma, MD");
+      if (!traineeName) setTraineeName("Rohan Verma");
+      if (!patientName) setPatientName("Rahul Kumar");
       setStep("details");
     } finally {
       setAuthLoading(false);
@@ -396,7 +396,7 @@ export default function ProfileModal({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="e.g. physician@hospital.org"
+                    placeholder="e.g. doctor@aiims.edu"
                     className="neu-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -705,7 +705,7 @@ export default function ProfileModal({
                     required
                     value={clinicianName}
                     onChange={(e) => setClinicianName(e.target.value)}
-                    placeholder="e.g. Dr. Sarah Jenkins, MD"
+                    placeholder="e.g. Dr. Aarav Sharma, MD"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -731,20 +731,20 @@ export default function ProfileModal({
                     type="text"
                     value={hospital}
                     onChange={(e) => setHospital(e.target.value)}
-                    placeholder="e.g. Metropolitan Heart Hospital"
+                    placeholder="e.g. AIIMS New Delhi"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                    License / NPI <span className="text-slate-500 font-normal">(Optional)</span>
+                    Medical Registration Number <span className="text-slate-500 font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
                     value={licenseNumber}
                     onChange={(e) => setLicenseNumber(e.target.value)}
-                    placeholder="e.g. NPI-19482048"
+                    placeholder="e.g. NMC-2019-038291"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -762,7 +762,7 @@ export default function ProfileModal({
                     required
                     value={traineeName}
                     onChange={(e) => setTraineeName(e.target.value)}
-                    placeholder="e.g. Alex Rivera"
+                    placeholder="e.g. Rohan Verma"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -775,7 +775,7 @@ export default function ProfileModal({
                     type="text"
                     value={medicalSchool}
                     onChange={(e) => setMedicalSchool(e.target.value)}
-                    placeholder="e.g. Johns Hopkins School of Medicine"
+                    placeholder="e.g. All India Institute of Medical Sciences (AIIMS)"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -787,14 +787,14 @@ export default function ProfileModal({
                   <select
                     value={trainingLevel}
                     onChange={(e) => setTrainingLevel(e.target.value)}
-                    className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                    className="neu-input w-full px-4.5 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   >
-                    <option value="Pre-Med / Undergraduate">Pre-Med / Undergraduate</option>
-                    <option value="MS1-MS2 Pre-Clinical">MS1-MS2 Pre-Clinical Years</option>
-                    <option value="MS3 - Clinical Rotations">MS3 - Clinical Rotations</option>
-                    <option value="MS4 - Advanced Sub-Internship">MS4 - Advanced Sub-Internship</option>
-                    <option value="Internal Medicine Resident">Internal Medicine Resident</option>
-                    <option value="Cardiology Fellow">Cardiology Fellow</option>
+                    <option value="MBBS 1st/2nd Prof - Pre-Clinical">MBBS 1st/2nd Prof - Pre-Clinical</option>
+                    <option value="MBBS 3rd/Final Prof - Clinical Postings">MBBS 3rd/Final Prof - Clinical Postings</option>
+                    <option value="CRRI / Compulsory Rotatory Intern">CRRI / Compulsory Rotatory Intern</option>
+                    <option value="Junior Resident (JR) - MD/MS Medicine">Junior Resident (JR) - MD/MS Medicine</option>
+                    <option value="Senior Resident (SR) - Cardiology">Senior Resident (SR) - Cardiology</option>
+                    <option value="DM / DNB Cardiology Fellow">DM / DNB Cardiology Fellow</option>
                   </select>
                 </div>
 
@@ -806,7 +806,7 @@ export default function ProfileModal({
                     type="text"
                     value={academicFocus}
                     onChange={(e) => setAcademicFocus(e.target.value)}
-                    placeholder="e.g. Hemodynamics, Coronary Pathophysiology"
+                    placeholder="e.g. Preventive Cardiology & CAD in South Asian Cohorts"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -824,7 +824,7 @@ export default function ProfileModal({
                     required
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
-                    placeholder="e.g. John Doe"
+                    placeholder="e.g. Rahul Kumar"
                     className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -1002,7 +1002,7 @@ export default function ProfileModal({
                       required
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="e.g. physician@hospital.org"
+                      placeholder="e.g. doctor@aiims.edu"
                       className="neu-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                     />
                   </div>

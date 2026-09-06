@@ -97,10 +97,10 @@ export default function SignUpPage() {
   // Resolved user name
   const resolvedName =
     role === "clinician"
-      ? clinicianName.trim() || "Dr. Sarah Jenkins, MD"
+      ? clinicianName.trim() || "Dr. Aarav Sharma, MD"
       : role === "trainee"
-      ? traineeName.trim() || "Alex Rivera, Medical Trainee"
-      : patientName.trim() || "John Doe";
+      ? traineeName.trim() || "Rohan Verma, Medical Trainee"
+      : patientName.trim() || "Rahul Kumar";
 
   const handleFinalizeProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,16 +109,16 @@ export default function SignUpPage() {
 
     const roleDetails: RoleDetails =
       role === "clinician"
-        ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
+        ? { specialty, hospital: hospital || "AIIMS New Delhi", licenseNumber }
         : role === "trainee"
-        ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
+        ? { medicalSchool: medicalSchool || "All India Institute of Medical Sciences (AIIMS)", trainingLevel, academicFocus }
         : { age: patientAge, sex: patientSex };
 
     try {
       if (isGoogleSignUp) {
         await loginWithGoogle("signup", role, roleDetails);
       } else {
-        const fallbackEmail = email || `${resolvedName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor"}@zeze.ai`;
+        const fallbackEmail = email || `${resolvedName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor"}@aiims.edu`;
         await registerWithEmail(fallbackEmail, "Temporary123!", {
           name: resolvedName,
           role,
@@ -145,10 +145,10 @@ export default function SignUpPage() {
       const googleName =
         res.name ||
         (role === "clinician"
-          ? clinicianName || "Dr. Alex Chen, MD"
+          ? clinicianName || "Dr. Aarav Sharma, MD"
           : role === "trainee"
-          ? traineeName || "Alex Chen"
-          : patientName || "Alex Chen");
+          ? traineeName || "Rohan Verma"
+          : patientName || "Rahul Kumar");
 
       // Save initial profile requiring completion
       const initialProfile = {
@@ -162,7 +162,7 @@ export default function SignUpPage() {
           role === "clinician"
             ? { specialty: "", hospital: "", licenseNumber: "" }
             : role === "trainee"
-            ? { medicalSchool: "", trainingLevel: "MS3 - Clinical Rotations", academicFocus: "" }
+            ? { medicalSchool: "", trainingLevel: "MBBS 3rd/Final Prof - Clinical Postings", academicFocus: "" }
             : { age: "", sex: "Male" as const },
       };
       persistLocalSession(initialProfile);
@@ -178,8 +178,8 @@ export default function SignUpPage() {
       }
       console.error("[Google Auth] Error:", err);
       // Mock/fallback for resilient dev experience
-      const fallbackEmail = "alex.chen.md@cardio-health.org";
-      const fallbackName = role === "clinician" ? "Dr. Alex Chen, MD" : "Alex Chen";
+      const fallbackEmail = "dr.sharma@aiims.edu";
+      const fallbackName = role === "clinician" ? "Dr. Aarav Sharma, MD" : "Rohan Verma";
       const initialProfile = {
         uid: "usr_google_mock",
         name: fallbackName,
@@ -191,7 +191,7 @@ export default function SignUpPage() {
           role === "clinician"
             ? { specialty: "", hospital: "", licenseNumber: "" }
             : role === "trainee"
-            ? { medicalSchool: "", trainingLevel: "MS3 - Clinical Rotations", academicFocus: "" }
+            ? { medicalSchool: "", trainingLevel: "MBBS 3rd/Final Prof - Clinical Postings", academicFocus: "" }
             : { age: "", sex: "Male" as const },
       };
       persistLocalSession(initialProfile);
@@ -437,7 +437,7 @@ export default function SignUpPage() {
                       required
                       value={clinicianName}
                       onChange={(e) => setClinicianName(e.target.value)}
-                      placeholder="e.g. Dr. Sarah Jenkins, MD"
+                      placeholder="e.g. Dr. Aarav Sharma, MD"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -463,20 +463,20 @@ export default function SignUpPage() {
                       type="text"
                       value={hospital}
                       onChange={(e) => setHospital(e.target.value)}
-                      placeholder="e.g. City Heart Center"
+                      placeholder="e.g. AIIMS New Delhi"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
-                      Medical License Number <span className="text-slate-400 font-normal">(Optional)</span>
+                      Medical Registration Number <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
-                      placeholder="e.g. MD-982412"
+                      placeholder="e.g. NMC-2019-038291"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -494,7 +494,7 @@ export default function SignUpPage() {
                       required
                       value={traineeName}
                       onChange={(e) => setTraineeName(e.target.value)}
-                      placeholder="e.g. Alex Rivera"
+                      placeholder="e.g. Rohan Verma"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -507,7 +507,7 @@ export default function SignUpPage() {
                       type="text"
                       value={medicalSchool}
                       onChange={(e) => setMedicalSchool(e.target.value)}
-                      placeholder="e.g. University School of Medicine"
+                      placeholder="e.g. All India Institute of Medical Sciences (AIIMS)"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -521,13 +521,12 @@ export default function SignUpPage() {
                       onChange={(e) => setTrainingLevel(e.target.value)}
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     >
-                      <option value="MS1 - Pre-Clinical Sciences">MS1 - Pre-Clinical Sciences</option>
-                      <option value="MS2 - Organ Systems & Pathology">MS2 - Organ Systems &amp; Pathology</option>
-                      <option value="MS3 - Clinical Rotations">MS3 - Clinical Rotations</option>
-                      <option value="MS4 - Sub-Internship & Electives">MS4 - Sub-Internship &amp; Electives</option>
-                      <option value="PGY1 - Internal Medicine Resident">PGY1 - Internal Medicine Resident</option>
-                      <option value="PGY2/3 - Senior Medical Resident">PGY2/3 - Senior Medical Resident</option>
-                      <option value="Cardiology Fellow">Cardiology Fellow</option>
+                      <option value="MBBS 1st/2nd Prof - Pre-Clinical">MBBS 1st/2nd Prof - Pre-Clinical</option>
+                      <option value="MBBS 3rd/Final Prof - Clinical Postings">MBBS 3rd/Final Prof - Clinical Postings</option>
+                      <option value="CRRI / Compulsory Rotatory Intern">CRRI / Compulsory Rotatory Intern</option>
+                      <option value="Junior Resident (JR) - MD/MS Medicine">Junior Resident (JR) - MD/MS Medicine</option>
+                      <option value="Senior Resident (SR) - Cardiology">Senior Resident (SR) - Cardiology</option>
+                      <option value="DM / DNB Cardiology Fellow">DM / DNB Cardiology Fellow</option>
                     </select>
                   </div>
                 </div>
@@ -544,7 +543,7 @@ export default function SignUpPage() {
                       required
                       value={patientName}
                       onChange={(e) => setPatientName(e.target.value)}
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. Rahul Kumar"
                       className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>

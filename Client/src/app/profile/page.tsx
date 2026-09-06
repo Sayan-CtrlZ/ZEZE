@@ -25,7 +25,6 @@ import {
   saveUserProfileToFirestore,
   updateAccountPassword,
   deleteUserAccount,
-  auth,
   type RoleDetails,
 } from "@/lib/firebase";
 
@@ -127,23 +126,20 @@ function ProfileContent() {
       }
     }
 
-    let unsubAuth: (() => void) | undefined;
-    if (auth) {
-      unsubAuth = auth.onAuthStateChanged((currentUser) => {
-        if (currentUser) {
-          const hasPassProvider = currentUser.providerData?.some(
-            (p) => p.providerId === "password"
-          );
-          if (hasPassProvider) {
+    // Check if user has password set in local session
+    if (typeof window !== "undefined") {
+      try {
+        const stored = sessionStorage.getItem("zeze_user");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.hasPassword === true || parsed.authMethod === "email") {
             setHasPassword(true);
           }
         }
-      });
+      } catch {
+        // ignore
+      }
     }
-
-    return () => {
-      if (unsubAuth) unsubAuth();
-    };
   }, [isQueryCompleteMode, queryRole]);
 
   const isWorkspaceLocked = !isProfileComplete;
@@ -448,7 +444,7 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Dr. Sarah Jenkins, MD"
+                      placeholder="e.g. Dr. Aarav Sharma, MD"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
@@ -476,21 +472,21 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={hospital}
                       onChange={(e) => setHospital(e.target.value)}
-                      placeholder="e.g. City Heart Center"
+                      placeholder="e.g. AIIMS New Delhi"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-2">
-                      Medical License Number <span className="text-slate-400 font-normal">(Optional)</span>
+                      Medical Registration Number <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       disabled={!isEditing}
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
-                      placeholder="e.g. MD-982412"
+                      placeholder="e.g. NMC-2019-038291"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
@@ -509,7 +505,7 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. Alex Rivera"
+                      placeholder="e.g. Rohan Verma"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
@@ -523,7 +519,7 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={medicalSchool}
                       onChange={(e) => setMedicalSchool(e.target.value)}
-                      placeholder="e.g. Johns Hopkins School of Medicine"
+                      placeholder="e.g. All India Institute of Medical Sciences (AIIMS)"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
@@ -538,13 +534,12 @@ function ProfileContent() {
                       onChange={(e) => setTrainingLevel(e.target.value)}
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     >
-                      <option value="MS1 - Pre-Clinical Sciences">MS1 - Pre-Clinical Sciences</option>
-                      <option value="MS2 - Organ Systems & Pathology">MS2 - Organ Systems &amp; Pathology</option>
-                      <option value="MS3 - Clinical Rotations">MS3 - Clinical Rotations</option>
-                      <option value="MS4 - Sub-Internship & Electives">MS4 - Sub-Internship &amp; Electives</option>
-                      <option value="PGY1 - Internal Medicine Resident">PGY1 - Internal Medicine Resident</option>
-                      <option value="PGY2/3 - Senior Medical Resident">PGY2/3 - Senior Medical Resident</option>
-                      <option value="Cardiology Fellow">Cardiology Fellow</option>
+                      <option value="MBBS 1st/2nd Prof - Pre-Clinical">MBBS 1st/2nd Prof - Pre-Clinical</option>
+                      <option value="MBBS 3rd/Final Prof - Clinical Postings">MBBS 3rd/Final Prof - Clinical Postings</option>
+                      <option value="CRRI / Compulsory Rotatory Intern">CRRI / Compulsory Rotatory Intern</option>
+                      <option value="Junior Resident (JR) - MD/MS Medicine">Junior Resident (JR) - MD/MS Medicine</option>
+                      <option value="Senior Resident (SR) - Cardiology">Senior Resident (SR) - Cardiology</option>
+                      <option value="DM / DNB Cardiology Fellow">DM / DNB Cardiology Fellow</option>
                     </select>
                   </div>
 
@@ -557,7 +552,7 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={academicFocus}
                       onChange={(e) => setAcademicFocus(e.target.value)}
-                      placeholder="e.g. Hemodynamics & Cardiovascular Pathophysiology"
+                      placeholder="e.g. Preventive Cardiology & CAD in South Asian Cohorts"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>
@@ -576,7 +571,7 @@ function ProfileContent() {
                       disabled={!isEditing}
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="e.g. John Doe"
+                      placeholder="e.g. Rahul Kumar"
                       className="neu-input w-full px-4.5 py-3.5 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none disabled:opacity-75"
                     />
                   </div>

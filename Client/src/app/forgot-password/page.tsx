@@ -101,7 +101,7 @@ export default function ForgotPasswordPage() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="physician@hospital.org"
+                      placeholder="doctor@aiims.edu"
                       className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>

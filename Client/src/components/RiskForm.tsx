@@ -279,7 +279,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
   };
 
   const loadDemoReport = () => {
-    const demoContent = "Patient Age: 58\nSex: Male\nBlood Pressure: 140/90 mmHg\nTotal Cholesterol: 245 mg/dL\nFasting Glucose: 110 mg/dL\nHeight: 175 cm\nWeight: 82 kg\nSymptoms: Mild exertional dyspnea when walking uphill.\n";
+    const demoContent = "Patient Name: Rajesh Kumar\nAge: 58\nSex: Male\nHospital: AIIMS New Delhi - Cardiology OPD\nAttending: Dr. Aarav Sharma, MD (NMC-2019-038291)\nBlood Pressure: 140/90 mmHg\nTotal Cholesterol: 245 mg/dL\nFasting Blood Sugar: 110 mg/dL\nHeight: 175 cm\nWeight: 82 kg\nSymptoms: Retrosternal chest tightness and exertional breathlessness when walking uphill.\n";
     const blob = new Blob([demoContent], { type: "text/plain" });
     const demoFile = new File([blob], "sample_lab_report.txt", { type: "text/plain" });
     setParseError("");
@@ -577,7 +577,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                       value={formData.symptoms} 
                       onChange={handleTextChange} 
                       className="w-full neu-input rounded-2xl p-3.5 sm:p-4 text-slate-900 text-sm placeholder:text-slate-400 outline-none min-h-[160px] sm:min-h-[220px] resize-none font-semibold leading-relaxed" 
-                      placeholder="Symptoms or clinical notes from report (e.g. chest tightness on exertion, shortness of breath, palpitations)..." 
+                      placeholder="Symptoms or clinical notes from lab slip (e.g. retrosternal chest discomfort, exertional breathlessness, palpitations)..." 
                     />
                   </div>
 
@@ -811,7 +811,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   value={formData.symptoms} 
                   onChange={handleTextChange} 
                   className="w-full neu-input rounded-2xl p-3.5 sm:p-4 text-slate-800 text-sm placeholder:text-slate-400 outline-none min-h-[160px] sm:min-h-[220px] resize-none font-semibold leading-relaxed" 
-                  placeholder="Describe feelings, symptoms, or medical notes (e.g. 'chest tightness on exertion, heavy legs')..." 
+                  placeholder="Describe feelings, symptoms, or clinical notes (e.g. 'retrosternal heaviness on exertion, shortness of breath, palpitations')..." 
                 />
               </div>
 

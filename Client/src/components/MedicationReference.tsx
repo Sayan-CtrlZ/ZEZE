@@ -400,7 +400,7 @@ export default function MedicationReference({ role = 'clinician', patientVitals 
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search medicine by name, brand, or frequency (e.g. Amlodipine, statin)..."
+            placeholder="Search medicine by generic or brand (e.g. Telma, Amlodipine, Atorva, Rosuvas)..."
             className="w-full pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 neu-input rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
           />
           {searchQuery && (
