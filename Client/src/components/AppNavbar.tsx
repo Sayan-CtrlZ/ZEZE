@@ -10,6 +10,7 @@ import {
   LogOut,
   Sparkles,
 } from "lucide-react";
+import { signOutFirebaseUser } from "@/lib/firebase";
 
 export interface RoleConfig {
   id: "clinician" | "trainee" | "patient";
@@ -58,12 +59,14 @@ interface AppNavbarProps {
   onModeChange?: (mode: "upload" | "manual") => void;
   pageType?: "assessment" | "result" | "profile";
   pageTitle?: string;
+  isLocked?: boolean;
 }
 
 export default function AppNavbar({
   currentRole = "clinician",
   pageType,
   pageTitle,
+  isLocked = false,
 }: AppNavbarProps) {
   const router = useRouter();
 
@@ -114,6 +117,7 @@ export default function AppNavbar({
   }, [normalizedRole]);
 
   const handleSignOut = () => {
+    signOutFirebaseUser().catch((err) => console.warn("[Auth] Firebase signOut error:", err));
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("zeze_user");
       sessionStorage.removeItem("zeze_profile");
@@ -143,27 +147,43 @@ export default function AppNavbar({
   const resolvedPageTitle = getPageTitle();
 
   return (
-    <nav className="w-full relative z-40 mb-6 sm:mb-8">
+    <nav className={`w-full relative z-40 ${pageType === "profile" ? "mb-2 sm:mb-3" : "mb-5 sm:mb-6"}`}>
       {/* Floating Glass-Neumorphic Pill Bar (.neu-pill-nav) */}
       <div className="w-full neu-pill-nav py-3 px-4 sm:px-7 flex items-center justify-between gap-3 sm:gap-4 transition-all">
         {/* LEFT: Logo & Page-Aware Heading */}
-        <Link
-          href={`/assessment?role=${normalizedRole}`}
-          className="flex items-center gap-3 group cursor-pointer shrink-0"
-        >
-          {/* Neumorphic 3D medallion */}
-          <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-flat flex items-center justify-center p-2 bg-[#edf3f9] border border-white/80 shadow-sm group-hover:scale-105 transition-transform shrink-0">
-            <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
+        {isLocked ? (
+          <div className="flex items-center gap-3 shrink-0 cursor-not-allowed opacity-90">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-flat flex items-center justify-center p-2 bg-[#edf3f9] border border-white/80 shadow-sm shrink-0">
+              <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-black tracking-tight text-[#0a192f] leading-tight">
+                ZEZE MED AI
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-700 uppercase tracking-wider leading-none mt-0.5">
+                Profile Setup Mode (Locked)
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-base sm:text-lg font-black tracking-tight text-[#0a192f] leading-tight">
-              ZEZE MED AI
-            </span>
-            <span className="text-[9px] sm:text-[10px] font-extrabold text-blue-800 uppercase tracking-wider leading-none mt-0.5">
-              {resolvedPageTitle}
-            </span>
-          </div>
-        </Link>
+        ) : (
+          <Link
+            href={`/assessment?role=${normalizedRole}`}
+            className="flex items-center gap-3 group cursor-pointer shrink-0"
+          >
+            {/* Neumorphic 3D medallion */}
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-flat flex items-center justify-center p-2 bg-[#edf3f9] border border-white/80 shadow-sm group-hover:scale-105 transition-transform shrink-0">
+              <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-base sm:text-lg font-black tracking-tight text-[#0a192f] leading-tight">
+                ZEZE MED AI
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold text-blue-800 uppercase tracking-wider leading-none mt-0.5">
+                {resolvedPageTitle}
+              </span>
+            </div>
+          </Link>
+        )}
 
         {/* RIGHT: Profile Icon (links to /profile) + Log Out */}
         <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0">

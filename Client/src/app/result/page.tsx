@@ -283,8 +283,8 @@ Your heart and arteries are currently experiencing elevated stress due to higher
       const data = await res.json();
       setMessages((prev) => [...prev, { role: "model", parts: data.response }]);
     } catch (err) {
-      console.error(err);
-      setMessages((prev) => [...prev, { role: "model", parts: "Sorry, I could not connect to the analysis engine." }]);
+      console.error("[Chat] Engine error:", err);
+      setMessages((prev) => [...prev, { role: "model", parts: "Something went wrong. Please try again." }]);
     } finally {
       setIsChatLoading(false);
     }

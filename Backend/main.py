@@ -8,7 +8,9 @@ import json
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from auth import auth_router
 
 app = FastAPI(title="ZEZE Cardiovascular Risk Prediction API")
 
@@ -19,6 +21,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request, exc):
+    logger.error(f"Server exception intercepted: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Something went wrong. Please try again."}
+    )
 
 @app.get("/")
 def health_check():

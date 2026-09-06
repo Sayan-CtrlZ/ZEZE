@@ -42,16 +42,7 @@ function AssessmentContent() {
       });
 
       if (!response.ok) {
-        let errMsg = "Failed to evaluate risk score.";
-        try {
-          const errData = await response.json();
-          if (errData && errData.detail) {
-            errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
-          }
-        } catch {
-          // fallback
-        }
-        throw new Error(errMsg);
+        throw new Error("Evaluation error");
       }
 
       const responseData = await response.json();
@@ -62,8 +53,8 @@ function AssessmentContent() {
       router.push('/result');
 
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "An unexpected error occurred";
-      setError(msg);
+      console.error("[Assessment] Manual entry error:", e);
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
@@ -91,16 +82,7 @@ function AssessmentContent() {
       });
 
       if (!response.ok) {
-        let errMsg = "Failed to evaluate document.";
-        try {
-          const errData = await response.json();
-          if (errData && errData.detail) {
-            errMsg = typeof errData.detail === 'string' ? errData.detail : JSON.stringify(errData.detail);
-          }
-        } catch {
-          // fallback
-        }
-        throw new Error(errMsg);
+        throw new Error("Document evaluation error");
       }
 
       const responseData = await response.json();
@@ -118,14 +100,14 @@ function AssessmentContent() {
       router.push('/result');
 
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "An unexpected error occurred";
-      setError(msg);
+      console.error("[Assessment] Document upload error:", e);
+      setError("Something went wrong. Please try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-2 sm:px-6 lg:px-8">
+    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-2 sm:px-6 lg:px-8 flex flex-col flex-1">
       {/* RESPONSIVE TOP BAR: MOBILE HAMBURGER & NESTED MENU / DESKTOP PILL */}
       <AppNavbar
         currentRole={currentRole}
@@ -135,7 +117,7 @@ function AssessmentContent() {
         pageType="assessment"
       />
 
-      <header className="text-center mb-6 sm:mb-8 flex flex-col items-center px-2">
+      <header className="text-center mb-4 sm:mb-6 flex flex-col items-center px-2 shrink-0">
         <div className="inline-flex items-center gap-2.5 px-3.5 sm:px-4 py-1.5 rounded-full neu-inset-sm text-[10px] sm:text-xs font-black tracking-widest text-blue-900 mb-2.5 sm:mb-3">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_8px_#2563eb] animate-pulse"></span>
           <span>ACTIVE ASSESSMENT</span>
@@ -148,7 +130,7 @@ function AssessmentContent() {
           }
         </h1>
 
-        <h2 className="text-[10px] sm:text-xs sm:text-sm font-extrabold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-slate-500 px-2 mb-4 sm:mb-6">
+        <h2 className="text-[10px] sm:text-xs sm:text-sm font-extrabold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-slate-500 px-2 mb-3 sm:mb-5">
           Zero Error Zonal Evaluation Model • {currentRole.toUpperCase()} WORKSPACE
         </h2>
 
@@ -181,7 +163,7 @@ function AssessmentContent() {
         </div>
       </header>
 
-      <section>
+      <section className="flex-1 flex flex-col">
         <RiskForm 
           onSubmit={handleSubmit} 
           onDocumentSubmit={handleDocumentSubmit} 
@@ -201,7 +183,7 @@ function AssessmentContent() {
 
 export default function Assessment() {
   return (
-    <main className="min-h-screen relative pt-6 pb-12 px-2 sm:px-6 lg:px-8 overflow-x-hidden flex flex-col justify-start">
+    <main className="min-h-screen relative pt-4 sm:pt-6 pb-3 sm:pb-4 px-2 sm:px-6 lg:px-8 overflow-x-hidden flex flex-col justify-start">
       <Suspense fallback={<div className="flex justify-center text-slate-900 font-black tracking-widest uppercase">Loading Assessment...</div>}>
         <AssessmentContent />
       </Suspense>

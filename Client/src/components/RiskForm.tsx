@@ -302,14 +302,14 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
   const labelClasses = "block text-xs font-black tracking-wider text-slate-700 mb-2 uppercase";
 
   return (
-    <form onSubmit={handleSubmit} className="neu-card-glass p-4 sm:p-8 lg:p-12 w-full max-w-full text-slate-900">
+    <form onSubmit={handleSubmit} className={`neu-card-glass p-4 sm:p-7 lg:p-10 w-full max-w-full text-slate-900 ${mode === 'upload' && uploadStep === 'drop' ? 'flex-1 flex flex-col justify-between min-h-[500px] sm:min-h-[560px] lg:min-h-[620px]' : ''}`}>
       
       {mode === 'upload' ? (
-        <div className="flex flex-col space-y-6 sm:space-y-8 w-full">
+        <div className={`flex flex-col w-full ${uploadStep === 'drop' ? 'flex-1 justify-between space-y-4 sm:space-y-6' : 'space-y-6 sm:space-y-8'}`}>
           
           {/* STEP 1: DROP / SELECT FILE */}
           {uploadStep === 'drop' && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 flex flex-col justify-between">
               <div 
                 onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                 onDragLeave={() => setIsDragging(false)}
@@ -322,7 +322,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     handleStartOcr(e.dataTransfer.files);
                   }
                 }}
-                className={`w-full neu-inset-deep rounded-3xl p-5 sm:p-12 text-center transition-all relative group border-2 border-dashed ${
+                className={`w-full neu-inset-deep rounded-3xl p-6 sm:p-12 lg:p-16 text-center transition-all relative group border-2 border-dashed flex-1 flex flex-col items-center justify-center min-h-[350px] sm:min-h-[420px] lg:min-h-[480px] ${
                   isDragging 
                     ? 'border-blue-700 ring-4 ring-blue-700/20 scale-[1.01]' 
                     : 'border-slate-300 hover:border-slate-400'
@@ -337,12 +337,12 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                   disabled={isLoading}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed" 
                 />
-                <div className="flex flex-col items-center justify-center space-y-4 pointer-events-none">
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-inset flex items-center justify-center text-blue-700 group-hover:scale-105 transition-transform bg-white/60">
+                <div className="flex flex-col items-center justify-center space-y-4 sm:space-y-5 pointer-events-none">
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl neu-inset flex items-center justify-center text-blue-700 group-hover:scale-105 transition-transform bg-white/60 shadow-sm">
                     <svg className="w-8 h-8 sm:w-10 sm:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                   </div>
                   <div>
-                    <h3 className="font-black text-xl sm:text-2xl text-slate-900 tracking-tight">Upload Clinical Report / Lab Slip</h3>
+                    <h3 className="font-black text-xl sm:text-2xl lg:text-3xl text-slate-900 tracking-tight">Upload Clinical Report / Lab Slip</h3>
                     <p className="text-xs sm:text-sm font-bold tracking-wider text-slate-500 uppercase mt-1">PDF, PNG, JPG, or TXT (Lipid Profile, Blood Pressure, Medical Records)</p>
                   </div>
                   <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full neu-inset-sm text-xs font-black text-blue-800">
@@ -352,7 +352,7 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
               </div>
 
               {/* Quick Action Demo Button (Exact 3D Navy Button) */}
-              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-1 sm:pt-2 shrink-0">
                 <span className="text-xs font-bold text-slate-500">Don&apos;t have a report on hand?</span>
                 <button
                   type="button"

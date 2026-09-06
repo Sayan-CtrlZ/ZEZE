@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import ProfileModal from "@/components/ProfileModal";
 import {
   Stethoscope,
   GraduationCap,
   User,
   ArrowRight,
   FileUp,
-  FileText,
   Activity,
   Cpu,
   Layers,
@@ -22,9 +20,6 @@ import {
 
 export default function Home() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [modalRole, setModalRole] = useState<string>("clinician");
-  const [modalTab, setModalTab] = useState<"signup" | "signin">("signup");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -34,12 +29,6 @@ export default function Home() {
       }
     }
   }, []);
-
-  const openProfileWithRole = (roleId: string, tab: "signup" | "signin" = "signup") => {
-    setModalRole(roleId);
-    setModalTab(tab);
-    setProfileModalOpen(true);
-  };
 
   const roles = [
     {
@@ -137,23 +126,21 @@ export default function Home() {
 
         {/* Right Action Controls: Sign In & Sign Up / Start */}
         <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            type="button"
-            onClick={() => openProfileWithRole(selectedRole || "clinician", "signin")}
-            className="neu-button-secondary px-3 sm:px-4 py-2 text-xs font-black text-slate-800 transition-colors cursor-pointer hidden xs:inline-flex items-center gap-1.5"
+          <Link
+            href="/signin"
+            className="neu-button-secondary px-3 sm:px-4 py-2 text-xs font-black text-slate-800 transition-colors cursor-pointer hidden xs:inline-flex items-center gap-1.5 active:scale-95"
           >
             <Lock className="w-3.5 h-3.5 text-slate-500" />
             <span>Sign In</span>
-          </button>
+          </Link>
 
-          <button
-            type="button"
-            onClick={() => openProfileWithRole(selectedRole || "clinician", "signup")}
-            className="neu-button-3d px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer"
+          <Link
+            href="/signup"
+            className="neu-button-3d px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Create Profile</span>
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -176,14 +163,13 @@ export default function Home() {
 
         {/* CTA BUTTONS */}
         <div className="flex flex-wrap items-center justify-center gap-3.5 sm:gap-4 mb-10 sm:mb-16">
-          <button
-            type="button"
-            onClick={() => openProfileWithRole("clinician")}
-            className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group cursor-pointer flex items-center gap-2"
+          <Link
+            href="/signup"
+            className="neu-button-3d px-6 sm:px-8 py-3.5 sm:py-4 text-xs sm:text-sm font-black tracking-wider group cursor-pointer flex items-center gap-2 active:scale-95"
           >
             <span>Create Profile &amp; Start</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-          </button>
+          </Link>
 
           <a
             href="#persona-selection"
@@ -253,43 +239,15 @@ export default function Home() {
                 </ul>
               </div>
 
-              {/* Action Buttons for this Persona */}
-              <div className="space-y-2 pt-2 border-t border-slate-200/60">
-                <button
-                  type="button"
-                  onClick={() => openProfileWithRole(role.id)}
-                  className="neu-button-3d w-full py-3 text-xs font-black tracking-wider cursor-pointer flex items-center justify-center gap-2"
+              {/* Action Button for this Persona */}
+              <div className="pt-2 border-t border-slate-200/60">
+                <Link
+                  href={`/signup?role=${role.id}&step=details`}
+                  className="neu-button-3d w-full py-3.5 text-xs sm:text-sm font-black tracking-wider cursor-pointer flex items-center justify-center gap-2 group hover:scale-[1.02] active:scale-[0.98] transition-all"
                 >
                   <span>Select &amp; Create Profile</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href={`/assessment?mode=upload&role=${role.id}`}
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        sessionStorage.setItem("zeze_selected_role", role.id);
-                      }
-                    }}
-                    className="neu-button-secondary py-2 text-[11px] font-black text-slate-700 text-center flex items-center justify-center gap-1.5"
-                  >
-                    <FileUp className="w-3 h-3 text-slate-500" />
-                    <span>OCR Scan</span>
-                  </Link>
-                  <Link
-                    href={`/assessment?mode=manual&role=${role.id}`}
-                    onClick={() => {
-                      if (typeof window !== "undefined") {
-                        sessionStorage.setItem("zeze_selected_role", role.id);
-                      }
-                    }}
-                    className="neu-button-secondary py-2 text-[11px] font-black text-slate-700 text-center flex items-center justify-center gap-1.5"
-                  >
-                    <FileText className="w-3 h-3 text-slate-500" />
-                    <span>Manual Form</span>
-                  </Link>
-                </div>
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                </Link>
               </div>
             </div>
           ))}
@@ -447,6 +405,9 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-6">
+          <Link href="/signin" className="hover:text-blue-700 transition-colors">
+            Sign In
+          </Link>
           <Link href="/signup" className="hover:text-blue-700 transition-colors">
             Sign Up
           </Link>
@@ -458,14 +419,6 @@ export default function Home() {
           </Link>
         </div>
       </footer>
-
-      {/* Profile Onboarding Modal */}
-      <ProfileModal
-        isOpen={profileModalOpen}
-        onClose={() => setProfileModalOpen(false)}
-        initialRole={modalRole}
-        initialTab={modalTab}
-      />
     </main>
   );
 }

@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // ZEZE MED AI - FIRESTORE SECURITY RULES
+    // Zero-Retention Guaranteed: Strictly User Profiles Only
+    // =========================================================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // -------------------------------------------------------------------------
+    // USERS COLLECTION
+    // Stored Data: Practitioner / User identity only (name, email, role,
+    // designation, specialty, hospital, licenseNumber, academic focus, etc.)
+    // -------------------------------------------------------------------------
+    match /users/{userId} {
+      // Allow read for authenticated application users
+      allow read: if isAuthenticated();
+
+      // Only the authenticated account owner can create, update, or delete their profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
+
+    // -------------------------------------------------------------------------
+    // ZERO-RETENTION ENFORCEMENT
+    // Explicitly block creation of any clinical imaging, medical scans, ECG slips,
+    // or diagnostic analysis records. ZEZE operates on a strict zero-retention policy.
+    // -------------------------------------------------------------------------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

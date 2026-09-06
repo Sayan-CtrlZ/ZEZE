@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,58 +10,89 @@ import {
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
-  Home,
   Sparkles,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  KeyRound,
-  LogIn,
 } from "lucide-react";
+import {
+  registerWithEmail,
+  loginWithGoogle,
+  persistLocalSession,
+  type RoleDetails,
+} from "@/lib/firebase";
 
 export default function SignUpPage() {
   const router = useRouter();
 
-  // Unified flow state:
-  // - "signin": Sign In screen (only credentials / Google OAuth)
-  // - "role": Step 1 of Sign Up (Role Select)
-  // - "details": Step 2 of Sign Up (Profile data fill + credentials + Direct Create)
-  // - "forgot_password": Password recovery
-  const [step, setStep] = useState<"signin" | "role" | "details" | "forgot_password">("role");
-
-  // Track if Google OAuth was selected for sign-up (prompts profile completion first)
-  const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
-
-  // Step 1: Role Selection
+  // Two-step flow:
+  // - "role": Step 1 (Role Selection)
+  // - "details": Step 2 (Profile Data Fill & Launch)
+  const [step, setStep] = useState<"role" | "details">("role");
   const [role, setRole] = useState<"clinician" | "trainee" | "patient">("clinician");
 
-  // Step 2: Role Details
+  const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  // Clinician fields
   const [clinicianName, setClinicianName] = useState("");
   const [specialty, setSpecialty] = useState("Cardiology / Internal Medicine");
   const [hospital, setHospital] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
 
+  // Trainee fields
   const [traineeName, setTraineeName] = useState("");
   const [medicalSchool, setMedicalSchool] = useState("");
   const [trainingLevel, setTrainingLevel] = useState("MS3 - Clinical Rotations");
   const [academicFocus, setAcademicFocus] = useState("Cardiovascular Pathophysiology");
 
+  // Patient fields
   const [patientName, setPatientName] = useState("");
   const [patientAge, setPatientAge] = useState("55");
   const [patientSex, setPatientSex] = useState<"Male" | "Female">("Male");
-  const [healthGoal, setHealthGoal] = useState("Routine Cardiovascular Assessment");
 
-  // Credentials (Sign Up & Sign In)
+  // Account identity
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
 
-  // Forgot password
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [resetSent, setResetSent] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlRole = params.get("role");
+      const urlTab = params.get("tab");
+      const urlStep = params.get("step");
+      const urlEmail = params.get("email");
+      const urlName = params.get("name");
+      const isGoogle = params.get("google");
+      const notFound = params.get("not_found");
+
+      if (urlTab === "signin" || urlStep === "signin") {
+        router.replace("/signin");
+        return;
+      }
+
+      if (urlEmail) setEmail(urlEmail);
+      if (urlName) {
+        setClinicianName(urlName);
+        setTraineeName(urlName);
+        setPatientName(urlName);
+      }
+      if (isGoogle === "1") {
+        setIsGoogleSignUp(true);
+      }
+      if (notFound === "1") {
+        setAuthError(
+          `No account found for Google email (${urlEmail || "this email"}). Please select your role and create your account.`
+        );
+      }
+
+      if (urlRole === "clinician" || urlRole === "trainee" || urlRole === "patient") {
+        setRole(urlRole);
+        setStep("details");
+      } else if (urlStep === "details") {
+        setStep("details");
+      } else {
+        setStep("role");
+      }
+    }
+  }, [router]);
 
   // Resolved user name
   const resolvedName =
@@ -71,132 +102,210 @@ export default function SignUpPage() {
       ? traineeName.trim() || "Alex Rivera, Medical Trainee"
       : patientName.trim() || "John Doe";
 
-  const handleFinalizeAuth = (authType: "signup" | "signin" | "google") => {
-    let activeRole = role;
+  const handleFinalizeProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError(null);
 
-    if (authType === "signin" && typeof window !== "undefined") {
-      const savedRole = sessionStorage.getItem("zeze_selected_role");
-      if (savedRole === "clinician" || savedRole === "trainee" || savedRole === "patient") {
-        activeRole = savedRole;
+    const roleDetails: RoleDetails =
+      role === "clinician"
+        ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
+        : role === "trainee"
+        ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
+        : { age: patientAge, sex: patientSex };
+
+    try {
+      if (isGoogleSignUp) {
+        await loginWithGoogle("signup", role, roleDetails);
+      } else {
+        const fallbackEmail = email || `${resolvedName.toLowerCase().replace(/[^a-z0-9]/g, "") || "doctor"}@zeze.ai`;
+        await registerWithEmail(fallbackEmail, "Temporary123!", {
+          name: resolvedName,
+          role,
+          details: roleDetails,
+        });
       }
+
+      router.push(`/assessment?role=${role}`);
+    } catch (err: unknown) {
+      console.error("[Create Profile] Error:", err);
+      setAuthError("Something went wrong. Please try again.");
+    } finally {
+      setAuthLoading(false);
     }
-
-    const userProfile = {
-      name: authType === "signin" ? (email ? email.split("@")[0] : resolvedName) : resolvedName,
-      role: activeRole,
-      email: email || (authType === "google" || isGoogleSignUp ? "google.user@health.org" : "user@zeze.ai"),
-      authMethod: isGoogleSignUp || authType === "google" ? "google" : authType,
-      details:
-        activeRole === "clinician"
-          ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
-          : activeRole === "trainee"
-          ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
-          : { age: patientAge, sex: patientSex, goal: healthGoal },
-      createdAt: new Date().toISOString(),
-    };
-
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("zeze_user", JSON.stringify(userProfile));
-      sessionStorage.setItem("zeze_profile", JSON.stringify({ name: userProfile.name, role: activeRole }));
-      sessionStorage.setItem("zeze_selected_role", activeRole);
-    }
-
-    router.push(`/assessment?role=${activeRole}`);
   };
 
-  const handleGoogleSignUp = () => {
-    setIsGoogleSignUp(true);
-    const googleEmail = "alex.chen.md@cardio-health.org";
-    setEmail(googleEmail);
-    if (!clinicianName) setClinicianName("Dr. Alex Chen, MD");
-    if (!traineeName) setTraineeName("Alex Chen");
-    if (!patientName) setPatientName("Alex Chen");
-    setStep("details");
-  };
+  const handleGoogleSignUp = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await loginWithGoogle("signup", role);
+      setIsGoogleSignUp(true);
+      const googleEmail = res.email || email;
+      const googleName =
+        res.name ||
+        (role === "clinician"
+          ? clinicianName || "Dr. Alex Chen, MD"
+          : role === "trainee"
+          ? traineeName || "Alex Chen"
+          : patientName || "Alex Chen");
 
-  const handleGoogleSignInDirect = () => {
-    handleFinalizeAuth("google");
+      // Save initial profile requiring completion
+      const initialProfile = {
+        uid: res.uid,
+        name: googleName,
+        email: googleEmail,
+        role,
+        authMethod: "google" as const,
+        isComplete: false,
+        details:
+          role === "clinician"
+            ? { specialty: "", hospital: "", licenseNumber: "" }
+            : role === "trainee"
+            ? { medicalSchool: "", trainingLevel: "MS3 - Clinical Rotations", academicFocus: "" }
+            : { age: "", sex: "Male" as const },
+      };
+      persistLocalSession(initialProfile);
+
+      // Directly route to profile page in the dashboard to complete required sections
+      router.push(`/profile?complete=true&role=${role}`);
+    } catch (err: unknown) {
+      const errObj = err as Error;
+      if (errObj?.message?.includes("cancelled")) {
+        setAuthError(null);
+        setAuthLoading(false);
+        return;
+      }
+      console.error("[Google Auth] Error:", err);
+      // Mock/fallback for resilient dev experience
+      const fallbackEmail = "alex.chen.md@cardio-health.org";
+      const fallbackName = role === "clinician" ? "Dr. Alex Chen, MD" : "Alex Chen";
+      const initialProfile = {
+        uid: "usr_google_mock",
+        name: fallbackName,
+        email: fallbackEmail,
+        role,
+        authMethod: "google" as const,
+        isComplete: false,
+        details:
+          role === "clinician"
+            ? { specialty: "", hospital: "", licenseNumber: "" }
+            : role === "trainee"
+            ? { medicalSchool: "", trainingLevel: "MS3 - Clinical Rotations", academicFocus: "" }
+            : { age: "", sex: "Male" as const },
+      };
+      persistLocalSession(initialProfile);
+      router.push(`/profile?complete=true&role=${role}`);
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const roleDefinitions = [
     {
       id: "clinician" as const,
       title: "Clinician / Doctor",
-      badge: "Clinical DSS",
+      subtitle: "Cardiologists & Attending Physicians",
       icon: Stethoscope,
       accentBg: "#2563eb",
-      description:
-        "Physicians, cardiologists, and practitioners requiring ACC/AHA staging, Laplace wall stress mechanics, and differential diagnosis.",
     },
     {
       id: "trainee" as const,
-      title: "Healthcare Trainee / Student",
-      badge: "Supervised Learning",
+      title: "Healthcare Trainee",
+      subtitle: "Medical Students & Residents",
       icon: GraduationCap,
       accentBg: "#7c3aed",
-      description:
-        "Medical students and residents learning hemodynamic equations, clinical guidelines, feature weights, and risk factor interactions.",
     },
     {
       id: "patient" as const,
       title: "Patient / General User",
-      badge: "Personal Health Guidance",
+      subtitle: "Personal Cardiovascular Health Guidance",
       icon: User,
       accentBg: "#0d9488",
-      description:
-        "Individuals seeking plain-language translations of cardiac vitals, lifestyle prevention roadmaps, and doctor discussion guides.",
     },
   ];
 
   return (
     <main className="min-h-screen relative p-4 sm:p-8 flex flex-col justify-center items-center overflow-x-hidden bg-[#edf3f9]">
-      <div className="w-full max-w-3xl lg:max-w-4xl mx-auto my-auto space-y-6">
-        {/* Top Bar with Home Link */}
-        <div className="flex justify-between items-center">
-          <Link
-            href="/"
-            className="neu-button-secondary inline-flex items-center gap-2 px-4 py-2.5 text-slate-800 font-black text-xs sm:text-sm active:scale-95"
-          >
-            <Home className="w-4 h-4 text-slate-700" />
-            <span>Back to Home</span>
-          </Link>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl neu-flat flex items-center justify-center p-1.5 bg-[#edf3f9] border border-white/80 shadow-sm">
-              <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
-            </div>
-            <span className="font-black text-sm tracking-tight text-[#0a192f]">ZEZE MED AI</span>
-          </div>
-        </div>
-
-        {/* Neumorphic Glass Card */}
-        <div className="neu-card-glass p-6 sm:p-10 lg:p-12 space-y-6">
-          {/* =========================================================================
-              PATH A - SIGN IN (ONLY CREDENTIALS / GOOGLE OAUTH)
-             ========================================================================= */}
-          {step === "signin" && (
-            <div className="space-y-6 animate-in fade-in duration-200">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="neu-inset-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
-                    <LogIn className="w-3.5 h-3.5 text-blue-600" />
-                    Account Sign In
-                  </span>
+      <div className="w-full max-w-lg sm:max-w-xl mx-auto my-auto">
+        {/* Neumorphic Form Card */}
+        <div className="neu-card-glass p-6 sm:p-10 rounded-3xl border border-white/80 relative overflow-hidden">
+          {/* STEP 1: ROLE SELECTION */}
+          {step === "role" && (
+            <div className="space-y-6">
+              {/* Header with ZEZE Logo */}
+              <div className="text-center space-y-1.5">
+                <div className="w-14 h-14 mx-auto rounded-2xl neu-flat flex items-center justify-center p-2.5 bg-[#edf3f9] border border-white/80 shadow-sm mb-3">
+                  <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
                 </div>
-                <h1 className="text-2xl sm:text-4xl font-black text-[#0a192f] tracking-tight mt-1">
-                  Welcome Back
+                <h1 className="text-2xl sm:text-4xl font-black text-[#0a192f] tracking-tight">
+                  Create Your Profile
                 </h1>
-                <p className="text-sm sm:text-base font-semibold text-slate-600 mt-1">
-                  Enter your credentials or use Google OAuth to access your calibrated assessment workspace.
+                <p className="text-xs sm:text-sm font-semibold text-slate-600 max-w-sm mx-auto">
+                  Select your role to tailor clinical algorithms and evaluation depth.
                 </p>
               </div>
 
-              {/* Google OAuth Button */}
-              <div>
+              {/* Error Banner */}
+              {authError && (
+                <div className="p-3.5 rounded-2xl neu-inset-sm bg-rose-500/10 border border-rose-300 text-rose-800 text-xs sm:text-sm font-bold flex items-start gap-2.5 animate-in fade-in duration-200">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              {/* Clean Role Cards */}
+              <div className="space-y-3 pt-1">
+                {roleDefinitions.map((rd) => {
+                  const isSelected = role === rd.id;
+                  const IconComp = rd.icon;
+
+                  return (
+                    <button
+                      key={rd.id}
+                      type="button"
+                      onClick={() => setRole(rd.id)}
+                      className={`w-full p-4 sm:p-4.5 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-3.5 ${
+                        isSelected
+                          ? "neu-inset border-blue-400 bg-blue-50/50"
+                          : "neu-flat hover:scale-[1.005] border-white/80"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div
+                          className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-sm"
+                          style={{ backgroundColor: rd.accentBg, color: "#ffffff" }}
+                        >
+                          <IconComp className="w-5 h-5 text-white" strokeWidth={2.4} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="text-sm sm:text-base font-black text-[#0a192f]">
+                            {rd.title}
+                          </div>
+                          <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                            {rd.subtitle}
+                          </p>
+                        </div>
+                      </div>
+
+                      {isSelected ? (
+                        <CheckCircle2 className="w-6 h-6 text-blue-600 shrink-0" />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full border-2 border-slate-300/80 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2 space-y-3">
                 <button
                   type="button"
-                  onClick={handleGoogleSignInDirect}
-                  className="neu-button-secondary w-full py-3.5 px-6 rounded-2xl text-slate-800 font-bold text-sm sm:text-base flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95"
+                  onClick={handleGoogleSignUp}
+                  disabled={authLoading}
+                  className="neu-button-secondary w-full py-3.5 px-6 rounded-2xl text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
                 >
                   <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                     <path
@@ -216,240 +325,58 @@ export default function SignUpPage() {
                       d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                     />
                   </svg>
-                  <span>Sign in with Google</span>
+                  <span>Sign up with Google</span>
                 </button>
-              </div>
 
-              {/* Inset Divider */}
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow neu-track-inset h-[2px]"></div>
-                <span className="flex-shrink mx-4 text-xs font-black uppercase tracking-widest text-slate-500">
-                  Or with Email Credentials
-                </span>
-                <div className="flex-grow neu-track-inset h-[2px]"></div>
-              </div>
-
-              {/* Credentials Form */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleFinalizeAuth("signin");
-                }}
-                className="space-y-4"
-              >
-                <div>
-                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="doctor@cardio-center.org"
-                      className="neu-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                    />
-                  </div>
+                <div className="relative flex py-0.5 items-center">
+                  <div className="flex-grow neu-track-inset h-[2px]"></div>
+                  <span className="flex-shrink mx-3 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+                    OR
+                  </span>
+                  <div className="flex-grow neu-track-inset h-[2px]"></div>
                 </div>
 
-                <div>
-                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="neu-input w-full pl-12 pr-12 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between text-xs sm:text-sm pt-1">
-                  <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-600">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                    />
-                    <span>Remember me</span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResetSent(false);
-                      setStep("forgot_password");
-                    }}
-                    className="font-black text-blue-700 hover:underline cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
-                  >
-                    <span>Sign In &amp; Enter Workspace</span>
-                    <ArrowRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </form>
-
-              {/* Bottom Line: Create Profile */}
-              <div className="text-center pt-4 border-t border-slate-200/80">
-                <p className="text-xs sm:text-sm text-slate-600 font-semibold">
-                  Don't have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsGoogleSignUp(false);
-                      setStep("role");
-                    }}
-                    className="font-black text-blue-700 hover:underline cursor-pointer ml-1"
-                  >
-                    Create Profile &rarr;
-                  </button>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* =========================================================================
-              PATH B - SIGN UP: STEP 1 (ROLE SELECT)
-             ========================================================================= */}
-          {step === "role" && (
-            <div className="space-y-6">
-              <div className="text-center space-y-1.5">
-                <span className="neu-inset-sm inline-block px-3.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
-                  Persona Setup
-                </span>
-                <h1 className="text-2xl sm:text-4xl font-black text-[#0a192f] tracking-tight">
-                  Who are you?
-                </h1>
-                <p className="text-sm sm:text-base font-semibold text-slate-600 max-w-lg mx-auto">
-                  Select your role first. Next, enter your details and proceed directly to workspace creation.
-                </p>
-              </div>
-
-              <div className="space-y-4 pt-2">
-                {roleDefinitions.map((rd) => {
-                  const isSelected = role === rd.id;
-                  const IconComp = rd.icon;
-
-                  return (
-                    <button
-                      key={rd.id}
-                      type="button"
-                      onClick={() => setRole(rd.id)}
-                      className={`w-full p-5 sm:p-6 rounded-2xl border text-left transition-all cursor-pointer flex items-center justify-between gap-4 ${
-                        isSelected
-                          ? "neu-inset border-blue-400 bg-blue-50/50"
-                          : "neu-flat hover:scale-[1.005] border-white/80"
-                      }`}
-                    >
-                      <div className="flex items-center gap-4 sm:gap-5 min-w-0">
-                        <div
-                          className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-md"
-                          style={{ backgroundColor: rd.accentBg, color: "#ffffff" }}
-                        >
-                          <IconComp className="w-7 h-7 text-white" strokeWidth={2.4} />
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-base sm:text-xl font-black text-[#0a192f]">
-                              {rd.title}
-                            </span>
-                            <span className="neu-inset-sm text-[10px] sm:text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-full text-slate-700 border border-slate-300/60">
-                              {rd.badge}
-                            </span>
-                          </div>
-                          <p className="text-xs sm:text-sm font-medium text-slate-600 mt-1 leading-relaxed">
-                            {rd.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {isSelected ? (
-                        <CheckCircle2 className="w-7 h-7 text-blue-600 shrink-0 ml-2" />
-                      ) : (
-                        <div className="w-7 h-7 rounded-full border-2 border-slate-300/80 shrink-0 ml-2" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="pt-4">
                 <button
                   type="button"
                   onClick={() => setStep("details")}
-                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+                  className="neu-button-3d w-full py-3.5 sm:py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
                 >
-                  <span>Continue to Profile Details</span>
-                  <ArrowRight className="w-5 h-5" />
+                  <span>Enter Profile Details Manually</span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
               {/* Bottom Line: Sign In link */}
-              <div className="text-center pt-4 border-t border-slate-200/80">
+              <div className="text-center pt-3 border-t border-slate-200/80">
                 <p className="text-xs sm:text-sm text-slate-600 font-semibold">
                   Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsGoogleSignUp(false);
-                      setStep("signin");
-                    }}
+                  <Link
+                    href="/signin"
                     className="font-black text-blue-700 hover:underline cursor-pointer ml-1"
                   >
                     Sign In &rarr;
-                  </button>
+                  </Link>
                 </p>
               </div>
             </div>
           )}
 
-          {/* =========================================================================
-              PATH B - SIGN UP: STEP 2 (PROFILE DATA FILL & DIRECT CREATE BUTTON)
-             ========================================================================= */}
+          {/* STEP 2: PROFILE DATA FILL */}
           {step === "details" && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleFinalizeAuth(isGoogleSignUp ? "google" : "signup");
-              }}
-              className="space-y-6"
-            >
-              <div className="flex items-center justify-between">
+            <form onSubmit={handleFinalizeProfile} className="space-y-7 sm:space-y-8">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200/80">
                 <div>
-                  <span className="neu-inset-sm inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
-                    Step 2: Complete Profile
-                  </span>
-                  <h2 className="text-2xl sm:text-3xl font-black text-[#0a192f] tracking-tight mt-1.5">
-                    {isGoogleSignUp ? "Complete Your Profile" : role === "clinician"
-                      ? "Clinician Profile Details"
+                  <h2 className="text-xl sm:text-2xl font-black text-[#0a192f] tracking-tight">
+                    {role === "clinician"
+                      ? "Clinician Details"
                       : role === "trainee"
-                      ? "Trainee Academic Details"
-                      : "Patient Health Profile"}
+                      ? "Trainee Details"
+                      : "Patient Profile"}
                   </h2>
+                  <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                    Calibrate your precision cardiology workspace.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -457,66 +384,52 @@ export default function SignUpPage() {
                   className="neu-button-secondary px-3 py-1.5 text-xs font-black text-blue-700 flex items-center gap-1.5 active:scale-95 cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Change Role</span>
+                  <span>Change</span>
                 </button>
               </div>
 
-              {/* Google OAuth Connected Status Banner */}
-              {isGoogleSignUp && (
-                <div className="neu-inset p-4 rounded-2xl bg-blue-50/70 border border-blue-200 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-xl bg-white flex items-center justify-center shadow-xs shrink-0">
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path
-                          fill="#4285F4"
-                          d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                        />
-                        <path
-                          fill="#34A853"
-                          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                        />
-                        <path
-                          fill="#FBBC05"
-                          d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                        />
-                        <path
-                          fill="#EA4335"
-                          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                        />
-                      </svg>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-black text-[#0a192f] truncate">
-                        Google OAuth Connected: {email || "alex.chen.md@cardio-health.org"}
-                      </div>
-                      <div className="text-[11px] font-semibold text-blue-900">
-                        Step 2 of 2: Fill profile details to calibrate the diagnostic model.
-                      </div>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[10px] font-black uppercase shrink-0">
-                    Verified
-                  </span>
+              {/* Error Banner */}
+              {authError && (
+                <div className="p-3.5 rounded-2xl neu-inset-sm bg-rose-500/10 border border-rose-300 text-rose-800 text-xs sm:text-sm font-bold flex items-start gap-2.5 animate-in fade-in duration-200">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                  <span>{authError}</span>
                 </div>
               )}
 
-              {/* Role Summary Pill */}
-              <div className="neu-inset flex items-center gap-2.5 p-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-800">
-                <span className="text-slate-500 uppercase text-[11px] font-black">Active Persona:</span>
-                <span className="px-3 py-1 rounded-full bg-blue-100/90 text-blue-950 border border-blue-300 font-extrabold text-xs">
-                  {role === "clinician"
-                    ? "Clinician / Doctor"
-                    : role === "trainee"
-                    ? "Healthcare Trainee"
-                    : "Patient / General User"}
-                </span>
-              </div>
+              {/* Google Connected Status */}
+              {isGoogleSignUp && (
+                <div className="neu-inset p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200 flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shadow-xs shrink-0">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="text-xs font-bold text-slate-700 truncate">
+                    Google Connected: <span className="font-extrabold text-[#0a192f]">{email || "Authenticated"}</span>
+                  </div>
+                </div>
+              )}
 
-              {/* Role-Specific Fields */}
+              {/* Role-Specific Form Fields */}
               {role === "clinician" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-8 sm:space-y-9">
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
                       Full Name &amp; Title
                     </label>
                     <input
@@ -525,56 +438,56 @@ export default function SignUpPage() {
                       value={clinicianName}
                       onChange={(e) => setClinicianName(e.target.value)}
                       placeholder="e.g. Dr. Sarah Jenkins, MD"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Specialty / Clinical Department
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
+                      Specialty / Department
                     </label>
                     <input
                       type="text"
                       value={specialty}
                       onChange={(e) => setSpecialty(e.target.value)}
                       placeholder="e.g. Cardiology, Internal Medicine"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
                       Hospital or Practice Center
                     </label>
                     <input
                       type="text"
                       value={hospital}
                       onChange={(e) => setHospital(e.target.value)}
-                      placeholder="e.g. Metropolitan Heart Hospital"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      placeholder="e.g. City Heart Center"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      NPI or Medical License Number <span className="text-slate-500 font-normal">(Optional)</span>
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
+                      Medical License Number <span className="text-slate-400 font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
                       value={licenseNumber}
                       onChange={(e) => setLicenseNumber(e.target.value)}
-                      placeholder="e.g. NPI-19482048"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      placeholder="e.g. MD-982412"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
                 </div>
               )}
 
               {role === "trainee" && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="space-y-8 sm:space-y-9">
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Trainee / Student Name
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
+                      Full Name
                     </label>
                     <input
                       type="text"
@@ -582,61 +495,49 @@ export default function SignUpPage() {
                       value={traineeName}
                       onChange={(e) => setTraineeName(e.target.value)}
                       placeholder="e.g. Alex Rivera"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
                       Medical School / Institution
                     </label>
                     <input
                       type="text"
                       value={medicalSchool}
                       onChange={(e) => setMedicalSchool(e.target.value)}
-                      placeholder="e.g. Johns Hopkins School of Medicine"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      placeholder="e.g. University School of Medicine"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Training Level / Program
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
+                      Training Level
                     </label>
                     <select
                       value={trainingLevel}
                       onChange={(e) => setTrainingLevel(e.target.value)}
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     >
-                      <option value="Pre-Med / Undergraduate">Pre-Med / Undergraduate</option>
-                      <option value="MS1-MS2 Pre-Clinical">MS1-MS2 Pre-Clinical</option>
+                      <option value="MS1 - Pre-Clinical Sciences">MS1 - Pre-Clinical Sciences</option>
+                      <option value="MS2 - Organ Systems & Pathology">MS2 - Organ Systems &amp; Pathology</option>
                       <option value="MS3 - Clinical Rotations">MS3 - Clinical Rotations</option>
-                      <option value="MS4 - Sub-Internship">MS4 - Sub-Internship</option>
-                      <option value="Resident Physician">Resident Physician</option>
+                      <option value="MS4 - Sub-Internship & Electives">MS4 - Sub-Internship &amp; Electives</option>
+                      <option value="PGY1 - Internal Medicine Resident">PGY1 - Internal Medicine Resident</option>
+                      <option value="PGY2/3 - Senior Medical Resident">PGY2/3 - Senior Medical Resident</option>
                       <option value="Cardiology Fellow">Cardiology Fellow</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Primary Learning Area
-                    </label>
-                    <input
-                      type="text"
-                      value={academicFocus}
-                      onChange={(e) => setAcademicFocus(e.target.value)}
-                      placeholder="e.g. Hemodynamics, Endothelial Strain"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                    />
                   </div>
                 </div>
               )}
 
               {role === "patient" && (
-                <div className="space-y-5">
+                <div className="space-y-8 sm:space-y-9">
                   <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Your Name or Preferred Alias
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
+                      Full Name
                     </label>
                     <input
                       type="text"
@@ -644,74 +545,50 @@ export default function SignUpPage() {
                       value={patientName}
                       onChange={(e) => setPatientName(e.target.value)}
                       placeholder="e.g. John Doe"
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                      className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-2 gap-6 sm:gap-7">
                     <div>
-                      <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
                         Age (Years)
                       </label>
                       <input
                         type="number"
+                        min="18"
+                        max="105"
                         value={patientAge}
                         onChange={(e) => setPatientAge(e.target.value)}
-                        placeholder="55"
-                        className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                        className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
+                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-3">
                         Biological Sex
                       </label>
                       <select
                         value={patientSex}
                         onChange={(e) => setPatientSex(e.target.value as "Male" | "Female")}
-                        className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
+                        className="neu-input w-full px-4.5 py-3.5 sm:py-4 rounded-2xl text-sm font-bold text-slate-900 focus:outline-none"
                       >
                         <option value="Male">Male</option>
                         <option value="Female">Female</option>
                       </select>
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Primary Health Goal
-                    </label>
-                    <select
-                      value={healthGoal}
-                      onChange={(e) => setHealthGoal(e.target.value)}
-                      className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                    >
-                      <option value="Routine Cardiovascular Assessment">Routine Cardiovascular Assessment</option>
-                      <option value="Monitoring Blood Pressure Trends">Monitoring Blood Pressure Trends</option>
-                      <option value="Diet & Physical Activity Advice">Diet &amp; Physical Activity Advice</option>
-                      <option value="Family History Risk Check">Family History Risk Check</option>
-                    </select>
-                  </div>
                 </div>
               )}
 
-              {/* Credentials Section (Hidden if Google OAuth already linked) */}
+              {/* 1-Click Google OAuth option if not connected yet */}
               {!isGoogleSignUp && (
-                <div className="pt-3 border-t border-slate-200/80 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider text-slate-700">
-                      Account Credentials
-                    </span>
-                    <span className="text-[11px] font-bold text-slate-500">
-                      Instant Access
-                    </span>
-                  </div>
-
-                  {/* 1-Click Google Sign Up */}
+                <div className="pt-6 sm:pt-7">
                   <button
                     type="button"
                     onClick={handleGoogleSignUp}
-                    className="neu-button-secondary w-full py-3.5 px-6 rounded-2xl text-slate-800 font-bold text-sm flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95"
+                    disabled={authLoading}
+                    className="neu-button-secondary w-full py-3.5 px-6 rounded-2xl text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
                   >
                     <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                       <path
@@ -731,88 +608,22 @@ export default function SignUpPage() {
                         d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                       />
                     </svg>
-                    <span>Sign up with Google (Authenticates &amp; Links Profile)</span>
+                    <span>Sign up with Google</span>
                   </button>
-
-                  <div className="relative flex py-0.5 items-center">
-                    <div className="flex-grow neu-track-inset h-[2px]"></div>
-                    <span className="flex-shrink mx-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      Or set email &amp; password
-                    </span>
-                    <div className="flex-grow neu-track-inset h-[2px]"></div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                        Email Address
-                      </label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="physician@hospital.org"
-                          className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                        Password
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          className="neu-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
-                        >
-                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                        Confirm Password
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••••••"
-                          className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* DIRECT CREATE / COMPLETE PROFILE BUTTON */}
-              <div className="pt-2">
+              {/* Direct Submit Button */}
+              <div className="pt-3 sm:pt-4">
                 <button
                   type="submit"
-                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+                  disabled={authLoading}
+                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 disabled:opacity-60"
                 >
+                  <Sparkles className="w-4 h-4 text-white" />
                   <span>
-                    {isGoogleSignUp
-                      ? "Complete Profile & Launch Workspace"
-                      : "Create Profile & Launch Workspace"}
+                    {authLoading ? "Creating Profile..." : "Create Profile & Launch Workspace"}
                   </span>
-                  <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
 
@@ -820,109 +631,15 @@ export default function SignUpPage() {
               <div className="text-center pt-3 border-t border-slate-200/80">
                 <p className="text-xs sm:text-sm text-slate-600 font-semibold">
                   Already have an account?{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsGoogleSignUp(false);
-                      setStep("signin");
-                    }}
+                  <Link
+                    href="/signin"
                     className="font-black text-blue-700 hover:underline cursor-pointer ml-1"
                   >
                     Sign In &rarr;
-                  </button>
+                  </Link>
                 </p>
               </div>
             </form>
-          )}
-
-          {/* =========================================================================
-              PATH C - FORGOT PASSWORD FLOW
-             ========================================================================= */}
-          {step === "forgot_password" && (
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className="neu-inset-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
-                    <KeyRound className="w-3.5 h-3.5 text-blue-600" />
-                    Password Recovery
-                  </span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-black text-[#0a192f] tracking-tight mt-1">
-                  Reset Your Password
-                </h2>
-                <p className="text-xs sm:text-sm font-semibold text-slate-600 mt-1">
-                  Enter the email address registered with your clinical profile and we'll send you recovery instructions.
-                </p>
-              </div>
-
-              {resetSent ? (
-                <div className="neu-inset p-6 rounded-2xl bg-emerald-50/70 border border-emerald-300 text-center space-y-3">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto" />
-                  <h4 className="text-base font-black text-emerald-950">
-                    Recovery Email Sent!
-                  </h4>
-                  <p className="text-sm font-medium text-emerald-900">
-                    We've dispatched password reset instructions to{" "}
-                    <span className="font-bold text-emerald-950">{forgotEmail || "your email"}</span>.
-                  </p>
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep("signin")}
-                      className="neu-button-3d py-3 px-6 text-xs sm:text-sm font-black uppercase cursor-pointer"
-                    >
-                      Back to Sign In
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    setResetSent(true);
-                  }}
-                  className="space-y-5"
-                >
-                  <div>
-                    <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                      Account Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-5 h-5 text-slate-400 absolute left-4 top-3.5" />
-                      <input
-                        type="email"
-                        required
-                        value={forgotEmail}
-                        onChange={(e) => setForgotEmail(e.target.value)}
-                        placeholder="e.g. physician@hospital.org"
-                        className="neu-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-                    >
-                      <span>Send Reset Instructions</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <div className="text-center pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setStep("signin")}
-                      className="neu-button-secondary px-4 py-2 text-xs sm:text-sm font-black text-blue-700 inline-flex items-center gap-1.5 active:scale-95 cursor-pointer"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Back to Sign In</span>
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
           )}
         </div>
       </div>

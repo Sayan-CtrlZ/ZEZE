@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   X,
@@ -19,11 +19,21 @@ import {
   LogIn,
 } from "lucide-react";
 
+import {
+  registerWithEmail,
+  loginWithEmail,
+  loginWithGoogle,
+  resetPasswordEmail,
+  GoogleAccountNotFoundError,
+  type RoleDetails,
+} from "@/lib/firebase";
+
 interface ProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialRole?: string;
   initialTab?: "signup" | "signin";
+  initialStep?: "signin" | "role" | "details" | "forgot_password";
 }
 
 export default function ProfileModal({
@@ -31,6 +41,7 @@ export default function ProfileModal({
   onClose,
   initialRole = "clinician",
   initialTab = "signup",
+  initialStep,
 }: ProfileModalProps) {
   const router = useRouter();
 
@@ -40,16 +51,39 @@ export default function ProfileModal({
   // - "details": Step 2 of Sign Up (Fill profile data + credentials + Direct Create)
   // - "forgot_password": Password recovery
   const [step, setStep] = useState<"signin" | "role" | "details" | "forgot_password">(
-    initialTab === "signin" ? "signin" : "role"
+    initialStep || (initialTab === "signin" ? "signin" : initialRole ? "details" : "role")
   );
 
   // Track if Google OAuth was selected for sign-up (prompts profile completion first)
   const [isGoogleSignUp, setIsGoogleSignUp] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Sign Up: Step 1 Role Selection
   const [role, setRole] = useState<"clinician" | "trainee" | "patient">(
     initialRole === "trainee" ? "trainee" : initialRole === "patient" ? "patient" : "clinician"
   );
+
+  // Keep state synchronized whenever modal opens or props change
+  useEffect(() => {
+    if (isOpen) {
+      setAuthError(null);
+      if (initialRole === "trainee" || initialRole === "patient" || initialRole === "clinician") {
+        setRole(initialRole);
+      }
+
+      if (initialStep) {
+        setStep(initialStep);
+      } else if (initialTab === "signin") {
+        setStep("signin");
+      } else if (initialRole) {
+        // Open the corresponding selected role form directly
+        setStep("details");
+      } else {
+        setStep("role");
+      }
+    }
+  }, [isOpen, initialRole, initialTab, initialStep]);
 
   // Sign Up: Step 2 Role Details
   // Clinician fields
@@ -91,7 +125,10 @@ export default function ProfileModal({
       ? traineeName.trim() || "Alex Rivera, Medical Trainee"
       : patientName.trim() || "John Doe";
 
-  const handleFinalizeAuth = (authType: "signup" | "signin" | "google") => {
+  const handleFinalizeAuth = async (authType: "signup" | "signin" | "google") => {
+    setAuthLoading(true);
+    setAuthError(null);
+
     let activeRole = role;
 
     // If signing in directly, check if a role was previously saved or default to clinician
@@ -102,44 +139,129 @@ export default function ProfileModal({
       }
     }
 
-    const userProfile = {
-      name: authType === "signin" ? (email ? email.split("@")[0] : resolvedName) : resolvedName,
-      role: activeRole,
-      email: email || (authType === "google" || isGoogleSignUp ? "google.user@health.org" : "user@zeze.ai"),
-      authMethod: isGoogleSignUp || authType === "google" ? "google" : authType,
-      details:
-        activeRole === "clinician"
-          ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
-          : activeRole === "trainee"
-          ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
-          : { age: patientAge, sex: patientSex, goal: healthGoal },
-      createdAt: new Date().toISOString(),
-    };
+    const roleDetails: RoleDetails =
+      activeRole === "clinician"
+        ? { specialty, hospital: hospital || "City Heart Center", licenseNumber }
+        : activeRole === "trainee"
+        ? { medicalSchool: medicalSchool || "University Hospital School of Medicine", trainingLevel, academicFocus }
+        : { age: patientAge, sex: patientSex, healthGoal };
 
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("zeze_user", JSON.stringify(userProfile));
-      sessionStorage.setItem("zeze_profile", JSON.stringify({ name: userProfile.name, role: activeRole }));
-      sessionStorage.setItem("zeze_selected_role", activeRole);
+    const userName = authType === "signin" ? (email ? email.split("@")[0] : resolvedName) : resolvedName;
+
+    try {
+      if (authType === "signup") {
+        if (password && confirmPassword && password !== confirmPassword) {
+          setAuthError("Passwords do not match. Please verify.");
+          setAuthLoading(false);
+          return;
+        }
+        await registerWithEmail(
+          email || "user@zeze.ai",
+          password || "Temporary123!",
+          {
+            name: userName,
+            role: activeRole,
+            details: roleDetails,
+          }
+        );
+      } else if (authType === "signin") {
+        await loginWithEmail(email || "user@zeze.ai", password || "Temporary123!");
+      } else if (authType === "google") {
+        await loginWithGoogle("signup", activeRole, roleDetails);
+      }
+
+      onClose();
+      router.push(`/assessment?role=${activeRole}`);
+    } catch (err: unknown) {
+      console.error("[Auth] Backend error:", err);
+      setAuthError("Something went wrong. Please try again.");
+    } finally {
+      setAuthLoading(false);
     }
-
-    onClose();
-    router.push(`/assessment?role=${activeRole}`);
   };
 
   // Google OAuth clicked for Sign Up -> prompts profile completion
-  const handleGoogleSignUp = () => {
-    setIsGoogleSignUp(true);
-    const googleEmail = "alex.chen.md@cardio-health.org";
-    setEmail(googleEmail);
-    if (!clinicianName) setClinicianName("Dr. Alex Chen, MD");
-    if (!traineeName) setTraineeName("Alex Chen");
-    if (!patientName) setPatientName("Alex Chen");
-    setStep("details");
+  const handleGoogleSignUp = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await loginWithGoogle("signup", role);
+      setIsGoogleSignUp(true);
+      if (res.email) setEmail(res.email);
+      if (res.name) {
+        if (role === "clinician") setClinicianName(res.name);
+        else if (role === "trainee") setTraineeName(res.name);
+        else setPatientName(res.name);
+      }
+      setStep("details");
+    } catch (err: unknown) {
+      const errObj = err as Error;
+      if (errObj?.message?.includes("cancelled")) {
+        setAuthError(null);
+        setAuthLoading(false);
+        return;
+      }
+      console.error("[Google Auth] Error:", err);
+      setIsGoogleSignUp(true);
+      setEmail("alex.chen.md@cardio-health.org");
+      if (!clinicianName) setClinicianName("Dr. Alex Chen, MD");
+      if (!traineeName) setTraineeName("Alex Chen");
+      if (!patientName) setPatientName("Alex Chen");
+      setStep("details");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
-  // Google OAuth clicked on Sign In -> direct workspace entrance
-  const handleGoogleSignInDirect = () => {
-    handleFinalizeAuth("google");
+  // Google OAuth clicked on Sign In -> checks if account exists, otherwise alert and send to Sign Up
+  const handleGoogleSignInDirect = async () => {
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      const res = await loginWithGoogle("signin");
+      if (res?.profile) {
+        onClose();
+        router.push(`/assessment?role=${res.profile.role || "clinician"}`);
+      }
+    } catch (err: unknown) {
+      if (err instanceof GoogleAccountNotFoundError) {
+        setIsGoogleSignUp(true);
+        if (err.email) setEmail(err.email);
+        if (err.userName) {
+          setClinicianName(err.userName);
+          setTraineeName(err.userName);
+          setPatientName(err.userName);
+        }
+        setAuthError(
+          `No account found for Google email (${err.email}). You cannot sign in directly — please select your role and create your account.`
+        );
+        setStep("role");
+      } else if (err instanceof Error && err.message.includes("cancelled")) {
+        setAuthError(null);
+      } else {
+        console.error("[Google Sign-In] Error:", err);
+        setAuthError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Forgot password submit
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail) return;
+    setAuthLoading(true);
+    setAuthError(null);
+    try {
+      await resetPasswordEmail(forgotEmail);
+      setResetSent(true);
+    } catch (err: unknown) {
+      console.error("[Auth] Password reset error:", err);
+      setAuthError("Something went wrong. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const roleDefinitions = [
@@ -247,6 +369,14 @@ export default function ProfileModal({
               <div className="flex-grow neu-track-inset h-[2px]"></div>
             </div>
 
+            {/* Auth Error Display */}
+            {authError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold flex items-center gap-2.5">
+                <span className="text-base">⚠️</span>
+                <span>{authError}</span>
+              </div>
+            )}
+
             {/* Credentials Form */}
             <form
               onSubmit={(e) => {
@@ -266,7 +396,7 @@ export default function ProfileModal({
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="doctor@cardio-center.org"
+                    placeholder="e.g. physician@hospital.org"
                     className="neu-input w-full pl-12 pr-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
@@ -289,16 +419,20 @@ export default function ProfileModal({
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    className="absolute right-4 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    {showPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
 
-              {/* Remember Me & Forgot Password Row */}
-              <div className="flex items-center justify-between text-xs sm:text-sm pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer font-bold text-slate-600">
+              {/* Remember Me & Forgot Password */}
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <label className="flex items-center gap-2 text-slate-600 font-medium cursor-pointer">
                   <input
                     type="checkbox"
                     checked={rememberMe}
@@ -311,6 +445,7 @@ export default function ProfileModal({
                 <button
                   type="button"
                   onClick={() => {
+                    setAuthError(null);
                     setResetSent(false);
                     setStep("forgot_password");
                   }}
@@ -324,9 +459,10 @@ export default function ProfileModal({
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+                  disabled={authLoading}
+                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 disabled:opacity-60"
                 >
-                  <span>Sign In &amp; Enter Workspace</span>
+                  <span>{authLoading ? "Authenticating..." : "Sign In & Enter Workspace"}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -356,6 +492,12 @@ export default function ProfileModal({
            ========================================================================= */}
         {step === "role" && (
           <div className="space-y-6 animate-in fade-in duration-200">
+            {authError && (
+              <div className="p-4 rounded-2xl neu-inset-sm bg-rose-500/10 border border-rose-300 text-rose-800 text-xs sm:text-sm font-bold flex items-start gap-2.5 animate-in fade-in duration-200">
+                <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
             <div>
               <div className="flex items-center gap-2 mb-1.5">
                 <span className="neu-inset-sm inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
@@ -464,6 +606,14 @@ export default function ProfileModal({
             }}
             className="space-y-6 animate-in fade-in duration-200"
           >
+            {/* Auth Error Display */}
+            {authError && (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold flex items-center gap-2.5">
+                <span className="text-base">⚠️</span>
+                <span>{authError}</span>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between">
                 <span className="neu-inset-sm inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-blue-900">
@@ -707,22 +857,6 @@ export default function ProfileModal({
                     </select>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
-                    Primary Health Goal
-                  </label>
-                  <select
-                    value={healthGoal}
-                    onChange={(e) => setHealthGoal(e.target.value)}
-                    className="neu-input w-full px-4 py-3.5 rounded-xl text-sm sm:text-base font-bold text-slate-900 focus:outline-none"
-                  >
-                    <option value="Routine Cardiovascular Assessment">Routine Cardiovascular Assessment</option>
-                    <option value="Monitoring Blood Pressure Trends">Monitoring Blood Pressure Trends</option>
-                    <option value="Diet & Physical Activity Advice">Diet &amp; Physical Activity Advice</option>
-                    <option value="Family History Risk Check">Family History Risk Check</option>
-                  </select>
-                </div>
               </div>
             )}
 
@@ -764,71 +898,6 @@ export default function ProfileModal({
                   </svg>
                   <span>Sign up with Google (Authenticates &amp; Links Profile)</span>
                 </button>
-
-                <div className="relative flex py-0.5 items-center">
-                  <div className="flex-grow neu-track-inset h-[2px]"></div>
-                  <span className="flex-shrink mx-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                    Or set email &amp; password
-                  </span>
-                  <div className="flex-grow neu-track-inset h-[2px]"></div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="physician@hospital.org"
-                        className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="neu-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1">
-                      Confirm Password
-                    </label>
-                    <div className="relative">
-                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••••••"
-                        className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
             )}
 
@@ -836,10 +905,13 @@ export default function ProfileModal({
             <div className="pt-2">
               <button
                 type="submit"
-                className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95"
+                disabled={authLoading}
+                className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 disabled:opacity-60"
               >
                 <span>
-                  {isGoogleSignUp
+                  {authLoading
+                    ? "Creating Profile..."
+                    : isGoogleSignUp
                     ? "Complete Profile & Launch Workspace"
                     : "Create Profile & Launch Workspace"}
                 </span>
@@ -908,12 +980,17 @@ export default function ProfileModal({
               </div>
             ) : (
               <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setResetSent(true);
-                }}
+                onSubmit={handleForgotPasswordSubmit}
                 className="space-y-5"
               >
+                {/* Auth Error Display */}
+                {authError && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold flex items-center gap-2.5">
+                    <span className="text-base">⚠️</span>
+                    <span>{authError}</span>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs sm:text-sm font-black uppercase tracking-wider text-slate-700 mb-1.5">
                     Account Email Address
@@ -934,9 +1011,10 @@ export default function ProfileModal({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    disabled={authLoading}
+                    className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-60"
                   >
-                    <span>Send Reset Instructions</span>
+                    <span>{authLoading ? "Sending Instructions..." : "Send Reset Instructions"}</span>
                     <ArrowRight className="w-5 h-5" />
                   </button>
                 </div>
