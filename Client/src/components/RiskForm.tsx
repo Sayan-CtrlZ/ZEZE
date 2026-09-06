@@ -387,33 +387,6 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
           {/* STEP 3: REVIEW & VERIFY SCREEN */}
           {uploadStep === 'review' && (
             <div className="w-full space-y-8">
-              
-              {/* Top Banner: Verification Notice with Visual Workflow */}
-              <div className="p-4 sm:p-7 neu-inset rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 bg-white/70 border border-emerald-200/60">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl neu-flat text-[#17805d] flex items-center justify-center shrink-0 bg-emerald-50">
-                    <svg className="w-6 h-6 sm:w-7 sm:h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-base sm:text-lg font-black text-slate-900">Review Extracted Data</h4>
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {Object.keys(ocrSnippets).length > 0 ? `${Object.keys(ocrSnippets).length} Variables Extracted` : 'AI Parsed'}
-                      </span>
-                    </div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-600">
-                      Report uploaded → AI extracted variables → <span className="text-blue-700 underline">Verify &amp; edit values</span> → Missing fields highlighted in amber below.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClearFiles}
-                  className="neu-button px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl text-xs font-black text-slate-800 hover:text-red-700 w-full sm:w-auto text-center transition-all shrink-0"
-                >
-                  Upload Another File
-                </button>
-              </div>
 
               {/* Editable Fields Grid (Spacious, Un-congested) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 w-full">
