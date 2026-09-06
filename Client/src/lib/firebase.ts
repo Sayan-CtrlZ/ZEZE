@@ -265,6 +265,15 @@ export const loginWithGoogle = async (
     ) {
       throw new Error("cancelled");
     }
+    if (errorObj.code === "auth/unauthorized-domain") {
+      const currentHost = typeof window !== "undefined" ? window.location.hostname : "your current domain";
+      const isIp = currentHost === "127.0.0.1" || currentHost.startsWith("192.168.") || currentHost.startsWith("10.");
+      const tip = isIp
+        ? `Domain '${currentHost}' is not authorized. Please open the app at http://localhost:3000 or add '${currentHost}' to Firebase Console > Authentication > Settings > Authorized domains.`
+        : `Domain '${currentHost}' is not authorized. Please add '${currentHost}' in Firebase Console (Authentication > Settings > Authorized domains).`;
+      console.error("[Firebase Unauthorized Domain]", tip);
+      throw new Error(tip);
+    }
     console.error("[Firebase Google Auth Error]", err);
     throw err;
   }

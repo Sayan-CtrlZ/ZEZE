@@ -235,7 +235,7 @@ export default function ProfileModal({
         setAuthError(null);
       } else {
         console.error("[Google Sign-In] Error:", err);
-        setAuthError("Something went wrong. Please try again.");
+        setAuthError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       }
     } finally {
       setAuthLoading(false);
