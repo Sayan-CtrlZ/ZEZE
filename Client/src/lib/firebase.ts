@@ -97,7 +97,45 @@ try {
 export { app, auth, db, googleProvider };
 
 export const getBackendBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000";
+};
+
+/**
+ * Resilient fetch that automatically tries localhost:10000 and localhost:8000
+ * if one of the local development ports is unreachable.
+ */
+export const backendFetch = async (
+  endpoint: string,
+  init?: RequestInit
+): Promise<Response> => {
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const primaryBase = getBackendBaseUrl().replace(/\/$/, "");
+  const primaryUrl = `${primaryBase}${cleanEndpoint}`;
+
+  try {
+    return await fetch(primaryUrl, init);
+  } catch (err: unknown) {
+    const isNetworkErr =
+      err instanceof TypeError ||
+      (err instanceof Error &&
+        (err.message.includes("fetch") ||
+          err.message.includes("NetworkError") ||
+          err.message.includes("Failed to fetch")));
+
+    if (isNetworkErr && (primaryBase.includes("localhost") || primaryBase.includes("127.0.0.1"))) {
+      const altBase = primaryBase.includes("8000")
+        ? primaryBase.replace("8000", "10000")
+        : primaryBase.replace("10000", "8000");
+      const altUrl = `${altBase}${cleanEndpoint}`;
+      try {
+        console.info(`[Backend Failover] ${primaryBase} unreachable, attempting ${altBase}...`);
+        return await fetch(altUrl, init);
+      } catch {
+        // Fall through to throw original error
+      }
+    }
+    throw err;
+  }
 };
 
 /**
@@ -150,9 +188,6 @@ export const registerWithEmail = async (
     details?: RoleDetails;
   }
 ): Promise<ZezeUserProfile> => {
-  const baseUrl = getBackendBaseUrl();
-  const url = `${baseUrl}/auth/register`;
-
   const payload = {
     name: profileData.name,
     email,
@@ -162,7 +197,7 @@ export const registerWithEmail = async (
   };
 
   try {
-    const res = await fetch(url, {
+    const res = await backendFetch("/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -208,15 +243,12 @@ export const loginWithEmail = async (
   email: string,
   pass: string
 ): Promise<ZezeUserProfile> => {
-  const baseUrl = getBackendBaseUrl();
-  const url = `${baseUrl}/auth/login`;
-
   const payload = {
     email,
     password: pass,
   };
 
-  const res = await fetch(url, {
+  const res = await backendFetch("/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -235,6 +267,7 @@ export const loginWithEmail = async (
   persistLocalSession(user, data.token);
   return user;
 };
+
 
 /**
  * Google Sign In / Sign Up using Firebase Auth Client Popup
@@ -294,7 +327,7 @@ export const loginWithGoogle = async (
 
   // Synchronize Google user with Backend & Firestore database
   try {
-    const res = await fetch(`${baseUrl}/auth/google`, {
+    const res = await backendFetch("/auth/google", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -365,9 +398,8 @@ export const loginWithGoogle = async (
  * Trigger Password Reset Email via FastAPI Backend (Firebase Identity Toolkit)
  */
 export const resetPasswordEmail = async (email: string): Promise<boolean> => {
-  const baseUrl = getBackendBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/auth/forgot-password`, {
+    const res = await backendFetch("/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -429,7 +461,7 @@ export const saveUserProfileToFirestore = async (
   // Update profile in backend
   try {
     const token = typeof window !== "undefined" ? sessionStorage.getItem("zeze_auth_token") : null;
-    await fetch(`${baseUrl}/auth/profile/${uid}`, {
+    await backendFetch(`/auth/profile/${uid}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -454,9 +486,8 @@ export const saveUserProfileToFirestore = async (
  * Fetch user profile from Backend / Cloud Firestore
  */
 export const getUserProfileFromFirestore = async (uid: string): Promise<ZezeUserProfile | null> => {
-  const baseUrl = getBackendBaseUrl();
   try {
-    const res = await fetch(`${baseUrl}/auth/profile/${uid}`);
+    const res = await backendFetch(`/auth/profile/${uid}`);
     if (res.ok) {
       const data = await res.json();
       if (data.user) {
@@ -478,7 +509,6 @@ export const updateAccountPassword = async (
   oldPassword?: string
 ): Promise<void> => {
   if (typeof window === "undefined") return;
-  const baseUrl = getBackendBaseUrl();
   let email = "";
   try {
     const raw = sessionStorage.getItem("zeze_user");
@@ -499,7 +529,7 @@ export const updateAccountPassword = async (
     }
   }
 
-  const res = await fetch(`${baseUrl}/auth/update-password`, {
+  const res = await backendFetch("/auth/update-password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, oldPassword, newPassword }),
@@ -531,7 +561,6 @@ export const updateAccountPassword = async (
  */
 export const deleteUserAccount = async (password?: string): Promise<void> => {
   if (typeof window === "undefined") return;
-  const baseUrl = getBackendBaseUrl();
   let uid = auth?.currentUser?.uid || "usr_current";
   let email = auth?.currentUser?.email || "";
 
@@ -555,7 +584,7 @@ export const deleteUserAccount = async (password?: string): Promise<void> => {
 
   // Call FastAPI backend to permanently delete user from Firebase Auth & Firestore
   try {
-    const res = await fetch(`${baseUrl}/auth/profile/${uid}`, {
+    const res = await backendFetch(`/auth/profile/${uid}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, idToken }),
