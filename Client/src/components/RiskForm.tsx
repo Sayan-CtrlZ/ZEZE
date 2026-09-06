@@ -575,6 +575,13 @@ export default function RiskForm({ onSubmit, isLoading, mode = 'upload' }: RiskF
                     <p className="text-[11px] text-center text-slate-500 font-bold mt-3 uppercase tracking-wider">
                       Calibrated Clinical Decision Support Model
                     </p>
+                    <button
+                      type="button"
+                      onClick={handleClearFiles}
+                      className="neu-button-secondary w-full mt-3 py-2.5 px-3 rounded-2xl text-xs font-black text-slate-700 hover:text-red-700 transition-all cursor-pointer text-center"
+                    >
+                      Upload Different Document
+                    </button>
                   </div>
                 </div>
 
