@@ -86,28 +86,28 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="min-h-screen relative p-4 sm:p-8 flex flex-col justify-center items-center overflow-x-hidden bg-[#edf3f9]">
+    <main className="h-dvh sm:min-h-screen relative p-3 sm:p-8 flex flex-col justify-center items-center overflow-hidden sm:overflow-auto bg-[#edf3f9]">
       <div className="w-full max-w-lg mx-auto my-auto">
         {/* Neumorphic Sign In Card */}
-        <div className="neu-card-glass p-6 sm:p-10 rounded-3xl border border-white/80 relative overflow-hidden">
-          <div className="space-y-6">
+        <div className="neu-card-glass p-4 sm:p-10 rounded-2xl sm:rounded-3xl border border-white/80 relative overflow-hidden">
+          <div className="space-y-3 sm:space-y-6">
             {/* Header */}
-            <div className="text-center space-y-1.5">
-              <div className="w-14 h-14 mx-auto rounded-2xl neu-flat flex items-center justify-center p-2.5 bg-[#edf3f9] border border-white/80 shadow-sm mb-3">
+            <div className="text-center space-y-0.5 sm:space-y-1.5">
+              <div className="w-9 h-9 sm:w-14 sm:h-14 mx-auto rounded-xl sm:rounded-2xl neu-flat flex items-center justify-center p-1.5 sm:p-2.5 bg-[#edf3f9] border border-white/80 shadow-sm mb-1.5 sm:mb-3">
                 <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
               </div>
-              <h1 className="text-2xl sm:text-4xl font-black text-[#0a192f] tracking-tight">
+              <h1 className="text-xl sm:text-4xl font-black text-[#0a192f] tracking-tight">
                 Welcome Back
               </h1>
-              <p className="text-xs sm:text-sm font-semibold text-slate-600 max-w-sm mx-auto">
+              <p className="text-[11px] sm:text-sm font-semibold text-slate-600 max-w-sm mx-auto line-clamp-2 sm:line-clamp-none">
                 Sign in to your clinical evaluation and precision cardiology workspace.
               </p>
             </div>
 
             {/* Error Banner */}
             {authError && (
-              <div className="p-3.5 rounded-2xl neu-inset-sm bg-rose-500/10 border border-rose-300 text-rose-800 text-xs sm:text-sm font-bold flex items-start gap-2.5 animate-in fade-in duration-200">
-                <div className="w-2.5 h-2.5 rounded-full bg-rose-500 mt-1 shrink-0" />
+              <div className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl neu-inset-sm bg-rose-500/10 border border-rose-300 text-rose-800 text-xs sm:text-sm font-bold flex items-start gap-2 animate-in fade-in duration-200">
+                <div className="w-2 h-2 rounded-full bg-rose-500 mt-1 shrink-0" />
                 <span>{authError}</span>
               </div>
             )}
@@ -118,9 +118,9 @@ export default function SignInPage() {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={authLoading}
-                className="neu-button-secondary w-full py-3.5 px-6 rounded-2xl text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                className="neu-button-secondary w-full py-2.5 sm:py-3.5 px-4 sm:px-6 rounded-xl sm:rounded-2xl text-slate-800 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 sm:gap-3 transition-all cursor-pointer active:scale-95 disabled:opacity-60"
               >
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
@@ -143,92 +143,92 @@ export default function SignInPage() {
             </div>
 
             {/* Divider */}
-            <div className="relative flex py-0.5 items-center">
+            <div className="relative flex py-0 sm:py-0.5 items-center">
               <div className="flex-grow neu-track-inset h-[2px]"></div>
-              <span className="flex-shrink mx-4 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <span className="flex-shrink mx-3 text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-slate-500">
                 Or continue with credentials
               </span>
               <div className="flex-grow neu-track-inset h-[2px]"></div>
             </div>
 
             {/* Email & Password Form */}
-            <form onSubmit={handleEmailSignIn} className="space-y-6 sm:space-y-7">
+            <form onSubmit={handleEmailSignIn} className="space-y-2.5 sm:space-y-6">
               <div>
-                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-2.5">
+                <label className="block text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-700 mb-1 sm:mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                  <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 absolute left-3 top-2.5 sm:left-3.5 sm:top-3.5" />
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="doctor@aiims.edu"
-                    className="neu-input w-full pl-10 pr-4 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
+                    className="neu-input w-full pl-9 pr-3.5 py-2 sm:pl-10 sm:pr-4 sm:py-3 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-2.5">
-                  <label className="text-xs font-black uppercase tracking-wider text-slate-700">
+                <div className="flex items-center justify-between mb-1 sm:mb-2">
+                  <label className="text-[11px] sm:text-xs font-black uppercase tracking-wider text-slate-700">
                     Password
                   </label>
                   <Link
                     href="/forgot-password"
-                    className="text-[11px] font-bold text-blue-700 hover:underline"
+                    className="text-[10px] sm:text-[11px] font-bold text-blue-700 hover:underline"
                   >
                     Forgot Password?
                   </Link>
                 </div>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                  <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 absolute left-3 top-2.5 sm:left-3.5 sm:top-3.5" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
-                    className="neu-input w-full pl-10 pr-10 py-3 rounded-xl text-sm font-bold text-slate-900 focus:outline-none"
+                    className="neu-input w-full pl-9 pr-9 py-2 sm:pl-10 sm:pr-10 sm:py-3 rounded-xl text-xs sm:text-sm font-bold text-slate-900 focus:outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+                    className="absolute right-3 top-2.5 sm:right-3.5 sm:top-3.5 text-slate-400 hover:text-slate-700 cursor-pointer"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div className="flex items-center justify-between pt-0.5 sm:pt-1">
+                <label className="flex items-center gap-1.5 sm:gap-2 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
                   />
-                  <span className="text-xs font-bold text-slate-600">Remember this session</span>
+                  <span className="text-[11px] sm:text-xs font-bold text-slate-600">Remember session</span>
                 </label>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-1 sm:pt-2">
                 <button
                   type="submit"
                   disabled={authLoading}
-                  className="neu-button-3d w-full py-4 px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2.5 cursor-pointer active:scale-95 disabled:opacity-60"
+                  className="neu-button-3d w-full py-2.5 sm:py-4 px-4 sm:px-8 text-xs sm:text-sm font-black uppercase tracking-wider flex items-center justify-center gap-2 sm:gap-2.5 cursor-pointer active:scale-95 disabled:opacity-60 rounded-xl sm:rounded-2xl"
                 >
-                  <Sparkles className="w-4 h-4 text-white" />
+                  <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                   <span>{authLoading ? "Signing In..." : "Sign In to Workspace"}</span>
                 </button>
               </div>
             </form>
 
             {/* Bottom Line: Create Profile Link */}
-            <div className="text-center pt-4 border-t border-slate-200/80">
-              <p className="text-xs sm:text-sm text-slate-600 font-semibold">
+            <div className="text-center pt-2 sm:pt-4 border-t border-slate-200/80">
+              <p className="text-[11px] sm:text-sm text-slate-600 font-semibold">
                 Don't have an account?{" "}
                 <Link
                   href="/signup"
