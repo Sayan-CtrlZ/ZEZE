@@ -1,18 +1,15 @@
-/**
- * ==============================================================================
- * ZEZE MED AI - BACKEND-DELEGATED AUTH & USER PROFILE SERVICE
- * ==============================================================================
- * 
- * ARCHITECTURE NOTE:
- * All authentication logic, Firebase Identity Toolkit calls, password hashing/resets,
- * and Cloud Firestore user collections are handled 100% BY THE BACKEND API.
- * 
- * The frontend contains ZERO Firebase Client SDK dependencies and requires
- * NO Firebase configuration or keys during deployment.
- * 
- * Only NEXT_PUBLIC_API_URL (pointing to your FastAPI backend) is needed.
- * ==============================================================================
- */
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  signInWithEmailAndPassword,
+  updatePassword as updateAuthPassword,
+  deleteUser as deleteAuthUser,
+  type Auth,
+} from "firebase/auth";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 export class GoogleAccountNotFoundError extends Error {
   email: string;
@@ -69,10 +66,35 @@ export interface ZezeUserProfile {
   updatedAt?: unknown;
 }
 
-// Safe stubs for any legacy references (Frontend does not require Firebase client)
-export const auth = null;
-export const db = null;
-export const app = null;
+// ------------------------------------------------------------------------------
+// Firebase Client SDK Configuration & Initialization
+// ------------------------------------------------------------------------------
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBpJtrd-kwvNV9V5vePiKkkykhBsdeNKHQ",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "zeze-3e3d1.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "zeze-3e3d1",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "zeze-3e3d1.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "201767435174",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:201767435174:web:e8b5dfad6fb4995a2a6d67",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-82NNW9TQHC",
+};
+
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+let db: Firestore | null = null;
+let googleProvider: GoogleAuthProvider | null = null;
+
+try {
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+  googleProvider = new GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: "select_account" });
+} catch (e) {
+  console.warn("[Firebase Client Init Notice]", e);
+}
+
+export { app, auth, db, googleProvider };
 
 export const getBackendBaseUrl = (): string => {
   return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -215,33 +237,53 @@ export const loginWithEmail = async (
 };
 
 /**
- * Google Sign In / Sign Up delegated to Backend
+ * Google Sign In / Sign Up using Firebase Auth Client Popup
  */
 export const loginWithGoogle = async (
   mode: "signin" | "signup" = "signup",
   desiredRole?: "clinician" | "trainee" | "patient",
   additionalDetails?: RoleDetails
 ): Promise<{ profile: ZezeUserProfile; isNewUser: boolean; email: string; name: string; uid: string }> => {
-  const baseUrl = getBackendBaseUrl();
-
-  // Try to read saved user if signing in
-  let existingEmail = "";
-  let existingName = "";
-  if (typeof window !== "undefined") {
-    const raw = sessionStorage.getItem("zeze_user");
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.email) existingEmail = parsed.email;
-        if (parsed.name) existingName = parsed.name;
-      } catch {}
-    }
+  if (!auth) {
+    throw new Error("Firebase Auth client is not initialized. Check your client environment configuration.");
   }
 
-  const googleEmail = existingEmail || (desiredRole === "clinician" ? "dr.sharma@aiims.edu" : "rohan.verma@aiims.edu");
-  const googleName = existingName || (desiredRole === "clinician" ? "Dr. Aarav Sharma, MD" : "Rohan Verma");
-  const googleUid = `google_${absHash(googleEmail)}`;
+  const provider = googleProvider || new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
 
+  let cred;
+  try {
+    cred = await signInWithPopup(auth, provider);
+  } catch (err: unknown) {
+    const errorObj = err as { code?: string; message?: string };
+    if (
+      errorObj.code === "auth/popup-closed-by-user" ||
+      errorObj.code === "auth/cancelled-popup-request" ||
+      errorObj.code === "auth/popup-blocked" ||
+      errorObj.message?.includes("closed-by-user") ||
+      errorObj.message?.includes("popup has been closed")
+    ) {
+      throw new Error("cancelled");
+    }
+    console.error("[Firebase Google Auth Error]", err);
+    throw err;
+  }
+
+  const googleUser = cred.user;
+  const googleEmail = googleUser.email || "";
+  const googleName = googleUser.displayName || (desiredRole === "clinician" ? "Medical Clinician" : "Medical User");
+  const googleUid = googleUser.uid;
+  let idToken: string | undefined;
+
+  try {
+    idToken = await googleUser.getIdToken();
+  } catch (tokenErr) {
+    console.warn("[Firebase Token Warning]", tokenErr);
+  }
+
+  const baseUrl = getBackendBaseUrl();
+
+  // Synchronize Google user with Backend & Firestore database
   try {
     const res = await fetch(`${baseUrl}/auth/google`, {
       method: "POST",
@@ -252,6 +294,7 @@ export const loginWithGoogle = async (
         name: googleName,
         role: desiredRole || "clinician",
         mode,
+        idToken,
         details: additionalDetails || {},
       }),
     });
@@ -262,9 +305,13 @@ export const loginWithGoogle = async (
 
     if (res.ok) {
       const data = await res.json();
-      persistLocalSession(data.user);
+      const serverProfile: ZezeUserProfile = {
+        ...data.user,
+        token: idToken || data.token,
+      };
+      persistLocalSession(serverProfile, idToken);
       return {
-        profile: data.user,
+        profile: serverProfile,
         isNewUser: data.isNewUser ?? false,
         email: googleEmail,
         name: googleName,
@@ -275,10 +322,10 @@ export const loginWithGoogle = async (
     if (err instanceof GoogleAccountNotFoundError) {
       throw err;
     }
-    console.warn("[Google Auth API] Notice:", err);
+    console.warn("[Google Auth Backend Sync Warning]:", err);
   }
 
-  // Local fallback
+  // If sign in mode and backend rejected / not found
   if (mode === "signin") {
     const savedUser = typeof window !== "undefined" ? sessionStorage.getItem("zeze_user") : null;
     if (!savedUser) {
@@ -286,18 +333,19 @@ export const loginWithGoogle = async (
     }
   }
 
-  const mockProfile: ZezeUserProfile = {
+  const clientProfile: ZezeUserProfile = {
     uid: googleUid,
     name: googleName,
     email: googleEmail,
     role: desiredRole || "clinician",
     authMethod: "google",
     details: additionalDetails || {},
+    token: idToken,
   };
-  persistLocalSession(mockProfile);
+  persistLocalSession(clientProfile, idToken);
   return {
-    profile: mockProfile,
-    isNewUser: false,
+    profile: clientProfile,
+    isNewUser: mode === "signup",
     email: googleEmail,
     name: googleName,
     uid: googleUid,
@@ -433,6 +481,15 @@ export const updateAccountPassword = async (
     // ignore
   }
 
+  // Also update Firebase Client Auth password if current session user exists
+  if (auth?.currentUser) {
+    try {
+      await updateAuthPassword(auth.currentUser, newPassword);
+    } catch (clientErr) {
+      console.warn("[Firebase Client Password Update Notice]", clientErr);
+    }
+  }
+
   const res = await fetch(`${baseUrl}/auth/update-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -461,13 +518,13 @@ export const updateAccountPassword = async (
 };
 
 /**
- * Permanently delete user account via FastAPI Backend
+ * Permanently delete user account via FastAPI Backend & Firebase
  */
 export const deleteUserAccount = async (password?: string): Promise<void> => {
   if (typeof window === "undefined") return;
   const baseUrl = getBackendBaseUrl();
-  let uid = "usr_current";
-  let email = "";
+  let uid = auth?.currentUser?.uid || "usr_current";
+  let email = auth?.currentUser?.email || "";
 
   try {
     const raw = sessionStorage.getItem("zeze_user");
@@ -480,7 +537,12 @@ export const deleteUserAccount = async (password?: string): Promise<void> => {
     // ignore
   }
 
-  const idToken = sessionStorage.getItem("zeze_auth_token") || undefined;
+  let idToken = sessionStorage.getItem("zeze_auth_token") || undefined;
+  if (auth?.currentUser) {
+    try {
+      idToken = await auth.currentUser.getIdToken();
+    } catch {}
+  }
 
   // Call FastAPI backend to permanently delete user from Firebase Auth & Firestore
   try {
@@ -499,13 +561,29 @@ export const deleteUserAccount = async (password?: string): Promise<void> => {
     console.warn("[Auth API] delete profile warning:", apiErr);
   }
 
+  // Delete directly from Firebase client auth if available
+  if (auth?.currentUser) {
+    try {
+      await deleteAuthUser(auth.currentUser);
+    } catch (clientErr) {
+      console.warn("[Firebase Client User Delete Notice]", clientErr);
+    }
+  }
+
   clearLocalSession();
 };
 
 /**
- * Sign out user and clear local storage
+ * Sign out user from Firebase Auth and clear local storage
  */
 export const signOutFirebaseUser = async (): Promise<void> => {
+  try {
+    if (auth) {
+      await signOut(auth);
+    }
+  } catch (err) {
+    console.warn("[Firebase SignOut Notice]", err);
+  }
   clearLocalSession();
 };
 

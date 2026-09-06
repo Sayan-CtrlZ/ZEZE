@@ -202,12 +202,7 @@ export default function ProfileModal({
         return;
       }
       console.error("[Google Auth] Error:", err);
-      setIsGoogleSignUp(true);
-      setEmail("dr.sharma@aiims.edu");
-      if (!clinicianName) setClinicianName("Dr. Aarav Sharma, MD");
-      if (!traineeName) setTraineeName("Rohan Verma");
-      if (!patientName) setPatientName("Rahul Kumar");
-      setStep("details");
+      setAuthError(errObj?.message || "Google authentication failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }

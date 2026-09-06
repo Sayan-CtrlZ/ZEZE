@@ -177,25 +177,7 @@ export default function SignUpPage() {
         return;
       }
       console.error("[Google Auth] Error:", err);
-      // Mock/fallback for resilient dev experience
-      const fallbackEmail = "dr.sharma@aiims.edu";
-      const fallbackName = role === "clinician" ? "Dr. Aarav Sharma, MD" : "Rohan Verma";
-      const initialProfile = {
-        uid: "usr_google_mock",
-        name: fallbackName,
-        email: fallbackEmail,
-        role,
-        authMethod: "google" as const,
-        isComplete: false,
-        details:
-          role === "clinician"
-            ? { specialty: "", hospital: "", licenseNumber: "" }
-            : role === "trainee"
-            ? { medicalSchool: "", trainingLevel: "MBBS 3rd/Final Prof - Clinical Postings", academicFocus: "" }
-            : { age: "", sex: "Male" as const },
-      };
-      persistLocalSession(initialProfile);
-      router.push(`/profile?complete=true&role=${role}`);
+      setAuthError(errObj?.message || "Google authentication failed. Please try again.");
     } finally {
       setAuthLoading(false);
     }
