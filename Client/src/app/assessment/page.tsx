@@ -16,6 +16,7 @@ function AssessmentContent() {
   const [currentRole, setCurrentRole] = useState<string>("clinician");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasActiveResult, setHasActiveResult] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -29,6 +30,13 @@ function AssessmentContent() {
       } else {
         router.replace("/select-role");
       }
+
+      try {
+        const savedResult = sessionStorage.getItem("zeze_result");
+        if (savedResult) {
+          setHasActiveResult(true);
+        }
+      } catch (e) {}
     }
   }, [roleParam, router]);
 
@@ -123,8 +131,8 @@ function AssessmentContent() {
   };
 
   return (
-    <div className="max-w-[1640px] 2xl:max-w-[1720px] mx-auto relative z-10 w-full px-2 sm:px-6 lg:px-8 flex flex-col flex-1">
-      {/* RESPONSIVE TOP BAR: MOBILE HAMBURGER & NESTED MENU / DESKTOP PILL */}
+    <div className="w-full max-w-[1720px] mx-auto relative z-10 px-0.5 sm:px-2 flex flex-col flex-1">
+      {/* Universal App Navigation Bar - Exactly Aligned Across the Application */}
       <AppNavbar
         currentRole={currentRole}
         currentMode={currentMode}
@@ -148,6 +156,29 @@ function AssessmentContent() {
         <h2 className="text-[10px] sm:text-xs sm:text-sm font-extrabold tracking-[0.15em] sm:tracking-[0.2em] uppercase text-slate-500 px-2 mb-3 sm:mb-5">
           Zero Error Zonal Evaluation Model • {currentRole.toUpperCase()} WORKSPACE
         </h2>
+
+        {hasActiveResult && (
+          <div className="mb-4 w-full max-w-xl neu-flat p-3 px-4 rounded-2xl border border-blue-200/80 bg-gradient-to-r from-blue-50/90 to-indigo-50/90 flex items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-2.5 text-left">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] shrink-0 animate-pulse"></span>
+              <div>
+                <p className="text-xs font-black text-slate-800">
+                  Active Assessment Report in Session
+                </p>
+                <p className="text-[10px] font-semibold text-slate-500">
+                  Your previous assessment results are saved and ready to review
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/result"
+              className="neu-button-3d text-white px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap shrink-0 flex items-center gap-1 shadow-sm"
+            >
+              <span>View Report</span>
+              <span className="text-xs">→</span>
+            </Link>
+          </div>
+        )}
 
         {/* 3D MODE TOGGLE SWITCH */}
         <div className="p-1.5 sm:p-2 neu-inset rounded-full flex items-center gap-1.5 sm:gap-2 shadow-inner bg-white/50 max-w-full overflow-x-auto no-scrollbar">
@@ -198,7 +229,7 @@ function AssessmentContent() {
 
 export default function Assessment() {
   return (
-    <main className="min-h-screen relative pt-4 sm:pt-6 pb-3 sm:pb-4 px-2 sm:px-6 lg:px-8 overflow-x-hidden flex flex-col justify-start">
+    <main className="min-h-screen relative px-3 sm:px-4 lg:px-6 xl:px-8 pt-2 sm:pt-3 pb-20 sm:pb-16 overflow-y-auto bg-[#e8ecf2] flex flex-col justify-start">
       <Suspense fallback={<div className="flex justify-center text-slate-900 font-black tracking-widest uppercase">Loading Assessment...</div>}>
         <AssessmentContent />
       </Suspense>

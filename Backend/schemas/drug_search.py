@@ -29,6 +29,7 @@ class DrugEntity(BaseModel):
 class DrugSearchRequest(BaseModel):
     query: str = Field(..., description="User query, e.g. 'drugs used for type 2 diabetes' or 'tell me about metformin'")
     patient_context: Optional[Dict[str, Any]] = Field(None, description="Optional patient biomarkers, diseases, or vitals for safety review")
+    role: Optional[str] = Field("clinician", description="User role: 'clinician', 'trainee', or 'patient'")
 
 class DrugSearchResponse(BaseModel):
     query: str

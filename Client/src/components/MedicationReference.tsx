@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronLeft, ChevronRight, GraduationCap, Pill, RotateCw, X, Sparkles, ShieldAlert, CheckCircle2, Clock, Info, BookOpen, Stethoscope, ArrowRight } from 'lucide-react';
+import { ChevronDown, GraduationCap, Pill, X, Stethoscope, ArrowRight } from 'lucide-react';
 
 export interface Medication {
   id: string;
@@ -259,66 +259,19 @@ interface MedicationReferenceProps {
 
 export default function MedicationReference({ role = 'clinician', patientVitals, dynamicMedications }: MedicationReferenceProps) {
   const hasDynamicMeds = Boolean(dynamicMedications && dynamicMedications.length > 0);
-  const [activeTab, setActiveTab] = useState<'suggested' | 'formulary'>(hasDynamicMeds ? 'suggested' : 'formulary');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const PAGE_SIZE = 3;
-  const [showAll, setShowAll] = useState<boolean>(false);
-  const [isReloading, setIsReloading] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const isClinician = role === 'clinician' || role === 'practitioner';
   const isTrainee = role === 'trainee' || role === 'student';
 
-  // Flagged context from patient vitals
-  const ap_hi = Number(patientVitals?.ap_hi || 135);
-  const cholTier = Number(patientVitals?.cholesterol || 2);
-  const hasHypertension = ap_hi >= 130;
-  const hasHighCholesterol = cholTier > 1;
-
-  // Filtered list
-  const filteredMeds = useMemo(() => {
-    return MEDICATION_DATABASE.filter(med => {
-      const matchesCategory = activeCategory === 'all' || med.category === activeCategory;
-      const query = searchQuery.toLowerCase().trim();
-      const matchesQuery = 
-        !query ||
-        med.name.toLowerCase().includes(query) ||
-        med.brandNames.toLowerCase().includes(query) ||
-        med.drugClass.toLowerCase().includes(query) ||
-        med.frequency.toLowerCase().includes(query) ||
-        med.indications.some(i => i.toLowerCase().includes(query)) ||
-        med.commonSideEffects.some(s => s.toLowerCase().includes(query));
-
-      return matchesCategory && matchesQuery;
-    });
-  }, [searchQuery, activeCategory]);
-
-  // Reset pagination when search query or category filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, activeCategory]);
-
-  const totalItems = filteredMeds.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
-
-  // Current batch of medications to display (compact 3 at a time or all)
-  const displayedMeds = useMemo(() => {
-    if (showAll) return filteredMeds;
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredMeds.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredMeds, currentPage, showAll, PAGE_SIZE]);
-
-  // Reload next batch with smooth transition
-  const handleReloadNextBatch = () => {
-    setIsReloading(true);
-    setTimeout(() => {
-      setCurrentPage((prev) => (prev % totalPages) + 1);
-      setIsReloading(false);
-    }, 220);
-  };
+  // Suggested medications list: dynamic if available, otherwise baseline cardiovascular guidelines
+  const medicationsToShow = useMemo(() => {
+    if (hasDynamicMeds && dynamicMedications) {
+      return dynamicMedications;
+    }
+    return MEDICATION_DATABASE.slice(0, 4);
+  }, [hasDynamicMeds, dynamicMedications]);
 
   return (
     <div className="neu-flat rounded-3xl border border-slate-200/80 overflow-hidden bg-gradient-to-b from-white/95 to-[#eef3f8]/90 shadow-[6px_6px_20px_rgba(163,177,198,0.35),-6px_-6px_20px_rgba(255,255,255,0.9)] transition-all">
@@ -339,7 +292,7 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
             </h3>
             <p className="text-[11px] sm:text-xs font-bold text-slate-600 mt-0.5 sm:mt-1">
               {isClinician 
-                ? 'Evidence-based formulary search with dosing schedules, side effects, and ACC/AHA & FDA guidelines.'
+                ? 'Evidence-based personalized pharmacotherapy with dosing schedules, side effects, and ACC/AHA & FDA guidelines.'
                 : isTrainee
                 ? 'Supervised pharmacology reference: mechanisms of action, once vs twice daily kinetics, and clinical pearls.'
                 : 'Prescription reference for healthcare providers. Consult your physician for personalized medical advice.'}
@@ -348,13 +301,9 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 self-start sm:self-auto shrink-0 pl-11 sm:pl-0">
-          <span className={`text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 ${
-            hasDynamicMeds 
-              ? 'bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-sm'
-              : 'bg-blue-100 text-blue-900 border border-blue-200'
-          }`}>
-            {hasDynamicMeds && <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />}
-            {hasDynamicMeds ? `${dynamicMedications?.length} Targeted Prescriptions` : (isClinician ? 'Clinician Reference' : isTrainee ? 'Trainee Reference' : 'Formulary')}
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider px-2.5 sm:px-3 py-1 rounded-full flex items-center gap-1.5 bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+            {medicationsToShow.length} Targeted Prescriptions
           </span>
           <span className="text-xs font-black text-indigo-700 hidden sm:inline">
             {isOpen ? 'Hide Drug Reference' : 'Explore Drug Reference'}
@@ -366,44 +315,7 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
       {isOpen && (
         <div className="p-4 sm:p-6 md:p-8 pt-2 border-t border-slate-200/70 space-y-4 sm:space-y-6">
 
-        {/* Dynamic vs Full Formulary Tab Navigation */}
-        {hasDynamicMeds && (
-          <div className="flex items-center gap-2 p-1.5 bg-slate-100/90 rounded-2xl border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => setActiveTab('suggested')}
-              className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                activeTab === 'suggested'
-                  ? 'bg-white text-slate-900 shadow-md shadow-slate-200/60 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Suggested for Patient</span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-200">
-                {dynamicMedications?.length || 0}
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('formulary')}
-              className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                activeTab === 'formulary'
-                  ? 'bg-white text-slate-900 shadow-md shadow-slate-200/60 border border-slate-200/60'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <BookOpen className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>Master Drug Formulary</span>
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                {MEDICATION_DATABASE.length}
-              </span>
-            </button>
-          </div>
-        )}
-
-        {/* TAB 1: DYNAMIC SUGGESTED MEDICATIONS */}
-        {activeTab === 'suggested' && hasDynamicMeds && (
+          {/* DYNAMIC SUGGESTED MEDICATIONS */}
           <div className="space-y-4 sm:space-y-6">
             {/* Clinical Rationale Banner */}
             <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white border border-blue-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -416,7 +328,7 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
                     Personalized Cardiovascular Pharmacotherapy
                   </h4>
                   <p className="text-xs text-slate-600 font-medium mt-0.5">
-                    Prescriptions synthesized according to 2017 ACC/AHA and USPSTF guidelines based on resting BP ({ap_hi}/{Number(patientVitals?.ap_lo || 80)} mmHg) and metabolic biomarkers.
+                    Prescriptions synthesized according to 2017 ACC/AHA and USPSTF guidelines based on clinical biomarkers.
                   </p>
                 </div>
               </div>
@@ -425,503 +337,74 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
               </span>
             </div>
 
-            {/* Dynamic Cards Grid with clean airy layout and dark high-contrast text */}
+            {/* Dynamic Cards Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
-              {dynamicMedications?.map((med) => {
+              {medicationsToShow.map((med) => {
                 return (
                   <div 
                     key={med.id}
                     className="neu-flat rounded-3xl border border-slate-200/90 bg-white/95 p-5 sm:p-6 shadow-[5px_5px_18px_rgba(163,177,198,0.25),-5px_-5px_18px_rgba(255,255,255,0.9)] hover:border-blue-300 transition-all flex flex-col justify-between gap-5"
                   >
                     <div className="space-y-4">
-                      {/* Card Header */}
                       <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200/70">
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="text-lg font-black text-slate-900 tracking-tight">
-                              {med.name}
-                            </h4>
-                            <span className="text-xs font-semibold text-slate-500">
-                              ({med.brandNames})
-                            </span>
+                            <h4 className="text-lg font-black text-slate-900 tracking-tight">{med.name}</h4>
+                            <span className="text-xs font-semibold text-slate-500">({med.brandNames})</span>
                           </div>
-                          <p className="text-xs font-bold text-blue-900 mt-1">
-                            {med.drugClass}
-                          </p>
+                          <p className="text-xs font-bold text-blue-900 mt-1">{med.drugClass}</p>
                         </div>
                         <span className="text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider bg-blue-50 text-blue-900 border border-blue-200 shrink-0">
                           {med.frequency}
                         </span>
                       </div>
-
-                      {/* Clinical Indication / Reason with generous spacing */}
-                      {med.patientIndication && (
-                        <div className="p-4 rounded-2xl bg-[#fdfbf7] border border-amber-200/80 text-xs my-1">
-                          <span className="font-black text-[10px] uppercase tracking-wider text-amber-900 block mb-1.5">
-                            Targeted Purpose
-                          </span>
-                          <p className="text-slate-800 leading-relaxed font-medium">
-                            {med.patientIndication}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Dosing & Administration Instructions */}
                       <div className="p-4 rounded-2xl neu-inset bg-slate-50/70 border border-slate-200/70 space-y-3 text-xs">
                         <div>
-                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">
-                            Recommended Dosage
-                          </span>
-                          <span className="font-semibold text-slate-800 leading-relaxed block">
-                            {med.typicalDose}
-                          </span>
+                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">Recommended Dosage</span>
+                          <span className="font-semibold text-slate-800 leading-relaxed block">{med.typicalDose}</span>
                         </div>
                         <div className="pt-2.5 border-t border-slate-200/60">
-                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">
-                            Administration Advice
-                          </span>
-                          <span className="font-medium text-slate-700 leading-relaxed block">
-                            {med.timing}
-                          </span>
+                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block mb-1">Administration Advice</span>
+                          <span className="font-medium text-slate-700 leading-relaxed block">{med.timing}</span>
                         </div>
                       </div>
-
-                      {/* Precautions & Side Effects */}
-                      <div className="space-y-1.5 text-xs pt-1">
-                        <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block">
-                          Precautions &amp; Side Effects
-                        </span>
-                        <p className="text-slate-700 leading-relaxed font-medium">
-                          {med.commonSideEffects?.slice(0, 3).join(' • ')}
-                        </p>
-                      </div>
-
-                      {/* Monitoring Plan */}
-                      {med.monitoring && med.monitoring.length > 0 && (
-                        <div className="space-y-1 text-xs pt-2.5 border-t border-slate-100">
-                          <span className="font-bold text-slate-900 text-[11px] uppercase tracking-wider block">
-                            Monitoring Routine
-                          </span>
-                          <p className="text-slate-700 leading-relaxed font-medium">
-                            {med.monitoring.slice(0, 2).join(' • ')}
-                          </p>
-                        </div>
-                      )}
                     </div>
-
-                    {/* Actions: Clinical Profile & Drug AI Deep Dive Link */}
-                    <div className="pt-4 border-t border-slate-200/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                      <div className="flex items-center gap-1.5">
-                        {med.guidelineSources?.slice(0, 1).map((src, idx) => (
-                          <span key={idx} className="text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-200">
-                            {src.org}: {src.badge}
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedMed(med)}
-                          className="px-3 py-1.5 rounded-xl neu-button-secondary text-xs font-bold text-slate-700 hover:text-blue-800 transition-all cursor-pointer"
-                        >
-                          Details
-                        </button>
-
-                        <Link
-                          href={`/drugs?q=${encodeURIComponent(med.name)}&role=${role}`}
-                          className="px-3.5 py-1.5 rounded-xl neu-button-3d text-xs font-black text-white hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
-                        >
-                          <span>Explore with AI</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: MASTER FORMULARY SEARCH (Shown when activeTab === 'formulary' or no dynamic meds) */}
-        {(activeTab === 'formulary' || !hasDynamicMeds) && (
-          <div className="space-y-4 sm:space-y-6">
-
-      {/* Patient Contextual Recommendation Banner */}
-      {(hasHypertension || hasHighCholesterol) && (
-        <div className="p-3.5 sm:p-4 rounded-2xl neu-inset bg-blue-50/60 border border-blue-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-3 text-xs">
-          <div className="flex items-start sm:items-center gap-2 font-bold text-slate-800">
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse mt-1 sm:mt-0 shrink-0"></span>
-            <span>
-              <strong>Contextual Suggestions:</strong> Patient profile exhibits{' '}
-              {hasHypertension && <span className="text-blue-900 underline font-black">Resting BP ≥130 mmHg</span>}
-              {hasHypertension && hasHighCholesterol && ' and '}
-              {hasHighCholesterol && <span className="text-blue-900 underline font-black">Elevated Cholesterol Tier {cholTier}</span>}.
-            </span>
-          </div>
-          <div className="flex gap-2 flex-wrap self-start sm:self-auto shrink-0">
-            {hasHypertension && (
-              <button
-                type="button"
-                onClick={() => { setActiveCategory('antihypertensive'); setSearchQuery(''); }}
-                className="neu-button-3d text-[10px] font-black px-3 py-1 text-white"
-              >
-                View Antihypertensives
-              </button>
-            )}
-            {hasHighCholesterol && (
-              <button
-                type="button"
-                onClick={() => { setActiveCategory('lipid'); setSearchQuery(''); }}
-                className="neu-button-3d text-[10px] font-black px-3 py-1 text-white"
-              >
-                View Statins
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Search Bar & Category Filters */}
-      <div className="space-y-3">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3.5 sm:pl-4 flex items-center pointer-events-none text-slate-400">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search medicine by generic or brand (e.g. Telma, Amlodipine, Atorva, Rosuvas)..."
-            className="w-full pl-10 sm:pl-11 pr-4 py-3 sm:py-3.5 neu-input rounded-2xl text-xs sm:text-sm font-semibold text-slate-900 placeholder:text-slate-400 outline-none"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-4 flex items-center text-xs font-bold text-slate-400 hover:text-slate-700 cursor-pointer"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-
-        {/* Category Pills & Quick Controls: Smooth horizontal scrolling on mobile */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
-          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar touch-scroll pb-1 sm:pb-0 sm:flex-wrap">
-            {[
-              { id: 'all', label: 'All Medications' },
-              { id: 'antihypertensive', label: 'Blood Pressure' },
-              { id: 'lipid', label: 'Cholesterol & Statins' },
-              { id: 'metabolic', label: 'Cardiometabolic' },
-              { id: 'antiplatelet', label: 'Antiplatelet' }
-            ].map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setActiveCategory(cat.id as any)}
-                className={`px-3 sm:px-3.5 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                  activeCategory === cat.id
-                    ? 'neu-button-3d text-white'
-                    : 'neu-inset text-slate-600 hover:text-slate-900 bg-white/60'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Quick Reload & View Toggle */}
-          <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0">
-            {!showAll && totalPages > 1 && (
-              <button
-                type="button"
-                onClick={handleReloadNextBatch}
-                disabled={isReloading}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-blue-700 bg-blue-50/80 hover:bg-blue-100/80 border border-blue-200 transition-all cursor-pointer shadow-sm active:scale-95"
-                title="Cycle to next batch of medications"
-              >
-                <svg className={`w-3.5 h-3.5 ${isReloading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Reload Meds</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-blue-200 text-blue-900">
-                  {currentPage}/{totalPages}
-                </span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setShowAll(!showAll)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 transition-all cursor-pointer whitespace-nowrap"
-            >
-              {showAll ? 'Compact (3)' : `Show All (${totalItems})`}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Unified Master Formulary Table (Clean, Compact, No Extra Cards) */}
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        {filteredMeds.length > 0 ? (
-          <>
-            {/* Desktop Table View */}
-            <div className={`hidden lg:block overflow-x-auto transition-opacity duration-200 ${isReloading ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-[11px] font-black uppercase text-slate-500 tracking-wider">
-                    <th className="py-3.5 px-4">Medication &amp; Class</th>
-                    <th className="py-3.5 px-3">Regimen Frequency</th>
-                    <th className="py-3.5 px-4">Standard Dosage &amp; Schedule</th>
-                    <th className="py-3.5 px-4">Key Side Effects</th>
-                    <th className="py-3.5 px-3">Endorsements</th>
-                    <th className="py-3.5 px-3 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {displayedMeds.map((med) => {
-                    const isOnceDaily = med.frequency === 'Once Daily (OD)';
-                    const isTwiceDaily = med.frequency === 'Twice Daily (BD)';
-
-                    return (
-                      <tr 
-                        key={med.id}
-                        onClick={() => setSelectedMed(med)}
-                        className="hover:bg-blue-50/50 transition-colors cursor-pointer group"
-                      >
-                        {/* Name & Class */}
-                        <td className="py-3.5 px-4">
-                          <div className="font-black text-sm text-slate-900 group-hover:text-blue-600 transition-colors flex items-center gap-1.5">
-                            {med.name}
-                            <span className="text-[10px] font-medium text-slate-400">({med.brandNames})</span>
-                          </div>
-                          <div className="text-[11px] font-bold text-blue-900 mt-0.5">
-                            {med.drugClass}
-                          </div>
-                        </td>
-
-                        {/* Frequency */}
-                        <td className="py-3.5 px-3 whitespace-nowrap">
-                          <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                            isOnceDaily 
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200' 
-                              : isTwiceDaily
-                              ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                              : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                          }`}>
-                            {med.frequency}
-                          </span>
-                        </td>
-
-                        {/* Typical Dose & Timing */}
-                        <td className="py-3.5 px-4 max-w-xs">
-                          <div className="text-slate-900 font-semibold">{med.typicalDose}</div>
-                          <div className="text-[10px] text-slate-500 italic mt-0.5">{med.timing}</div>
-                        </td>
-
-                        {/* Side Effects */}
-                        <td className="py-3.5 px-4">
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {med.commonSideEffects.slice(0, 2).map((eff, i) => (
-                              <span key={i} className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-50 text-amber-900 border border-amber-200/60">
-                                {eff}
-                              </span>
-                            ))}
-                            {med.commonSideEffects.length > 2 && (
-                              <span className="text-[10px] font-medium text-slate-400 self-center">
-                                +{med.commonSideEffects.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Guidelines */}
-                        <td className="py-3.5 px-3 whitespace-nowrap">
-                          <div className="flex flex-wrap gap-1">
-                            {med.guidelineSources.slice(0, 2).map((src, i) => (
-                              <span key={i} className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
-                                {src.org}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-
-                        {/* Action */}
-                        <td className="py-3.5 px-3 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); setSelectedMed(med); }}
-                              className="text-xs font-bold text-slate-600 hover:text-blue-800 transition-colors"
-                            >
-                              Details
-                            </button>
-                            <Link
-                              href={`/drugs?q=${encodeURIComponent(med.name)}&role=${role}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-xs font-black text-blue-700 hover:text-blue-900 inline-flex items-center gap-0.5"
-                            >
-                              <span>AI Deep Dive</span>
-                              <ChevronRight className="w-3 h-3" />
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile / Compact List View (No nested cards, clean divided rows) */}
-            <div className={`lg:hidden divide-y divide-slate-100 transition-opacity duration-200 ${isReloading ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-              {displayedMeds.map((med) => {
-                const isOnceDaily = med.frequency === 'Once Daily (OD)';
-                const isTwiceDaily = med.frequency === 'Twice Daily (BD)';
-
-                return (
-                  <div 
-                    key={med.id}
-                    onClick={() => setSelectedMed(med)}
-                    className="p-4 hover:bg-slate-50 transition-colors cursor-pointer space-y-2"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="font-black text-sm text-slate-900 flex items-center gap-1.5">
-                          {med.name}
-                          <span className="text-xs font-medium text-slate-400">({med.brandNames})</span>
-                        </div>
-                        <div className="text-xs font-bold text-blue-800">{med.drugClass}</div>
-                      </div>
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                        isOnceDaily 
-                          ? 'bg-blue-50 text-blue-800 border border-blue-200' 
-                          : isTwiceDaily
-                          ? 'bg-purple-50 text-purple-800 border border-purple-200'
-                          : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      }`}>
-                        {med.frequency}
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-slate-700 font-medium">
-                      {med.typicalDose} &bull; <span className="italic text-slate-500">{med.timing}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex flex-wrap gap-1">
-                        {med.commonSideEffects.slice(0, 2).map((eff, i) => (
-                          <span key={i} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/60">
-                            {eff}
-                          </span>
-                        ))}
-                      </div>
-                      <span className="text-xs font-bold text-blue-600 flex items-center gap-0.5">
-                        Details
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Pagination & Reload Footer */}
-            <div className="p-3.5 sm:px-4 bg-slate-50/90 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-slate-600 font-bold">
-                {!showAll ? (
-                  <>
-                    <span>
-                      Showing <strong className="text-slate-900 font-black">{Math.min(totalItems, (currentPage - 1) * PAGE_SIZE + 1)}–{Math.min(totalItems, currentPage * PAGE_SIZE)}</strong> of <strong className="text-slate-900 font-black">{totalItems}</strong> medications
-                    </span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60 text-[11px] font-black">
-                      Batch {currentPage} of {totalPages}
-                    </span>
-                  </>
-                ) : (
-                  <span>
-                    Showing all <strong className="text-slate-900 font-black">{totalItems}</strong> medications
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-1.5 self-center sm:self-auto">
-                {!showAll && totalPages > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1 || isReloading}
-                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs"
-                      title="Previous batch"
-                    >
-                      <ChevronLeft className="w-3 h-3" /> Prev
-                    </button>
-
-                    {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((pageNum) => (
+                    <div className="pt-4 border-t border-slate-200/80 flex items-center justify-between gap-3">
                       <button
-                        key={pageNum}
                         type="button"
-                        onClick={() => setCurrentPage(pageNum)}
-                        disabled={isReloading}
-                        className={`w-7 h-7 rounded-lg text-xs font-black transition-all ${
-                          currentPage === pageNum
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
-                        }`}
+                        onClick={() => setSelectedMed(med)}
+                        className="px-3.5 py-1.5 rounded-xl neu-button-secondary text-xs font-bold text-slate-700 hover:text-blue-800 transition-all cursor-pointer"
                       >
-                        {pageNum}
+                        Details
                       </button>
-                    ))}
 
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages || isReloading}
-                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1 text-xs"
-                      title="Next batch"
-                    >
-                      Next <ChevronRight className="w-3 h-3" />
-                    </button>
-
-                    <span className="mx-1 h-4 w-px bg-slate-300" />
-                  </>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handleReloadNextBatch}
-                  disabled={isReloading}
-                  className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-black shadow-sm active:scale-95 transition-all cursor-pointer text-xs"
-                  title="Reload to cycle next medications"
-                >
-                  <svg className={`w-3.5 h-3.5 ${isReloading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  <span>Reload</span>
-                </button>
-              </div>
+                      <Link
+                        href={`/drugs?q=${encodeURIComponent(med.name)}&role=${role}`}
+                        className="px-3.5 py-1.5 rounded-xl neu-button-3d text-xs font-black text-white hover:brightness-110 transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm"
+                      >
+                        <span>Explore with AI</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          </>
-        ) : (
-          <div className="p-8 text-center space-y-1">
-            <p className="text-sm font-bold text-slate-800">No matching medications found for &ldquo;{searchQuery}&rdquo;</p>
-            <p className="text-xs text-slate-500">Try searching by generic name (e.g. Amlodipine, Atorvastatin, Metformin) or drug class.</p>
           </div>
-        )}
-      </div>
-      </div>
+        </div>
       )}
 
       {/* COMPREHENSIVE MODAL FOR EXPANDED CLINICAL DETAIL */}
       {selectedMed && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2.5 sm:p-4">
-          <div className="neu-flat rounded-3xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-5 bg-white border border-slate-200 shadow-2xl">
-            
-            {/* Modal Top Header */}
-            <div className="flex justify-between items-start pb-3 sm:pb-4 border-b border-slate-200 gap-2.5">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4"
+          onClick={() => setSelectedMed(null)}
+        >
+          <div 
+            className="relative w-full max-w-2xl max-h-[85vh] rounded-3xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start p-5 sm:p-6 pb-4 border-b border-slate-200/80 shrink-0 bg-white gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="text-xl sm:text-2xl font-black text-slate-900">{selectedMed.name}</h3>
@@ -929,110 +412,107 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
                     {selectedMed.frequency}
                   </span>
                 </div>
-                <p className="text-[11px] sm:text-xs font-extrabold text-slate-500 mt-0.5">
+                <p className="text-[11px] sm:text-xs font-extrabold text-slate-500 mt-1">
                   Brand: {selectedMed.brandNames} &bull; Class: {selectedMed.drugClass}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedMed(null)}
-                className="w-8 h-8 rounded-full neu-button flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 hover:text-slate-900 cursor-pointer shrink-0 transition-colors"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Dosing & Administration */}
-            <div className="p-4 rounded-2xl neu-inset bg-blue-50/50 border border-blue-200 space-y-1.5 text-xs">
-              <h5 className="font-black text-blue-950 uppercase tracking-wider text-[11px]">
-                Dosage Regimen &amp; Administration Schedule
-              </h5>
-              <p className="text-slate-800 font-semibold">{selectedMed.typicalDose}</p>
-              <p className="text-blue-900 font-bold italic">Schedule: {selectedMed.timing}</p>
-            </div>
-
-            {/* Side Effects Grid (Common vs Serious) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl neu-inset bg-amber-50/50 border border-amber-200/80 space-y-2">
-                <h5 className="font-black text-amber-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                  Common Side Effects
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 sm:space-y-5 overscroll-contain">
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200/80 space-y-1.5 text-xs">
+                <h5 className="font-black text-blue-950 uppercase tracking-wider text-[11px]">
+                  Dosage Regimen &amp; Administration Schedule
                 </h5>
-                <ul className="text-xs font-medium text-slate-700 list-disc list-inside space-y-1">
-                  {selectedMed.commonSideEffects.map((eff, i) => (
-                    <li key={i}>{eff}</li>
+                <p className="text-slate-800 font-semibold">{selectedMed.typicalDose}</p>
+                <p className="text-blue-900 font-bold italic">Schedule: {selectedMed.timing}</p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200/80 space-y-2">
+                  <h5 className="font-black text-amber-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                    Common Side Effects
+                  </h5>
+                  <ul className="text-xs font-medium text-slate-700 list-disc list-inside space-y-1">
+                    {selectedMed.commonSideEffects.map((eff, i) => (
+                      <li key={i}>{eff}</li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">
+                  <h5 className="font-black text-rose-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                    Serious / Adverse Warnings
+                  </h5>
+                  <ul className="text-xs font-medium text-slate-700 list-disc list-inside space-y-1">
+                    {selectedMed.seriousAdverseEffects.map((adv, i) => (
+                      <li key={i}>{adv}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <strong className="text-slate-900 block font-black">Contraindications:</strong>
+                  <p className="text-slate-700 font-medium">{selectedMed.contraindications.join('; ')}</p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                  <strong className="text-slate-900 block font-black">Clinical Monitoring Guidelines:</strong>
+                  <p className="text-slate-700 font-medium">{selectedMed.monitoring.join(' • ')}</p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-1 text-xs">
+                <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block">
+                  Mechanism of Action (MOA)
+                </span>
+                <p className="text-slate-700 leading-relaxed font-medium">
+                  {selectedMed.mechanismOfAction}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200 text-xs space-y-1">
+                <span className="font-black text-purple-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <GraduationCap className="w-4 h-4 text-purple-800 shrink-0" />
+                  Trainee Supervised Learning Pearl:
+                </span>
+                <p className="text-purple-900 font-semibold leading-relaxed">
+                  {selectedMed.traineePearls}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200 space-y-2 text-xs">
+                <span className="font-black text-slate-900 text-[11px] uppercase tracking-wider block">
+                  Authoritative Guideline Endorsements
+                </span>
+                <div className="space-y-1.5">
+                  {selectedMed.guidelineSources.map((src, i) => (
+                    <div key={i} className="text-[11px] text-slate-600 flex items-start gap-2">
+                      <span className="font-black text-slate-900 px-2 py-0.5 rounded bg-slate-100 border shrink-0">
+                        {src.org}
+                      </span>
+                      <span>{src.recommendation}</span>
+                    </div>
                   ))}
-                </ul>
-              </div>
-
-              <div className="p-4 rounded-2xl neu-inset bg-rose-50/50 border border-rose-200/80 space-y-2">
-                <h5 className="font-black text-rose-950 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                  Serious / Adverse Warnings
-                </h5>
-                <ul className="text-xs font-medium text-slate-700 list-disc list-inside space-y-1">
-                  {selectedMed.seriousAdverseEffects.map((adv, i) => (
-                    <li key={i}>{adv}</li>
-                  ))}
-                </ul>
+                </div>
               </div>
             </div>
 
-            {/* Contraindications & Required Monitoring */}
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <strong className="text-slate-900 block font-black">Contraindications:</strong>
-                <p className="text-slate-700 font-medium">{selectedMed.contraindications.join('; ')}</p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <strong className="text-slate-900 block font-black">Clinical Monitoring Guidelines:</strong>
-                <p className="text-slate-700 font-medium">{selectedMed.monitoring.join(' • ')}</p>
-              </div>
-            </div>
-
-            {/* Mechanism of Action */}
-            <div className="p-4 rounded-2xl bg-white border border-slate-200 space-y-1 text-xs">
-              <span className="font-black text-slate-900 uppercase tracking-wider text-[11px] block">
-                Mechanism of Action (MOA)
-              </span>
-              <p className="text-slate-700 leading-relaxed font-medium">
-                {selectedMed.mechanismOfAction}
-              </p>
-            </div>
-
-            {/* Trainee Learning Pearls */}
-            <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200 text-xs space-y-1">
-              <span className="font-black text-purple-950 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <GraduationCap className="w-4 h-4 text-purple-800 shrink-0" />
-                Trainee Supervised Learning Pearl:
-              </span>
-              <p className="text-purple-900 font-semibold leading-relaxed">
-                {selectedMed.traineePearls}
-              </p>
-            </div>
-
-            {/* Authoritative Guideline Citations */}
-            <div className="pt-2 border-t border-slate-200 space-y-2 text-xs">
-              <span className="font-black text-slate-900 text-[11px] uppercase tracking-wider block">
-                Authoritative Guideline Endorsements
-              </span>
-              <div className="space-y-1.5">
-                {selectedMed.guidelineSources.map((src, i) => (
-                  <div key={i} className="text-[11px] text-slate-600 flex items-start gap-2">
-                    <span className="font-black text-slate-900 px-2 py-0.5 rounded bg-slate-100 border shrink-0">
-                      {src.org}
-                    </span>
-                    <span>{src.recommendation}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="p-4 sm:p-5 border-t border-slate-200/80 shrink-0 bg-slate-50/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
               <Link
                 href={`/drugs?q=${encodeURIComponent(selectedMed.name)}&role=${role}`}
-                className="neu-button-secondary text-xs font-black px-4 py-2.5 text-blue-900 hover:text-blue-800 inline-flex items-center justify-center gap-2"
+                className="px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-black text-blue-900 hover:bg-slate-100 inline-flex items-center justify-center gap-2 transition-colors"
               >
                 <span>Full FDA Monograph &amp; Studies in Drug Intelligence</span>
                 <ArrowRight className="w-3.5 h-3.5 text-blue-700" />
@@ -1046,14 +526,9 @@ export default function MedicationReference({ role = 'clinician', patientVitals,
                 Close Reference
               </button>
             </div>
-
           </div>
         </div>
       )}
-
-        </div>
-      )}
-
     </div>
   );
 }

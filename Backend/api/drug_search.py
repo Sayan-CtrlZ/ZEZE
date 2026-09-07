@@ -52,6 +52,7 @@ async def search_drugs(request: DrugSearchRequest):
         initial_state = {
             "raw_query": query_str,
             "patient_context": request.patient_context,
+            "role": request.role or "clinician",
             "intent": "general",
             "candidate_drugs": [],
             "drug_monographs": [],

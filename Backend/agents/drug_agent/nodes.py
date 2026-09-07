@@ -348,6 +348,9 @@ async def report_generator(state: DrugSearchState) -> Dict[str, Any]:
     drugs = structured.get("drugs", [])
     cond = structured.get("condition")
     query = state.get("raw_query", "")
+    role = (state.get("role") or "clinician").lower()
+    if role not in ["clinician", "trainee", "patient"]:
+        role = "clinician"
 
     # Check if Groq client is available
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -384,48 +387,136 @@ async def report_generator(state: DrugSearchState) -> Dict[str, Any]:
 
     data_payload = "\n".join(context_lines)
 
+    # Role-specific guidance
+    if role == "patient":
+        role_instructions = """
+        TARGET USER AUDIENCE: PATIENT AND CAREGIVER
+        Tone: Clear, reassuring, compassionate, empowering, and free of confusing clinical jargon.
+        Content Guidance:
+        - Structure the report with these exact clear sections:
+          ### Clinical Overview: What You Need to Know
+          Explain the health condition and treatment goals in plain, reassuring everyday language.
+          
+          ### Summary of Evaluated Therapies
+          Provide a clean markdown table with columns:
+          | # | Medication | Generic Name | Medicine Category | Key Health Benefit |
+          |---|---|---|---|---|
+          (Ensure each row has its own line)
+          
+          ### Detailed Medication Profiles
+          For each medication, provide:
+          #### [Number]. [Medication Display Name] ([Generic Name])
+          - **How This Medicine Helps**: Explain what it does for your heart, blood pressure, or blood sugar in simple terms.
+          - **How and When to Take**: Clear daily instructions (e.g., with or without food, best time of day).
+          - **What to Do If You Miss a Dose**: Practical, safe advice.
+          - **Common Mild Side Effects**: What is expected and usually temporary (e.g., mild ankle swelling, fatigue).
+          - **Warning Signs to Call Your Doctor**: Clear red flags requiring prompt medical attention.
+          - **Food, Drink, and Over-the-Counter Precautions**: Mention alcohol, pain relievers (like ibuprofen), or dietary cautions.
+          
+          ### Safety Screening & Precautions for You
+          Highlight essential safety alerts, age-related cautions, and when to consult your healthcare team.
+          
+          ### Questions to Ask Your Doctor or Pharmacist
+          Provide 3 to 4 high-yield, practical questions the patient can take to their next appointment.
+          
+          ### Authoritative Information Sources
+          List the public health agencies and repositories cited.
+          
+          ### Important Health Notice
+          Standard reminder that this guide is for educational understanding and to always follow their personal doctor's prescribed instructions.
+        """
+    elif role == "trainee":
+        role_instructions = """
+        TARGET USER AUDIENCE: MEDICAL RESIDENT, MEDICAL STUDENT, OR CLINICAL FELLOW
+        Tone: Academically rigorous, high-yield, clinical-pearl oriented, and exam/rounds focused.
+        Content Guidance:
+        - Structure the report with these exact clear sections:
+          ### Clinical Overview & Pathophysiologic Targets
+          Pathophysiology, disease staging, and clinical guideline management targets.
+          
+          ### Summary of Evaluated Therapies
+          Provide a clean markdown table with columns:
+          | # | Medication | Generic Name | RxCUI | Drug Class | Key Guideline / Trial Benchmark |
+          |---|---|---|---|---|---|
+          (Ensure each row has its own line)
+          
+          ### Detailed Medication Profiles
+          For each medication, provide:
+          #### [Number]. [Medication Display Name] ([Generic Name] • RxCUI: [RxCUI])
+          - **Cellular & Molecular Mechanism of Action**: Detailed pharmacodynamics and receptor/transporter mechanics.
+          - **FDA Approved Indications & Guideline Context**: Primary approved indications and guideline-directed therapy roles.
+          - **Landmark Clinical Trials**: Key trials (e.g., ALLHAT, SPRINT, EMPA-REG, UKPDS) with primary endpoints and clinical significance.
+          - **Clinical Pearls & Prescribing Nuances**: Bedside tips, practical titration steps, and patient selection rationale.
+          - **High-Yield Contraindications & Toxicities**: Classical adverse effects, black box warnings, and exam-relevant toxicities.
+          - **Dosage Titration & Practical Orders**: Initial dosage, titration intervals, and maximum ceiling daily dose.
+          
+          ### Safety Screening & Supervised Monitoring Checklist
+          Renal clearance parameters (eGFR cutoffs), electrolyte/organ baseline requirements, and pre-prescription checklist.
+          
+          ### Authoritative Citations & Traceability
+          Public health repositories and clinical practice guidelines cited.
+          
+          ### Clinical Training Disclaimer
+          Educational guidance note for clinical trainees under attending physician supervision.
+        """
+    else:  # clinician
+        role_instructions = """
+        TARGET USER AUDIENCE: LICENSED ATTENDING PHYSICIAN AND PHARMACOTHERAPY SPECIALIST
+        Tone: Advanced, evidence-based, concise, highly authoritative clinical pharmacology.
+        Content Guidance:
+        - Structure the report with these exact clear sections:
+          ### Clinical Overview
+          Concise evidence-based overview of the condition, GDMT targets, and risk stratification.
+          
+          ### Summary of Evaluated Therapies
+          Provide a clean markdown table with columns:
+          | # | Medication | Generic Name | RxCUI | Drug Class | Key Guideline / Trial Benchmark |
+          |---|---|---|---|---|---|
+          (Ensure each row has its own line)
+          
+          ### Detailed Medication Profiles
+          For each medication, provide:
+          #### [Number]. [Medication Display Name] ([Generic Name] • RxCUI: [RxCUI])
+          - **Drug Class & Pharmacodynamics**: Pharmacological category, receptor selectivity, and physiologic action.
+          - **FDA Approved Indications & Labeling**: Specific approved indications without truncation.
+          - **Dosage Titration & Administration Guidelines**: Specific starting dose, titration schedule, and maximum ceiling dosage.
+          - **Organ Clearance & Renal/Hepatic Thresholds**: Quantitative cutoffs (eGFR/CrCl thresholds, Child-Pugh staging).
+          - **FDA Boxed Warnings & Critical Contraindications**: Absolute and relative contraindications from official labeling.
+          - **Drug-Drug Interactions & CYP Metabolism**: Key enzymatic pathways (e.g., CYP3A4, CYP2C9) and contraindicated combinations.
+          - **Clinical Trial & Guideline Evidence**: Benchmark trials and ACC/AHA, ADA, or KDIGO recommendations.
+          
+          ### Safety Screening & Laboratory Monitoring Protocols
+          Mandated baseline and periodic laboratory monitoring (BMP, serum creatinine, potassium, LFTs, ECG).
+          
+          ### Authoritative Citations & Traceability
+          List the specific public health repositories and guidelines cited.
+          
+          ### Clinical Disclaimer
+          Standard clinical notice that this evidence report is for licensed healthcare professional decision support.
+        """
+
     prompt = f"""
     You are ZEZE Clinical Drug Intelligence, an authoritative evidence-based medical information synthesizer.
     Generate a high-yield, beautifully formatted clinical intelligence report based STRICTLY on the retrieved government records below.
 
     USER QUERY: "{query}"
 
+    {role_instructions}
+
     RETRIEVED VERIFIED DATA:
     {data_payload}
 
-    CRITICAL FORMATTING & CLINICAL RULES:
-    1. Base all statements exclusively on the provided retrieved facts. NEVER invent drug indications, mechanisms, or warnings.
-    2. Do NOT squish data into illegible single-line ASCII tables.
-    3. If you include any Markdown table, EVERY ROW MUST BE ON ITS OWN SEPARATE LINE (e.g., \n| col1 | col2 |\n). Never merge multiple rows onto the same line.
-    4. Structure the report with these exact clear sections:
-
-       ### Clinical Overview
-       Concise evidence-based overview of the condition and therapeutic management targets based on the retrieved data.
-
-       ### Summary of Evaluated Therapies
-       Provide a clean markdown table summarizing the evaluated drugs:
-       | # | Medication | Generic Name | RxCUI | Drug Class | Key Guideline / Trial Benchmark |
-       |---|---|---|---|---|---|
-       (Ensure each row has its own line)
-
-       ### Detailed Medication Profiles
-       For each retrieved drug, create a structured profile card using subheadings and bullet points:
-       #### [Number]. [Medication Display Name] ([Generic Name] • RxCUI: [RxCUI])
-       - **Drug Class**: [Class or Pharmacological Category]
-       - **FDA Approved Indications**: [Key approved uses from official labeling]
-       - **FDA Boxed Warnings & Safety Advisories**: [Boxed warnings, or note 'None excerpted in labeling' if none]
-       - **Contraindications**: [Key documented contraindications]
-       - **Clinical Trial & Guideline Evidence**: [Documented ADA, ACC/AHA, or landmark trial evidence]
-       - **Dosage & Administration Guidelines**: [Oral/dosing guidelines from official label]
-
-       ### Safety Screening & Risk Considerations
-       Highlight any patient safety considerations, renal clearance (eGFR) cutoffs, or documented contraindications from the SAFETY ALERTS section.
-
-       ### Authoritative Citations & Traceability
-       List the specific public health repositories and guidelines cited.
-
-       ### Clinical Disclaimer
-       Conclude with the standard clinical notice that this evidence report is for licensed healthcare professional reference and informational guidance only.
+    CRITICAL TEXT REFINEMENT & PUNCTUATION RULES:
+    1. NEVER USE ELLIPSIS ("...") UNDER ANY CIRCUMSTANCES:
+       - Every statement must be a complete, definitive, grammatical sentence.
+       - NEVER output phrases like "maybe can be used...", "inferred from...", or incomplete quotation fragments.
+    2. DO NOT USE EM DASHES ("—") OR EN DASHES ("–"):
+       - Replace all em dashes and en dashes with standard colons (":"), standard hyphens ("-"), or clean parentheses ("(...)").
+       - Example: "ACC/AHA Guideline: Class I recommendation" (NEVER "ACC/AHA Guideline – Class I").
+    3. STRICT TABLE FORMATTING:
+       - EVERY ROW MUST BE ON ITS OWN SEPARATE LINE (e.g., \\n| col1 | col2 |\\n). Never merge multiple rows onto the same line.
+    4. FACTUAL INTEGRITY:
+       - Base all statements exclusively on the provided retrieved facts. NEVER invent drug indications, mechanisms, or warnings.
     """
 
     report_text = ""
@@ -436,7 +527,7 @@ async def report_generator(state: DrugSearchState) -> Dict[str, Any]:
             completion = client.chat.completions.create(
                 model=groq_model,
                 messages=[
-                    {"role": "system", "content": "You are a specialized medical drug intelligence assistant. Cite only verified government and guideline sources."},
+                    {"role": "system", "content": "You are a specialized medical drug intelligence assistant. Cite only verified government and guideline sources. Never use em dashes or ellipsis."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2
@@ -447,60 +538,167 @@ async def report_generator(state: DrugSearchState) -> Dict[str, Any]:
 
     # Deterministic fallback report generator
     if not report_text:
-        report_text = generate_deterministic_report(query, cond, drugs, safety_alerts)
+        report_text = generate_deterministic_report(query, cond, drugs, safety_alerts, role=role)
 
-    logger.info("[ReportGenerator] Generated final clinical report.")
+    # Post-processing sanitization: strictly eliminate em dashes, en dashes, and ellipsis
+    if report_text:
+        report_text = report_text.replace("—", " - ").replace("–", " - ")
+        report_text = re.sub(r'\.{3,}', '', report_text)
+        report_text = re.sub(r'…', '', report_text)
+        report_text = re.sub(r'inferred from ["\']?([^"\']+)["\']?', r'\1', report_text)
+        report_text = re.sub(r'\s{2,}', ' ', report_text)
+
+    logger.info(f"[ReportGenerator] Generated final clinical report for role '{role}'.")
     return {
         "generated_report": report_text
     }
 
-def generate_deterministic_report(query: str, cond: Optional[Dict], drugs: List[Dict], safety_alerts: List[Dict]) -> str:
+def generate_deterministic_report(query: str, cond: Optional[Dict], drugs: List[Dict], safety_alerts: List[Dict], role: str = "clinician") -> str:
     lines = []
-    lines.append("### Clinical Overview")
-    if cond:
-        lines.append(f"Medical evaluation regarding **{cond.get('normalized_name') or cond.get('name')}** (MeSH Identifier: `{cond.get('identifier') or 'N/A'}`) retrieved from authoritative NLM RxNorm and FDA drug databases for user query: *\"{query}\"*.")
-    else:
-        lines.append(f"Medical monograph evaluation for query: *\"{query}\"* synthesized from verified NLM RxNorm and FDA databases.")
+    
+    if role == "patient":
+        lines.append("### Clinical Overview: What You Need to Know")
+        if cond:
+            lines.append(f"This guide provides helpful information about treatments for **{cond.get('normalized_name') or cond.get('name')}** based on verified medical databases for your search: *\"{query}\"*.")
+        else:
+            lines.append(f"This guide provides helpful information about medications for: *\"{query}\"* based on official FDA information.")
+            
+        lines.append("\n### Summary of Evaluated Therapies")
+        lines.append("| # | Medication | Generic Name | Medicine Category | Key Health Benefit |")
+        lines.append("|---|---|---|---|---|")
+        for i, d in enumerate(drugs, 1):
+            classes = ", ".join(d.get("drug_class", [])) or "Standard therapy"
+            inds = d.get("indications", [])
+            benefit = inds[0] if inds else "Prescribed for cardiovascular and metabolic management."
+            lines.append(f"| {i} | {d.get('name')} | {d.get('generic_name') or 'N/A'} | {classes} | {benefit} |")
 
-    lines.append("\n### Retrieved Medications & Classes")
-    for d in drugs:
-        classes = ", ".join(d.get("drug_class", [])) or "Class unassigned"
-        rxcui = d.get("rxnorm_id") or "Pending"
-        lines.append(f"- **{d.get('name')}** (Generic: *{d.get('generic_name') or 'N/A'}*, RxCUI: `{rxcui}`): {classes}")
-
-    lines.append("\n### Key Therapeutic Indications & Evidence")
-    for d in drugs:
-        inds = d.get("indications", [])
-        evs = d.get("evidence", [])
-        text_ind = inds[0] if inds else "Indicated per clinical practice guidelines."
-        lines.append(f"- **{d.get('name')}**: {text_ind}")
-        if evs:
-            lines.append(f"  *Evidence Benchmark*: {evs[0]}")
-
-    lines.append("\n### Boxed Warnings & Major Contraindications")
-    if safety_alerts:
-        for a in safety_alerts:
-            lines.append(f"- **{a.get('drug')}** [{a.get('alert_type')}]: {a.get('message')}")
-    else:
-        for d in drugs:
-            c = d.get("contraindications", [])
+        lines.append("\n### Detailed Medication Profiles")
+        for i, d in enumerate(drugs, 1):
+            lines.append(f"\n#### {i}. {d.get('name')} ({d.get('generic_name') or 'N/A'})")
+            lines.append(f"- **How This Medicine Helps**: Helps regulate blood pressure and protects your cardiovascular system.")
+            dose = d.get("dosage_information", [])
+            if dose:
+                lines.append(f"- **How to Take**: {dose[0]}")
+            else:
+                lines.append("- **How to Take**: Take once daily as directed by your physician with water.")
             w = d.get("warnings", [])
+            c = d.get("contraindications", [])
             if w or c:
                 note = w[0] if w else c[0]
-                lines.append(f"- **{d.get('name')}**: {note}")
+                lines.append(f"- **Safety Notice**: {note}")
+            lines.append("- **Questions for Your Doctor**: Ask your doctor about the best time of day to take your medicine and if any routine blood tests are needed.")
 
-    lines.append("\n### Usage & Administration Guidelines")
-    for d in drugs:
-        dose = d.get("dosage_information", [])
-        if dose:
-            lines.append(f"- **{d.get('name')}**: {dose[0]}")
+        lines.append("\n### Questions to Ask Your Doctor or Pharmacist")
+        lines.append("- What is the specific goal for my blood pressure or condition with this medication?")
+        lines.append("- What should I do if I accidentally miss a dose?")
+        lines.append("- Are there any over-the-counter pain medications or supplements I should avoid?")
 
-    lines.append("\n### Authoritative Citations & Limitations")
-    lines.append("- Sources queried: National Library of Medicine (RxNorm/RxNav), US FDA Approved Labeling (openFDA), and DailyMed.")
-    lines.append("- Limitations: Drug monographs reflect approved labeling; individual patient comorbidities, renal clearance, and polypharmacy must be verified.")
-    lines.append("\n*Clinical Disclaimer: This report is synthesized for healthcare informational purposes only and does not constitute a clinical prescription. Consult a board-certified physician or licensed pharmacist for medical care.*")
+        lines.append("\n### Important Health Notice")
+        lines.append("*This guide is for educational purposes only. Always consult your doctor or licensed pharmacist before changing any medication.*")
+        
+    elif role == "trainee":
+        lines.append("### Clinical Overview & Pathophysiologic Targets")
+        if cond:
+            lines.append(f"High-yield medical evaluation for **{cond.get('normalized_name') or cond.get('name')}** (MeSH Identifier: `{cond.get('identifier') or 'N/A'}`) synthesized from NLM RxNorm and FDA drug databases for query: *\"{query}\"*.")
+        else:
+            lines.append(f"Medical evaluation for query: *\"{query}\"* synthesized from verified NLM RxNorm and FDA databases.")
 
-    return "\n".join(lines)
+        lines.append("\n### Summary of Evaluated Therapies")
+        lines.append("| # | Medication | Generic Name | RxCUI | Drug Class | Key Guideline / Trial Benchmark |")
+        lines.append("|---|---|---|---|---|---|")
+        for i, d in enumerate(drugs, 1):
+            classes = ", ".join(d.get("drug_class", [])) or "Class unassigned"
+            rxcui = d.get("rxnorm_id") or "Pending"
+            ev = d.get("evidence", [])
+            ev_str = ev[0] if ev else "ACC/AHA Guideline-directed medical therapy"
+            lines.append(f"| {i} | {d.get('name')} | {d.get('generic_name') or 'N/A'} | {rxcui} | {classes} | {ev_str} |")
+
+        lines.append("\n### Detailed Medication Profiles")
+        for i, d in enumerate(drugs, 1):
+            rxcui = d.get("rxnorm_id") or "Pending"
+            lines.append(f"\n#### {i}. {d.get('name')} ({d.get('generic_name') or 'N/A'} - RxCUI: {rxcui})")
+            classes = ", ".join(d.get("drug_class", [])) or "Class unassigned"
+            lines.append(f"- **Mechanism of Action**: {classes} pharmacodynamics targeting vascular smooth muscle and metabolic homeostasis.")
+            inds = d.get("indications", [])
+            if inds:
+                lines.append(f"- **Approved Indications**: {inds[0]}")
+            evs = d.get("evidence", [])
+            if evs:
+                lines.append(f"- **Landmark Clinical Trial**: {evs[0]}")
+            w = d.get("warnings", [])
+            c = d.get("contraindications", [])
+            if w or c:
+                lines.append(f"- **High-Yield Contraindications & Warnings**: {w[0] if w else c[0]}")
+            dose = d.get("dosage_information", [])
+            if dose:
+                lines.append(f"- **Dosage & Practical Orders**: {dose[0]}")
+
+        lines.append("\n### Safety Screening & Supervised Monitoring Checklist")
+        if safety_alerts:
+            for a in safety_alerts:
+                lines.append(f"- **{a.get('drug')}** [{a.get('alert_type')}]: {a.get('message')}")
+        else:
+            lines.append("- Verify baseline renal clearance (eGFR) and serum potassium before initiation.")
+            lines.append("- Screen for drug-drug interactions with CYP substrates and concurrent antihypertensives.")
+
+        lines.append("\n### Authoritative Citations & Traceability")
+        lines.append("- Sources queried: National Library of Medicine (RxNorm/RxNav), US FDA Approved Labeling (openFDA), and DailyMed.")
+        lines.append("\n*Clinical Disclaimer: For clinical trainee educational reference under attending physician supervision.*")
+
+    else:  # clinician
+        lines.append("### Clinical Overview")
+        if cond:
+            lines.append(f"Authoritative pharmacotherapeutic evaluation for **{cond.get('normalized_name') or cond.get('name')}** (MeSH Identifier: `{cond.get('identifier') or 'N/A'}`) synthesized from NLM RxNorm and FDA drug databases for query: *\"{query}\"*.")
+        else:
+            lines.append(f"Pharmacotherapeutic monograph evaluation for query: *\"{query}\"* synthesized from verified NLM RxNorm and FDA databases.")
+
+        lines.append("\n### Summary of Evaluated Therapies")
+        lines.append("| # | Medication | Generic Name | RxCUI | Drug Class | Key Guideline / Trial Benchmark |")
+        lines.append("|---|---|---|---|---|---|")
+        for i, d in enumerate(drugs, 1):
+            classes = ", ".join(d.get("drug_class", [])) or "Class unassigned"
+            rxcui = d.get("rxnorm_id") or "Pending"
+            ev = d.get("evidence", [])
+            ev_str = ev[0] if ev else "ACC/AHA Guideline-directed medical therapy"
+            lines.append(f"| {i} | {d.get('name')} | {d.get('generic_name') or 'N/A'} | {rxcui} | {classes} | {ev_str} |")
+
+        lines.append("\n### Detailed Medication Profiles")
+        for i, d in enumerate(drugs, 1):
+            rxcui = d.get("rxnorm_id") or "Pending"
+            lines.append(f"\n#### {i}. {d.get('name')} ({d.get('generic_name') or 'N/A'} - RxCUI: {rxcui})")
+            classes = ", ".join(d.get("drug_class", [])) or "Class unassigned"
+            lines.append(f"- **Drug Class & Pharmacodynamics**: {classes}")
+            inds = d.get("indications", [])
+            if inds:
+                lines.append(f"- **FDA Approved Indications**: {inds[0]}")
+            dose = d.get("dosage_information", [])
+            if dose:
+                lines.append(f"- **Dosage Titration & Administration**: {dose[0]}")
+            w = d.get("warnings", [])
+            c = d.get("contraindications", [])
+            if w or c:
+                lines.append(f"- **FDA Boxed Warnings & Contraindications**: {w[0] if w else c[0]}")
+            evs = d.get("evidence", [])
+            if evs:
+                lines.append(f"- **Clinical Trial & Guideline Evidence**: {evs[0]}")
+
+        lines.append("\n### Safety Screening & Laboratory Monitoring Protocols")
+        if safety_alerts:
+            for a in safety_alerts:
+                lines.append(f"- **{a.get('drug')}** [{a.get('alert_type')}]: {a.get('message')}")
+        else:
+            lines.append("- Perform baseline and periodic BMP (serum creatinine, electrolytes, eGFR).")
+            lines.append("- Monitor blood pressure and heart rate titration response at 2 to 4 week intervals.")
+
+        lines.append("\n### Authoritative Citations & Traceability")
+        lines.append("- Sources queried: National Library of Medicine (RxNorm/RxNav), US FDA Approved Labeling (openFDA), and DailyMed.")
+        lines.append("\n*Clinical Disclaimer: For licensed healthcare professional reference only. Does not constitute a clinical prescription.*")
+
+    cleaned_report = "\n".join(lines)
+    cleaned_report = cleaned_report.replace("—", " - ").replace("–", " - ")
+    cleaned_report = re.sub(r'\.{3,}', '', cleaned_report)
+    cleaned_report = re.sub(r'…', '', cleaned_report)
+    return cleaned_report
 
 # ---------------------------------------------------------------------------
 # NODE 8: citation_validator

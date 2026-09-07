@@ -2,11 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Stethoscope,
   GraduationCap,
   User,
+  Activity,
+  Pill,
+  Sparkles,
 } from "lucide-react";
 
 export interface RoleConfig {
@@ -54,20 +56,16 @@ interface AppNavbarProps {
   currentMode?: "upload" | "manual";
   onRoleChange?: (role: string) => void;
   onModeChange?: (mode: "upload" | "manual") => void;
-  pageType?: "assessment" | "result" | "profile" | "drugs";
+  pageType?: "landing" | "assessment" | "result" | "profile" | "drugs";
   pageTitle?: string;
   isLocked?: boolean;
 }
 
 export default function AppNavbar({
   currentRole = "clinician",
-  onRoleChange,
-  pageType,
-  pageTitle,
+  pageType = "assessment",
   isLocked = false,
 }: AppNavbarProps) {
-  const router = useRouter();
-
   // Normalize role
   const normalizedRole =
     currentRole === "practitioner"
@@ -78,70 +76,124 @@ export default function AppNavbar({
     ROLES.find((r) => r.id === normalizedRole) || ROLES[0];
   const ActiveIcon = activeRoleConfig.icon;
 
-  // Determine dynamic page-aware title & subtitle
-  const getPageTitle = () => {
-    if (pageTitle) return pageTitle;
-    if (pageType === "drugs") {
-      return "Authoritative Drug Intelligence";
-    }
-    if (pageType === "result") {
-      if (normalizedRole === "clinician") return "Clinical Results Dashboard";
-      if (normalizedRole === "trainee") return "Supervised Learning Dashboard";
-      return "Health Results Dashboard";
-    }
-    if (pageType === "profile") {
-      return "Practitioner Profile & Credentials";
-    }
-    // Default / assessment
-    if (normalizedRole === "clinician") return "Clinical Decision Support";
-    if (normalizedRole === "trainee") return "Supervised Learning Workspace";
-    return "Health Guidance Workspace";
-  };
+  const isLanding = pageType === "landing";
 
-  const resolvedPageTitle = getPageTitle();
+  const [hasActiveResult, setHasActiveResult] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("zeze_result");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.risk !== undefined || parsed.probability !== undefined)) {
+            setHasActiveResult(true);
+          }
+        } catch (e) {}
+      }
+    }
+  }, [pageType]);
+
+  const isAssessmentActive = pageType === "assessment" || pageType === "result";
+  const assessmentHref = hasActiveResult ? "/result" : `/assessment?role=${normalizedRole}`;
 
   return (
-    <nav className={`w-full relative z-40 ${pageType === "profile" ? "mb-2 sm:mb-3" : "mb-5 sm:mb-6"}`}>
-      {/* Floating Glass-Neumorphic Pill Bar (.neu-pill-nav) */}
-      <div className="w-full neu-pill-nav py-3 px-4 sm:px-7 flex items-center justify-between gap-3 sm:gap-4 transition-all">
-        {/* LEFT: Logo & Page-Aware Heading */}
-        {isLocked ? (
-          <div className="flex items-center gap-3 shrink-0 cursor-not-allowed opacity-90">
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-flat flex items-center justify-center p-2 bg-[#edf3f9] border border-white/80 shadow-sm shrink-0">
-              <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-black tracking-tight text-[#0a192f] leading-tight">
-                ZEZE MED AI
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold text-amber-700 uppercase tracking-wider leading-none mt-0.5">
-                Profile Setup Mode (Locked)
-              </span>
-            </div>
-          </div>
-        ) : (
-          <Link
-            href={`/assessment?role=${normalizedRole}`}
-            className="flex items-center gap-3 group cursor-pointer shrink-0"
-          >
-            {/* Neumorphic 3D medallion */}
-            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl neu-flat flex items-center justify-center p-2 bg-[#edf3f9] border border-white/80 shadow-sm group-hover:scale-105 transition-transform shrink-0">
-              <img src="/icon.webp" alt="ZEZE" className="w-full h-full object-contain" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-black tracking-tight text-[#0a192f] leading-tight">
-                ZEZE MED AI
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold text-blue-800 uppercase tracking-wider leading-none mt-0.5">
-                {resolvedPageTitle}
-              </span>
-            </div>
+    <header
+      className={`w-full ${
+        isLanding
+          ? "max-w-6xl 2xl:max-w-7xl mx-auto mb-8 sm:mb-12"
+          : "w-full mb-5 sm:mb-8"
+      } neu-pill-nav py-2.5 sm:py-3 px-3.5 sm:px-8 flex items-center justify-between z-30 sticky top-3 sm:top-4 bg-white/90 backdrop-blur-md min-h-[64px] transition-all`}
+    >
+      {/* 1. LEFT: Brand Logo with Medallion (Exact Same as Landing Page) */}
+      <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/70 group-hover:scale-105 transition-transform shrink-0">
+          <img src="/icon.webp" alt="ZEZE" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" />
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <span className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">
+            ZEZE
+          </span>
+          <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">
+            MED AI
+          </span>
+        </div>
+      </Link>
+
+      {/* 2. CENTER: Navigation Links */}
+      {isLanding ? (
+        /* Landing Page Center Navigation */
+        <nav className="hidden md:flex items-center gap-7 text-xs font-black uppercase tracking-wider text-slate-600">
+          <Link href="#persona-selection" className="hover:text-blue-700 transition-colors">
+            Personas
           </Link>
-        )}
+          <Link href="#how-it-works" className="hover:text-blue-700 transition-colors">
+            How It Works
+          </Link>
+          <Link href="#data-proof" className="hover:text-blue-700 transition-colors">
+            Clinical Data
+          </Link>
+          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">
+            OCR Scan
+          </Link>
+          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">
+            Manual Form
+          </Link>
+        </nav>
+      ) : (
+        /* App Workspace Navigation: Shown for Clinician and Trainee ONLY (Except Patient) */
+        normalizedRole !== "patient" && !isLocked && (
+          <nav className="flex items-center gap-1.5 sm:gap-2 p-1.5 neu-inset rounded-2xl bg-[#dce5ef]/90 border border-white/95 shadow-inner shrink-0">
+            <Link
+              href={assessmentHref}
+              className={`h-9 sm:h-10 px-3.5 sm:px-5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                isAssessmentActive
+                  ? "neu-button-3d text-white shadow-md"
+                  : "neu-button-secondary text-slate-700 hover:text-blue-700"
+              }`}
+            >
+              <Activity
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${
+                  isAssessmentActive ? "text-white" : "text-blue-600"
+                }`}
+                strokeWidth={2.4}
+              />
+              <span>Assessment</span>
+            </Link>
+            <Link
+              href={`/drugs?role=${normalizedRole}`}
+              className={`h-9 sm:h-10 px-3.5 sm:px-5 rounded-xl text-xs font-black uppercase tracking-wider inline-flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap active:scale-95 ${
+                pageType === "drugs"
+                  ? "neu-button-3d text-white shadow-md"
+                  : "neu-button-secondary text-slate-700 hover:text-blue-700"
+              }`}
+            >
+              <Pill
+                className={`w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 ${
+                  pageType === "drugs" ? "text-white" : "text-blue-600"
+                }`}
+                strokeWidth={2.4}
+              />
+              <span>Drug Exploration</span>
+            </Link>
+          </nav>
+        )
+      )}
 
-
-
-        {/* RIGHT: Current Active Role Badge & Change Role Action */}
+      {/* 3. RIGHT: Action Controls */}
+      {isLanding ? (
+        /* Landing Action: Direct Launch Workspace */
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link
+            href="/select-role"
+            className="neu-button-3d px-4 sm:px-6 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Launch Workspace</span>
+          </Link>
+        </div>
+      ) : (
+        /* App Workspace Actions: Active Role Badge & Change Role */
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl neu-inset bg-white/70 shadow-inner">
             <div
@@ -163,12 +215,12 @@ export default function AppNavbar({
           <Link
             href="/select-role"
             title="Switch Workspace Role"
-            className="neu-button-secondary px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black text-slate-700 hover:text-blue-700 transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5"
+            className="neu-button-secondary px-3 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black text-slate-700 hover:text-blue-700 transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5 shrink-0"
           >
             <span>Change Role</span>
           </Link>
         </div>
-      </div>
-    </nav>
+      )}
+    </header>
   );
 }

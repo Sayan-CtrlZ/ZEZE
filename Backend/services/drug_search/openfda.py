@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 OPENFDA_BASE = "https://api.fda.gov/drug/label.json"
 
-def clean_label_text(text_list: Optional[List[str]], max_items: int = 3, max_chars: int = 350) -> List[str]:
-    """Cleans and truncates raw FDA label text chunks into readable clinical excerpts."""
+def clean_label_text(text_list: Optional[List[str]], max_items: int = 3, max_chars: int = 500) -> List[str]:
+    """Cleans raw FDA label text chunks into complete, readable clinical excerpts without trailing ellipsis."""
     if not text_list:
         return []
     
@@ -21,9 +21,20 @@ def clean_label_text(text_list: Optional[List[str]], max_items: int = 3, max_cha
         # Remove excessive section numbers like '1 INDICATIONS AND USAGE' or '[see Warnings and Precautions]'
         cleaned = re.sub(r'^\d+(\.\d+)?\s+[A-Z\s]+', '', raw.strip())
         cleaned = re.sub(r'\[see\s+[^\]]+\]', '', cleaned)
+        # Remove any pre-existing ellipsis or unicode ellipsis
+        cleaned = cleaned.replace("...", "").replace("…", "")
         cleaned = re.sub(r'\s{2,}', ' ', cleaned).strip()
+        
+        # If longer than max_chars, cut at nearest sentence boundary without ellipsis
         if len(cleaned) > max_chars:
-            cleaned = cleaned[:max_chars].rstrip() + "..."
+            period_idx = cleaned[:max_chars].rfind(". ")
+            if period_idx > 80:
+                cleaned = cleaned[:period_idx + 1].strip()
+            else:
+                cleaned = cleaned[:max_chars].rsplit(" ", 1)[0].strip()
+                if not cleaned.endswith("."):
+                    cleaned += "."
+                    
         if cleaned and cleaned not in cleaned_items:
             cleaned_items.append(cleaned)
             

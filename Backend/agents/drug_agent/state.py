@@ -4,6 +4,7 @@ from schemas.drug_search import ConditionEntity, DrugEntity, SourceMetadata
 class DrugSearchState(TypedDict, total=False):
     raw_query: str
     patient_context: Optional[Dict[str, Any]]
+    role: Optional[str] # 'clinician' | 'trainee' | 'patient'
     intent: str # 'disease_to_drugs' | 'drug_info' | 'drug_class' | 'general'
     normalized_condition: Optional[Dict[str, str]] # name, normalized_name, identifier
     target_drug_term: Optional[str]

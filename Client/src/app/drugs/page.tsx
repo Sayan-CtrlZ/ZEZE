@@ -15,7 +15,13 @@ import {
   Copy,
   Check,
   Send,
+  Download,
+  RotateCcw,
+  FileText,
+  ArrowRight,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface SourceMetadata {
   name: string;
@@ -84,6 +90,16 @@ interface ChatMessageItem {
   timestamp: string;
 }
 
+const PROGRESS_STAGES = [
+  { percent: 10, message: "Connecting to openFDA & NLM RxNorm databases...", minDuration: 320 },
+  { percent: 22, message: "Identifying active molecular compounds & drug classes...", minDuration: 380 },
+  { percent: 35, message: "Evaluating approved clinical indications & dosage regimens...", minDuration: 420 },
+  { percent: 50, message: "Screening boxed warnings, adverse reactions & safety alerts...", minDuration: 450 },
+  { percent: 70, message: "Cross-referencing evidence guidelines & interaction matrices...", minDuration: 450 },
+  { percent: 85, message: "Synthesizing clinical medical intelligence report...", minDuration: 480 },
+  { percent: 90, message: "Finalizing comprehensive clinical evidence summary...", minDuration: 500 },
+];
+
 function DrugSearchContent() {
   const searchParams = useSearchParams();
   const roleParam = searchParams.get("role") || "clinician";
@@ -91,7 +107,7 @@ function DrugSearchContent() {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [progressPercent, setProgressPercent] = useState(10);
-  const [statusMessage, setStatusMessage] = useState("Searching official medical databases...");
+  const [statusMessage, setStatusMessage] = useState("Connecting to openFDA & NLM RxNorm databases...");
   const [error, setError] = useState<string | null>(null);
   const [searchResult, setSearchResult] = useState<DrugSearchResponse | null>(null);
 
@@ -117,42 +133,16 @@ function DrugSearchContent() {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
 
-  // Progress timer ref
-  const progressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Progress animation refs
+  const simulationAbortedRef = useRef(false);
+  const creepTimerRef = useRef<NodeJS.Timeout | null>(null);
   const initialSearchDoneRef = useRef(false);
 
-  const startProgressSimulation = () => {
-    setProgressPercent(12);
-    setStatusMessage("Searching official medical databases...");
-
-    if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current);
-    }
-
-    progressTimerRef.current = setInterval(() => {
-      setProgressPercent((old) => {
-        if (old < 30) {
-          setStatusMessage("Reviewing approved treatments for your condition...");
-          return old + 7;
-        } else if (old < 55) {
-          setStatusMessage("Checking official FDA safety alerts and boxed warnings...");
-          return old + 5;
-        } else if (old < 75) {
-          setStatusMessage("Verifying clinical practice guidelines and studies...");
-          return old + 4;
-        } else if (old < 90) {
-          setStatusMessage("Preparing your personalized medical summary...");
-          return old + 2;
-        }
-        return old;
-      });
-    }, 550);
-  };
-
   const stopProgressSimulation = () => {
-    if (progressTimerRef.current) {
-      clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
+    simulationAbortedRef.current = true;
+    if (creepTimerRef.current) {
+      clearInterval(creepTimerRef.current);
+      creepTimerRef.current = null;
     }
   };
 
@@ -160,15 +150,58 @@ function DrugSearchContent() {
     return () => stopProgressSimulation();
   }, []);
 
-  // Auto-search if query param is present in URL (e.g. from Results Dashboard / Medication Reference)
+  // Session storage persistence & auto-search
   useEffect(() => {
-    const urlQuery = searchParams.get("q") || searchParams.get("query");
-    if (urlQuery && urlQuery.trim() && !initialSearchDoneRef.current) {
-      initialSearchDoneRef.current = true;
-      setQuery(urlQuery.trim());
-      handleSearch(urlQuery.trim());
+    if (typeof window !== "undefined") {
+      const urlQuery = searchParams.get("q") || searchParams.get("query");
+      const savedResult = sessionStorage.getItem("zeze_drug_result");
+      const savedQuery = sessionStorage.getItem("zeze_drug_query");
+      const savedChat = sessionStorage.getItem("zeze_drug_chat");
+
+      if (savedChat) {
+        try {
+          setChatMessages(JSON.parse(savedChat));
+        } catch (e) {}
+      }
+
+      if (urlQuery && urlQuery.trim()) {
+        const trimmedUrlQ = urlQuery.trim();
+        // If we already have this exact query cached in session, restore immediately without re-querying!
+        if (
+          savedResult &&
+          savedQuery &&
+          savedQuery.toLowerCase() === trimmedUrlQ.toLowerCase()
+        ) {
+          try {
+            const parsed = JSON.parse(savedResult);
+            setSearchResult(parsed);
+            setQuery(savedQuery);
+            initialSearchDoneRef.current = true;
+            return;
+          } catch (e) {}
+        }
+        if (!initialSearchDoneRef.current) {
+          initialSearchDoneRef.current = true;
+          setQuery(trimmedUrlQ);
+          handleSearch(trimmedUrlQ);
+        }
+      } else if (savedResult && savedQuery) {
+        // Navigated via navbar (no query in URL) -> restore previous search result!
+        try {
+          const parsed = JSON.parse(savedResult);
+          setSearchResult(parsed);
+          setQuery(savedQuery);
+        } catch (e) {}
+      }
     }
   }, [searchParams]);
+
+  // Sync follow-up chat to session
+  useEffect(() => {
+    if (typeof window !== "undefined" && chatMessages.length > 0) {
+      sessionStorage.setItem("zeze_drug_chat", JSON.stringify(chatMessages));
+    }
+  }, [chatMessages]);
 
   const handleSearch = async (searchQuery?: string) => {
     const q = (searchQuery !== undefined ? searchQuery : query).trim();
@@ -180,9 +213,43 @@ function DrugSearchContent() {
 
     setLoading(true);
     setError(null);
-    startProgressSimulation();
+    simulationAbortedRef.current = false;
+    if (creepTimerRef.current) {
+      clearInterval(creepTimerRef.current);
+      creepTimerRef.current = null;
+    }
 
-    // Build optional patient context
+    // Set initial 10% step
+    setProgressPercent(10);
+    setStatusMessage("Connecting to openFDA & NLM RxNorm databases...");
+
+    // Progressive stage promise: guarantees user sees the full sequence 10% -> 22% -> 35% -> 50% -> 70% -> 85% -> 90%
+    const runStages = async () => {
+      for (let i = 0; i < PROGRESS_STAGES.length; i++) {
+        if (simulationAbortedRef.current) return;
+        const stage = PROGRESS_STAGES[i];
+        setProgressPercent(stage.percent);
+        setStatusMessage(stage.message);
+        await new Promise((res) => setTimeout(res, stage.minDuration));
+      }
+      if (simulationAbortedRef.current) return;
+      // Start slow creeping between 90% and 94% until the backend completes
+      let currentVal = 90;
+      creepTimerRef.current = setInterval(() => {
+        if (simulationAbortedRef.current) {
+          if (creepTimerRef.current) clearInterval(creepTimerRef.current);
+          return;
+        }
+        if (currentVal < 94) {
+          currentVal += 1;
+          setProgressPercent(currentVal);
+        }
+      }, 1000);
+    };
+
+    const stagesPromise = runStages();
+
+    // Start backend request
     let patient_context: Record<string, any> | undefined = undefined;
     if (patientEgfr || patientAge || patientPregnancy || patientAllergies) {
       patient_context = {};
@@ -194,12 +261,12 @@ function DrugSearchContent() {
       }
     }
 
-    try {
+    const fetchPromise = (async () => {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:10000";
       const res = await fetch(`${baseUrl}/api/drugs/search`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, patient_context }),
+        body: JSON.stringify({ query: q, patient_context, role: roleParam }),
       });
 
       if (!res.ok) {
@@ -207,15 +274,34 @@ function DrugSearchContent() {
         throw new Error(errorData.detail || `Server error (${res.status})`);
       }
 
-      const data: DrugSearchResponse = await res.json();
+      return (await res.json()) as DrugSearchResponse;
+    })();
 
-      stopProgressSimulation();
+    try {
+      // 1. Wait for the backend data
+      const data = await fetchPromise;
+
+      // 2. Even if the report arrives faster, let the loading animation complete its stages first
+      await stagesPromise;
+
+      // 3. Stop creep timer
+      if (creepTimerRef.current) {
+        clearInterval(creepTimerRef.current);
+        creepTimerRef.current = null;
+      }
+
+      // 4. Smoothly hit 100% and show "Summary ready!"
       setStatusMessage("Summary ready!");
       setProgressPercent(100);
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      // 5. Brief display of 100% completion before revealing the report
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
       setSearchResult(data);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("zeze_drug_result", JSON.stringify(data));
+        sessionStorage.setItem("zeze_drug_query", q);
+      }
       setExpandedDrugs({ 0: true, 1: true });
       setChatMessages([]);
       setChatError(null);
@@ -237,6 +323,467 @@ function DrugSearchContent() {
     navigator.clipboard.writeText(searchResult.report);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleClearReport = () => {
+    setSearchResult(null);
+    setQuery("");
+    setChatMessages([]);
+    setChatError(null);
+    setError(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("zeze_drug_result");
+      sessionStorage.removeItem("zeze_drug_query");
+      sessionStorage.removeItem("zeze_drug_chat");
+      window.history.replaceState({}, "", `/drugs?role=${roleParam}`);
+    }
+    setTimeout(() => {
+      const input = document.getElementById("drug-search-input");
+      if (input) {
+        input.focus();
+        input.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+  };
+
+  const handleDownloadPDF = () => {
+    if (!searchResult) return;
+
+    try {
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 14;
+      const contentWidth = pageWidth - margin * 2;
+      let cursorY = 24;
+
+      // Clean all non-ASCII / Unicode artifacts that break Helvetica kerning & font metrics
+      const cleanPdfText = (str: string): string => {
+        if (!str) return "";
+        return str
+          .replace(/[\u202f\u00a0]/g, " ") // narrow non-breaking space / nbsp -> standard space
+          .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, "-") // unicode dashes/hyphens -> standard dash
+          .replace(/[\u2018\u2019]/g, "'") // curly single quotes -> standard quote
+          .replace(/[\u201c\u201d]/g, '"') // curly double quotes -> standard double quote
+          .replace(/\u2026/g, "...") // ellipsis
+          .replace(/\u2265/g, ">=") // >=
+          .replace(/\u2264/g, "<=") // <=
+          .replace(/[\u2022\u25cf\u25cb]/g, "-") // bullet characters
+          .replace(/[^\x20-\x7E\n]/g, " ") // replace any remaining non-ascii with space
+          .replace(/[ \t]+/g, " "); // collapse multiple spaces
+      };
+
+      const drawHeader = () => {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(8.5);
+        pdf.setTextColor(15, 43, 92);
+        pdf.text("ZEZE MED AI  |  CLINICAL DRUG INTELLIGENCE", margin, 14);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(
+          `Date: ${new Date().toLocaleDateString()}`,
+          pageWidth - margin,
+          14,
+          { align: "right" }
+        );
+
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.3);
+        pdf.line(margin, 17, pageWidth - margin, 17);
+      };
+
+      const checkPageBreak = (neededHeight: number) => {
+        if (cursorY + neededHeight > pageHeight - 20) {
+          pdf.addPage();
+          drawHeader();
+          cursorY = 24;
+        }
+      };
+
+      // 1. Initial Page Header
+      drawHeader();
+
+      // 2. Report Overview Card
+      pdf.setFillColor(244, 248, 253);
+      pdf.setDrawColor(191, 219, 254);
+      pdf.roundedRect(margin, cursorY, contentWidth, 23, 2, 2, "FD");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.setTextColor(15, 43, 92);
+      pdf.text("Evidence-Based Drug Intelligence Report", margin + 4, cursorY + 7);
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(9.5);
+      pdf.setTextColor(29, 78, 216);
+      pdf.text(cleanPdfText(`Inquiry Query: "${searchResult.query}"`), margin + 4, cursorY + 13.5);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(71, 85, 105);
+      const conditionName =
+        searchResult.condition?.normalized_name ||
+        searchResult.condition?.name ||
+        "Targeted Clinical Evaluation";
+      pdf.text(
+        cleanPdfText(`Indication: ${conditionName}  |  Medications Evaluated: ${searchResult.drugs.length}  |  Sources: openFDA, NLM RxNorm, ACC/AHA`),
+        margin + 4,
+        cursorY + 19.5
+      );
+
+      cursorY += 28;
+
+      // 3. Parse Markdown line by line
+      const rawLines = (searchResult.report || "").split("\n");
+      let idx = 0;
+
+      while (idx < rawLines.length) {
+        const originalLine = rawLines[idx];
+        const trimmed = originalLine.trim();
+
+        // Blank lines
+        if (!trimmed) {
+          cursorY += 2;
+          idx++;
+          continue;
+        }
+
+        // Horizontal Separator (---, ***, ___)
+        if (/^[-*_]{3,}$/.test(trimmed)) {
+          checkPageBreak(8);
+          cursorY += 2;
+          pdf.setDrawColor(226, 232, 240);
+          pdf.setLineWidth(0.3);
+          pdf.line(margin, cursorY, margin + contentWidth, cursorY);
+          cursorY += 4;
+          idx++;
+          continue;
+        }
+
+        // Markdown Table Block
+        if (trimmed.startsWith("|")) {
+          const tableLines: string[] = [];
+          while (idx < rawLines.length && rawLines[idx].trim().startsWith("|")) {
+            tableLines.push(rawLines[idx].trim());
+            idx++;
+          }
+
+          if (tableLines.length >= 2) {
+            const isSeparator = (line: string) => line.replace(/[|\s-:]/g, "").length === 0;
+
+            const parsedRows = tableLines
+              .map((line) =>
+                line
+                  .split("|")
+                  .slice(1, -1)
+                  .map((cell) =>
+                    cleanPdfText(
+                      cell
+                        .replace(/\*\*/g, "")
+                        .replace(/`/g, "")
+                        .trim()
+                    )
+                  )
+              )
+              .filter((row, rIdx) => {
+                if (rIdx === 1 && isSeparator(tableLines[1])) return false;
+                return row.some((c) => c.length > 0);
+              });
+
+            if (parsedRows.length >= 2) {
+              const head = [parsedRows[0]];
+              const body = parsedRows.slice(1);
+              const colCount = head[0].length;
+
+              // Tailored column widths to prevent overlapping
+              let columnStyles: Record<number, any> = {};
+              if (colCount === 6) {
+                columnStyles = {
+                  0: { cellWidth: 8, halign: "center" }, // #
+                  1: { cellWidth: 26, fontStyle: "bold" }, // Medication
+                  2: { cellWidth: 22 }, // Generic Name
+                  3: { cellWidth: 15, halign: "center" }, // RxCUI
+                  4: { cellWidth: 50 }, // Drug Class
+                  5: { cellWidth: "auto" }, // Key Guideline / Trial Benchmark
+                };
+              } else if (colCount <= 3) {
+                columnStyles = {
+                  0: { cellWidth: 25, fontStyle: "bold" },
+                  1: { cellWidth: 35 },
+                  2: { cellWidth: "auto" },
+                };
+              }
+
+              checkPageBreak(25);
+
+              autoTable(pdf, {
+                startY: cursorY + 2,
+                margin: { top: 24, bottom: 16, left: margin, right: margin },
+                rowPageBreak: "avoid",
+                tableWidth: contentWidth,
+                head,
+                body,
+                theme: "striped",
+                styles: {
+                  font: "helvetica",
+                  fontSize: 7.5,
+                  cellPadding: 2.5,
+                  overflow: "linebreak",
+                  textColor: [51, 65, 85],
+                  lineColor: [226, 232, 240],
+                  lineWidth: 0.2,
+                },
+                headStyles: {
+                  fillColor: [30, 58, 138], // Deep navy
+                  textColor: [255, 255, 255],
+                  fontStyle: "bold",
+                  fontSize: 7.8,
+                  halign: "left",
+                },
+                alternateRowStyles: {
+                  fillColor: [248, 250, 252],
+                },
+                columnStyles,
+                didDrawPage: () => {
+                  drawHeader();
+                },
+              });
+
+              cursorY = (pdf as any).lastAutoTable?.finalY
+                ? (pdf as any).lastAutoTable.finalY + 6
+                : cursorY + 20;
+            }
+          }
+          continue;
+        }
+
+        // Headings (Level 1 to 5)
+        if (/^#{1,5}\s+/.test(trimmed)) {
+          const headingLevel = trimmed.match(/^(#{1,5})\s+/)?.[1].length || 2;
+          const rawHeadingText = trimmed.replace(/^#{1,5}\s+/, "").replace(/\*\*/g, "").trim();
+          const cleanHeading = cleanPdfText(rawHeadingText);
+
+          if (headingLevel === 1) {
+            checkPageBreak(14);
+            cursorY += 4;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(13);
+            pdf.setTextColor(15, 43, 92);
+            pdf.text(cleanHeading, margin, cursorY + 4);
+            cursorY += 9;
+          } else if (headingLevel === 2) {
+            checkPageBreak(12);
+            cursorY += 3;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(11.5);
+            pdf.setTextColor(15, 43, 92);
+            pdf.text(cleanHeading, margin, cursorY + 4);
+            cursorY += 8;
+          } else if (headingLevel === 3) {
+            checkPageBreak(10);
+            cursorY += 3;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10.5);
+            pdf.setTextColor(29, 78, 216);
+            pdf.text(cleanHeading, margin, cursorY + 3.5);
+
+            pdf.setDrawColor(191, 219, 254);
+            pdf.setLineWidth(0.35);
+            pdf.line(margin, cursorY + 5.5, margin + 45, cursorY + 5.5);
+
+            cursorY += 8;
+          } else {
+            // Level 4/5: E.g., #### 1. Amlodipine besylate tablets...
+            checkPageBreak(9);
+            cursorY += 2.5;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(9.5);
+            pdf.setTextColor(15, 43, 92);
+            const wrapped = pdf.splitTextToSize(cleanHeading, contentWidth);
+            pdf.text(wrapped, margin, cursorY + 3.5);
+            cursorY += wrapped.length * 4.2 + 2;
+          }
+          idx++;
+          continue;
+        }
+
+        // Bullet points & Lists (- , * , + , or 1. )
+        if (/^(\s*[-*+]|\s*\d+\.)\s+/.test(originalLine)) {
+          const isIndented = /^\s{2,}/.test(originalLine);
+          const indentOffset = isIndented ? 6 : 0;
+          const bulletSymbol = isIndented ? "-" : "•";
+
+          const contentAfterBullet = originalLine
+            .replace(/^\s*[-*+]\s+/, "")
+            .replace(/^\s*\d+\.\s+/, "");
+
+          const boldPrefixMatch = contentAfterBullet.match(/^\*\*([^*]+)\*\*:(.*)$/);
+
+          if (boldPrefixMatch) {
+            const boldLabel = cleanPdfText(boldPrefixMatch[1]) + ":";
+            const restText = cleanPdfText(boldPrefixMatch[2]).trim();
+
+            if (restText) {
+              const fullClean = `${boldLabel} ${restText}`;
+              const maxW = contentWidth - indentOffset - 6;
+              const wrapped = pdf.splitTextToSize(fullClean, maxW);
+              const neededH = wrapped.length * 4.2 + 2;
+              checkPageBreak(neededH);
+
+              pdf.setFont("helvetica", "bold");
+              pdf.setFontSize(8.5);
+              pdf.setTextColor(29, 78, 216);
+              pdf.text(bulletSymbol, margin + indentOffset + 1, cursorY + 3.5);
+
+              pdf.setFont("helvetica", "normal");
+              pdf.setTextColor(51, 65, 85);
+              pdf.text(wrapped, margin + indentOffset + 5, cursorY + 3.5);
+
+              cursorY += wrapped.length * 4.2 + 1.5;
+            } else {
+              checkPageBreak(7);
+              pdf.setFont("helvetica", "bold");
+              pdf.setFontSize(8.5);
+              pdf.setTextColor(29, 78, 216);
+              pdf.text(bulletSymbol, margin + indentOffset + 1, cursorY + 3.5);
+
+              pdf.setFont("helvetica", "bold");
+              pdf.setTextColor(15, 43, 92);
+              pdf.text(boldLabel, margin + indentOffset + 5, cursorY + 3.5);
+
+              cursorY += 5.5;
+            }
+          } else {
+            const cleanBullet = cleanPdfText(
+              contentAfterBullet.replace(/\*\*/g, "").replace(/`/g, "").trim()
+            );
+            const maxW = contentWidth - indentOffset - 6;
+            const wrapped = pdf.splitTextToSize(cleanBullet, maxW);
+            const neededH = wrapped.length * 4.2 + 2;
+            checkPageBreak(neededH);
+
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(8.5);
+            pdf.setTextColor(29, 78, 216);
+            pdf.text(bulletSymbol, margin + indentOffset + 1, cursorY + 3.5);
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setTextColor(51, 65, 85);
+            pdf.text(wrapped, margin + indentOffset + 5, cursorY + 3.5);
+
+            cursorY += wrapped.length * 4.2 + 1.5;
+          }
+
+          idx++;
+          continue;
+        }
+
+        // Blockquote (> ...)
+        if (trimmed.startsWith(">")) {
+          const quoteText = cleanPdfText(trimmed.replace(/^>\s*/, "").replace(/\*\*/g, "").trim());
+          const wrapped = pdf.splitTextToSize(quoteText, contentWidth - 8);
+          const neededH = wrapped.length * 4.2 + 4;
+          checkPageBreak(neededH);
+
+          pdf.setDrawColor(59, 130, 246);
+          pdf.setLineWidth(0.8);
+          pdf.line(margin + 1, cursorY + 1, margin + 1, cursorY + neededH - 1);
+
+          pdf.setFont("helvetica", "italic");
+          pdf.setFontSize(8);
+          pdf.setTextColor(71, 85, 105);
+          pdf.text(wrapped, margin + 5, cursorY + 3.5);
+
+          cursorY += neededH + 1;
+          idx++;
+          continue;
+        }
+
+        // Standard Paragraph
+        const cleanPara = cleanPdfText(trimmed.replace(/\*\*/g, "").replace(/`/g, "").trim());
+        if (cleanPara) {
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(8.5);
+          pdf.setTextColor(51, 65, 85);
+
+          const wrapped = pdf.splitTextToSize(cleanPara, contentWidth);
+          const neededH = wrapped.length * 4.2 + 2;
+          checkPageBreak(neededH);
+
+          pdf.text(wrapped, margin, cursorY + 3.5);
+          cursorY += wrapped.length * 4.2 + 2.5;
+        }
+        idx++;
+      }
+
+      // 4. Clinical Evidence Source Endorsement & Disclaimer
+      checkPageBreak(22);
+      pdf.setFillColor(244, 248, 253);
+      pdf.setDrawColor(191, 219, 254);
+      pdf.roundedRect(margin, cursorY + 3, contentWidth, 16, 2, 2, "FD");
+
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(15, 43, 92);
+      pdf.text("OFFICIAL MEDICAL CITATION & EVIDENCE SOURCE", margin + 3, cursorY + 8);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(7);
+      pdf.setTextColor(71, 85, 105);
+      pdf.text(
+        "Data synthesized from official FDA drug labels via openFDA and normalized through NLM RxNorm. Formulated according to ACC/AHA clinical practice guidelines.",
+        margin + 3,
+        cursorY + 12
+      );
+      pdf.text(
+        "Clinical Disclaimer: For informational decision support. Prescribing clinicians must review full individual patient history.",
+        margin + 3,
+        cursorY + 16
+      );
+
+      // 5. Number all pages cleanly with footer
+      const totalPages = pdf.getNumberOfPages();
+      for (let p = 1; p <= totalPages; p++) {
+        pdf.setPage(p);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.setLineWidth(0.3);
+        pdf.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(7);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(
+          "ZEZE Medical AI • Clinical Drug Intelligence • Confidential",
+          margin,
+          pageHeight - 7
+        );
+        pdf.text(
+          `Page ${p} of ${totalPages}`,
+          pageWidth - margin,
+          pageHeight - 7,
+          { align: "right" }
+        );
+      }
+
+      const safeFilename = `ZEZE_Drug_Report_${(
+        searchResult.condition?.normalized_name ||
+        searchResult.query ||
+        "report"
+      )
+        .replace(/[^a-zA-Z0-9_-]/g, "_")
+        .slice(0, 30)}.pdf`;
+
+      pdf.save(safeFilename);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+    }
   };
 
   const handleSendFollowUp = async (customPrompt?: string) => {
@@ -350,6 +897,7 @@ function DrugSearchContent() {
             >
               <div className="relative flex-1">
                 <input
+                  id="drug-search-input"
                   type="text"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -481,9 +1029,9 @@ function DrugSearchContent() {
               <p className="text-xs text-blue-800 font-bold min-h-[1.25rem]">
                 {statusMessage}
               </p>
-              <div className="w-full bg-[#edf3f9] h-3 rounded-full overflow-hidden p-0.5 border border-white/80 neu-inset shadow-inner">
+              <div className="w-full bg-[#edf3f9] h-3.5 rounded-full overflow-hidden p-0.5 border border-white/80 neu-inset shadow-inner">
                 <div
-                  className="bg-blue-600 h-full rounded-full transition-all duration-500 ease-out"
+                  className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 h-full rounded-full transition-all duration-400 ease-out shadow-[0_0_12px_rgba(37,99,235,0.45)]"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
@@ -567,27 +1115,55 @@ function DrugSearchContent() {
               {/* TAB 1: Clinical Medical Summary (Spacious, Dark High-Contrast Text) */}
               {activeTab === "report" && (
                 <div className="p-6 sm:p-8 md:p-10 neu-flat rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white/95 to-[#eef3f8]/90 shadow-[6px_6px_20px_rgba(163,177,198,0.35),-6px_-6px_20px_rgba(255,255,255,0.9)] space-y-6">
-                  <div className="flex items-center justify-between pb-4 border-b border-slate-200/70">
-                    <h3 className="text-base sm:text-lg font-black text-[#0a192f]">
-                      Synthesized Medical Intelligence Report
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={handleCopyReport}
-                      className="neu-button-secondary px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-blue-800 rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          <span className="text-emerald-700">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copy Report</span>
-                        </>
-                      )}
-                    </button>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200/70">
+                    <div>
+                      <h3 className="text-base sm:text-lg font-black text-[#0a192f]">
+                        Synthesized Medical Intelligence Report
+                      </h3>
+                      <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                        Structured clinical synthesis from peer-reviewed evidence &amp; FDA databases
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleClearReport}
+                        className="neu-button-secondary px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-blue-800 rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                        title="Clear this report and search another drug"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Explore Another Medication</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleDownloadPDF}
+                        className="neu-button-3d text-white px-3.5 py-1.5 text-xs font-black rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all shadow-md"
+                        title="Download structured evidence report as PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download PDF</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleCopyReport}
+                        className="neu-button-secondary px-3.5 py-1.5 text-xs font-bold text-slate-700 hover:text-blue-800 rounded-xl flex items-center gap-1.5 cursor-pointer active:scale-95"
+                        title="Copy markdown text to clipboard"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            <span className="text-emerald-700">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copy Report</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Render Markdown with Dark Text and Generous Paragraph Spacing */}
@@ -796,13 +1372,68 @@ function DrugSearchContent() {
                           }`}
                         >
                           {msg.role === "assistant" ? (
-                            <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-800 space-y-2">
-                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            <div className="text-xs sm:text-sm text-slate-800 leading-relaxed space-y-2">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  p: ({ node, ...props }) => (
+                                    <p className="text-slate-800 leading-relaxed my-2 font-normal" {...props} />
+                                  ),
+                                  h2: ({ node, ...props }) => (
+                                    <h2 className="text-sm sm:text-base font-black text-[#0a192f] mt-3.5 mb-1.5 tracking-tight border-b border-slate-200/80 pb-1" {...props} />
+                                  ),
+                                  h3: ({ node, ...props }) => (
+                                    <h3 className="text-xs sm:text-sm font-black text-[#0a192f] mt-3 mb-1 tracking-tight" {...props} />
+                                  ),
+                                  h4: ({ node, ...props }) => (
+                                    <h4 className="text-xs font-bold text-blue-900 mt-2.5 mb-1" {...props} />
+                                  ),
+                                  ul: ({ node, ...props }) => (
+                                    <ul className="space-y-1.5 my-2 pl-4 list-disc text-slate-800 font-medium text-xs sm:text-sm" {...props} />
+                                  ),
+                                  ol: ({ node, ...props }) => (
+                                    <ol className="space-y-1.5 my-2 pl-4 list-decimal text-slate-800 font-medium text-xs sm:text-sm" {...props} />
+                                  ),
+                                  li: ({ node, ...props }) => (
+                                    <li className="leading-relaxed text-slate-800" {...props} />
+                                  ),
+                                  strong: ({ node, ...props }) => (
+                                    <strong className="font-extrabold text-[#0a192f]" {...props} />
+                                  ),
+                                  em: ({ node, ...props }) => (
+                                    <em className="text-slate-600 font-medium italic" {...props} />
+                                  ),
+                                  table: ({ node, ...props }) => (
+                                    <div className="overflow-x-auto my-3 rounded-xl border border-slate-200/80 bg-white shadow-2xs">
+                                      <table className="w-full text-xs text-left border-collapse" {...props} />
+                                    </div>
+                                  ),
+                                  thead: ({ node, ...props }) => (
+                                    <thead className="bg-slate-100/90 border-b border-slate-200 text-[#0a192f] font-black uppercase text-[10px] tracking-wide" {...props} />
+                                  ),
+                                  th: ({ node, ...props }) => (
+                                    <th className="py-2.5 px-3 font-black text-[#0a192f]" {...props} />
+                                  ),
+                                  td: ({ node, ...props }) => (
+                                    <td className="py-2.5 px-3 border-b border-slate-100 text-slate-800 font-medium leading-relaxed text-xs" {...props} />
+                                  ),
+                                  blockquote: ({ node, ...props }) => (
+                                    <blockquote className="border-l-3 border-blue-500 bg-blue-50/60 pl-3 py-1.5 my-2.5 text-xs text-slate-700 rounded-r-lg" {...props} />
+                                  ),
+                                  code: ({ node, inline, ...props }: any) => (
+                                    inline ? (
+                                      <code className="px-1.5 py-0.5 rounded bg-slate-100 text-[#0a192f] font-mono text-[11px] border border-slate-200" {...props} />
+                                    ) : (
+                                      <code className="block p-2.5 rounded-xl bg-slate-900 text-slate-100 font-mono text-xs overflow-x-auto my-2" {...props} />
+                                    )
+                                  ),
+                                }}
+                              >
                                 {msg.content}
                               </ReactMarkdown>
                             </div>
                           ) : (
-                            <p>{msg.content}</p>
+                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                           )}
                         </div>
                         <span className="text-[10px] text-slate-400 mt-1 px-1 font-semibold">

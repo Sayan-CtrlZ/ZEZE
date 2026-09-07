@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import AppNavbar from "@/components/AppNavbar";
 import {
   Stethoscope,
   GraduationCap,
@@ -87,54 +88,9 @@ export default function Home() {
   return (
     <main className="min-h-screen relative p-3 sm:p-8 flex flex-col justify-start items-center overflow-x-hidden bg-[#edf3f9]">
       {/* =========================================================================
-          1. FLOATING PILL NAVBAR
+          1. REUSABLE FLOATING PILL NAVBAR
          ========================================================================= */}
-      <header className="w-full max-w-6xl 2xl:max-w-7xl mx-auto neu-pill-nav py-2.5 sm:py-3 px-3.5 sm:px-8 mb-8 sm:mb-12 flex items-center justify-between z-30 sticky top-3 sm:top-4 bg-white/90 backdrop-blur-md">
-        {/* Brand Logo with Medallion */}
-        <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl neu-inset flex items-center justify-center text-blue-700 bg-white/70 group-hover:scale-105 transition-transform shrink-0">
-            <img src="/icon.webp" alt="ZEZE" className="w-5 h-5 sm:w-6 sm:h-6 object-contain" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-lg sm:text-2xl font-black tracking-tight text-slate-900">ZEZE</span>
-              <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-blue-700 px-2 py-0.5 rounded-full neu-inset-sm">
-                MED AI
-              </span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Center Nav Links */}
-        <nav className="hidden md:flex items-center gap-7 text-xs font-black uppercase tracking-wider text-slate-600">
-          <Link href="#persona-selection" className="hover:text-blue-700 transition-colors">
-            Personas
-          </Link>
-          <Link href="#how-it-works" className="hover:text-blue-700 transition-colors">
-            How It Works
-          </Link>
-          <Link href="#data-proof" className="hover:text-blue-700 transition-colors">
-            Clinical Data
-          </Link>
-          <Link href="/assessment?mode=upload" className="hover:text-blue-700 transition-colors">
-            OCR Scan
-          </Link>
-          <Link href="/assessment?mode=manual" className="hover:text-blue-700 transition-colors">
-            Manual Form
-          </Link>
-        </nav>
-
-        {/* Right Action Controls: Direct Launch Workspace */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Link
-            href="/select-role"
-            className="neu-button-3d px-4 sm:px-6 py-2 sm:py-2.5 text-xs font-black shrink-0 flex items-center gap-1.5 cursor-pointer active:scale-95"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Launch Workspace</span>
-          </Link>
-        </div>
-      </header>
+      <AppNavbar pageType="landing" />
 
       {/* =========================================================================
           2. HERO SECTION
